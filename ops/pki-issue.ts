@@ -50,7 +50,7 @@ import { webcrypto, randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CRL_URI_RE, cdpExtension } from "./crl-dp.js";
+import { cdpExtension, crlHostForProfile, crlUriProblem } from "./crl-dp.js";
 import { certFingerprintSha256Hex, computeIssuerId, computeRpId, pemToDer } from "@tamga-network/core";
 import { prodConfirmProblem, resolveSubject, SubjectError } from "./pki-subject.js";
 
@@ -133,9 +133,17 @@ async function main() {
   if (caName !== "root-ca" && !name.startsWith("rp-")) fail("--ca yalnız erişim sertifikasında (rp-*; ADR-0087 K2)");
   const crlUri = arg("crl-uri");
   if (crlUri !== undefined) {
-    const m = CRL_URI_RE.exec(crlUri);
-    if (!m) fail("--crl-uri: http://crl.<ağ>/<makam>.crl biçiminde olmalı (ADR-0090; https eşi otomatik eklenir)");
-    else if (m[1] !== caName) fail(`--crl-uri: verenin (${caName}) CRL'i olmalı (/${caName}.crl)`);
+    // CRL alan adı imzalanan ağa bağlı: PKI klasörünün pki.json'undaki profil (production / sandbox)
+    const pkiJsonFile = resolve(PKI, "pki.json");
+    const profile = existsSync(pkiJsonFile)
+      ? (JSON.parse(readFileSync(pkiJsonFile, "utf8")) as { profile?: unknown }).profile
+      : undefined;
+    if (PROD && crlHostForProfile(profile) === undefined)
+      console.warn(
+        "[uyarı] --crl-uri: pki.json'da ağ profili (production | sandbox) yok — CRL alan adı ağa göre denetlenmedi",
+      );
+    const problem = crlUriProblem(crlUri, caName, profile);
+    if (problem) fail(problem);
   }
   if (crlUri !== undefined && !name.startsWith("rp-")) fail("--crl-uri yalnız erişim sertifikasında (rp-*)");
 

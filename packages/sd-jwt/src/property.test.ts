@@ -271,11 +271,11 @@ describe("K11 Token Status List bit dizisi — özellikler", () => {
     );
   });
 
-  it("zlib bombası (12 MB sıfır → birkaç KB) sınırda durur: D6, 2 sn içinde", () => {
+  it("zlib bombası (12 MB sıfır → birkaç KB) sınırda durur: D4 (okunamıyor; denetim turu D1-8), 2 sn içinde", () => {
     const bomb = new Uint8Array(deflateSync(Buffer.alloc(12 * 1024 * 1024), { level: 9 }));
     expect(bomb.length).toBeLessThan(64 * 1024);
     const t = performance.now();
-    expect(() => StatusBitstring.fromCompressed(bomb, MIN_CAPACITY, 8)).toThrow(/^D6: .*maximum size/);
+    expect(() => StatusBitstring.fromCompressed(bomb, MIN_CAPACITY, 8)).toThrow(/^D4: .*maximum size/);
     expect(performance.now() - t).toBeLessThan(2000);
   });
 });

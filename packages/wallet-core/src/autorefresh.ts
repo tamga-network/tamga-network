@@ -4,6 +4,7 @@
  * Geçiş kartları yeni belgeye taşınır (anahtarları silinmez). Kurum belirteci reddederse bağ kaldırılır; uyarı akışı bugünkü gibi.
  */
 import { b64u } from "./b64.js";
+import { assertReceiveTrust } from "./receive-trust.js";
 import { readJson, type Http } from "./http.js";
 import { isAuthRequired, type KeyProvider } from "./keys.js";
 import { wuaForBinding, type WuaRecord } from "./wua.js";
@@ -86,7 +87,8 @@ export interface AutoRefreshInput {
   wuaForInstance?: (keyRef: string) => Promise<WuaRecord>;
   randomBytes: (n: number) => Uint8Array;
   now?: number;
-  receive?: ReceiveOptions;
+  /** ZORUNLU (güvenlik incelemesi 2026-11-18): yeni paket `receiveCredentials` ile alınır — `trust` zorunlu (ya da açık `"none"`); ağa çıkmadan denetlenir */
+  receive: ReceiveOptions;
   /** ADR-0025: yenilenen paket için de yeni anahtar kanıtı */
   keyAttestor?: (jwks: import("./keys.js").PublicJwk[]) => Promise<string>;
 }
@@ -100,6 +102,7 @@ export type AutoRefreshResult =
  * `state`'i kalıcı yazar, yazma başarıyla bitince anahtarları siler — yeni kayıt diske inmeden eski kopya anahtarı silinmez.
  */
 export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRefreshResult> {
+  assertReceiveTrust(p.receive); // belirteç harcanmadan önce
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const old = p.state.credentials.find((c) => c.id === p.credentialId);
   if (!old?.refresh)
@@ -209,7 +212,15 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
     // `auth_required` (ön denemeden sonra pencere kapandı), kurum ya da ağ hatası: iptal değil; yeni belirteç korunur
     return skip(isAuthRequired(e) ? "auth_required" : (e as Error).message, kept);
   }
-  const rec = receiveCredentials(p.state, out, { ...p.receive, typeName: old.typeName, now });
+  // Denetim turu D: kurumun gönderdiği kopya alınamazsa (imza, tür, kurum tutarsız) istisna atılmaz — belirteç zaten döndürüldü; yeni
+  // belirteç saklanır (`kept`), bu tur için üretilen kopya anahtarları silinir (yetim kalmaz). identity-renewal.ts ile aynı kural.
+  let rec;
+  try {
+    rec = receiveCredentials(p.state, out, { ...p.receive, typeName: old.typeName, now });
+  } catch (e) {
+    for (const c of out.copies) await p.keys.delete(c.keyRef).catch(() => {});
+    return skip((e as Error).message, kept);
+  }
   const neu = rec.credential;
   const changed = changedClaimNames(old.claims, neu.claims);
   // Eskinin yerini al: kopya anahtarları silinir; geçiş kartları yeni belgeye taşınır ve anahtarları korunur;

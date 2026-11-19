@@ -169,6 +169,10 @@ export async function loadTrustSetWith(
   verifyJws: JwsVerifier,
 ): Promise<{ store: TrustStore; report: LoadReport }> {
   const now = input.now ?? new Date();
+  // C6-Ö4 (güvenlik incelemesi 2026-11-18): NaN / Infinity / sıfır / negatif sınır bayatlık denetimini sessizce kapatırdı
+  // (`x > NaN` hep false) — verilen değer sonlu ve pozitif olmalı
+  if (input.anchorMaxAgeMs !== undefined && !(Number.isFinite(input.anchorMaxAgeMs) && input.anchorMaxAgeMs > 0))
+    throw new RangeError("anchorMaxAgeMs must be a finite positive number of milliseconds");
   const warnings: string[] = [];
 
   // 1) LOTL
@@ -359,6 +363,7 @@ export async function applyExternalListsWith(
       if (lote.sequence < lastSeq)
         throw new Error(`sequence ${lote.sequence} older than the last seen list (${lastSeq}, rollback)`);
       warnings.push(...store.applyExternalList(ptr, lote));
+      for (const w of lote.warnings ?? []) warnings.push(`external ${ptr.list_id}: ${w}`);
       memory.set(key, { version: lote.sequence, hash: sha256Tag(utf8(raw)) });
       if (lote.nextUpdate < now)
         warnings.push(`external ${ptr.list_id}: NextUpdate passed — its entries answer UNKNOWN`);

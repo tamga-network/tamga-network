@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-11-12
+last_updated: 2026-11-19
 summary: >
   `@tamga-network/*` paketlerinin 0.7.0 sürümünde güvenlik denetimini atlatan varsayılanlar kaldırılır: güven çapası, dönüş adresi
   izin listesi, iptal sorgusu ve doğrulayıcı kaydı zorunlu girdidir (bilerek atlamak için açık `"none"` değeri); DPoP token ve
@@ -67,6 +67,22 @@ ve ona bağlı `jkt` zorunlu; `ath` ve anahtar eşleşmesi her zaman denetlenir)
 alır (zorunlu): imzacı sertifikasının SHA-256 parmak izleri ya da parmak izini değerlendiren işlev. Eşleşmeyen imzacı imza
 denetiminden önce `D3: status token signer is not an expected signer`. Doğrulayıcı kurumun güven listesindeki iptal anahtarını,
 cüzdan sağlayıcı denetleyicisi (`WalletStatusChecker`) listedeki sağlayıcı anahtarını verir.
+
+## K6a — İptal listesi imzacısı belgenin güven bağlamına bağlanır (ek, 2026-11-19)
+Proje yönetimi onayıyla (AB uyum turu 2026-11-19). K6'nın "listedeki sağlayıcı anahtarı" kuralı daraltılır: WIA ya da KA'nın iptal
+listesini, o WIA'yı ya da KA'yı imzalayan anahtarla **aynı cüzdan sağlayıcı kaydındaki** bir anahtar imzalamalıdır; listedeki başka
+bir sağlayıcının anahtarı yetmez. Bağ anahtara değil kayda kurulur: sağlayıcı kendi kaydındaki anahtarlar arasında geçiş yaparken
+liste geçerli kalır.
+
+- `StatusValueOf` üçüncü girdi olarak denetlenen kanıtın imzacısının sertifika parmak izini (SHA-256, onaltılık) alır;
+  `verifyWalletAttestation` ve `verifyKeyAttestation` bunu verir. Kendi sorgu işlevini yazan çağıran bu girdiyi kullanmayabilir.
+- `WalletStatusChecker` ikinci girdi olarak güven kaynağının `isWalletProviderKey` ve `walletProviderOfKey` işlevlerini alır. Liste
+  imzacısı listede sağlayıcı anahtarı olmalı ve kanıt imzacısıyla aynı sağlayıcı kaydına çıkmalıdır. Kayıt bulunamıyorsa (dış liste,
+  bayat liste) liste imzacısı kanıt imzacısıyla aynı anahtar olmalıdır. Eşleşmezse sonuç `UNKNOWN` olur (K6 ile aynı: kabul yok).
+  İmzacı girdisi verilmezse de sonuç `UNKNOWN` olur.
+- Belge türlerinin bağlamı: kurum belgesi → güven listesindeki kurum kaydının iptal anahtarı (K6, değişmedi); kayıt sertifikası →
+  kayıt yapan tarafın listesi; WIA ve KA → aynı sağlayıcı kaydı (bu ek).
+- Kırıcı değişiklik: paketlerin bir sonraki sürümü. Liste türleri bağlam türü taşıdığında (LoTE) eşleme adlarla yapılır.
 
 ## K7 — `verifyIssuerSigned`: cihaz anahtarı zorunlu
 MSO `deviceKeyInfo.deviceKey` taşımayan belge `valid: false` ("deviceKey missing"): kişiye bağlanamayan belge geçerli sayılmaz.

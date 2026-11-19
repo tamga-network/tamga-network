@@ -32,6 +32,14 @@ export function resetListMonotonicity() {
   resetDefaultListVersionMemory();
 }
 
+/** Verilen başlangıç anından gerçek zamanla ilerleyen saat; başlangıç yoksa gerçek saat. */
+function advancingClock(start: Date | undefined): () => Date {
+  if (!start) return () => new Date();
+  const base = start.getTime();
+  const t0 = Date.now();
+  return () => new Date(base + (Date.now() - t0));
+}
+
 export async function fetchListTrustSource(
   trustBase: string,
   http: HttpGet,
@@ -153,6 +161,7 @@ export async function fetchListTrustSource(
   if (prev && (store.lotl.version < prev.lotl || tl.version < prev.tl))
     throw new TrustListError("trusted list older than a previously seen version (rollback)");
   seen.set(key, { lotl: Math.max(store.lotl.version, prev?.lotl ?? 0), tl: Math.max(tl.version, prev?.tl ?? 0) });
-  // Saat donmaz: tazelik her sorguda gerçek zamana göre (opts.now yalnızca test/vektör içindir)
-  return { source: new ListTrustSource(store, opts.now ? () => now : () => new Date()), store, report };
+  // Saat donmaz (güvenlik incelemesi 2026-11-18): `now` yalnız YÜKLEME anıdır. Kaynağın saati gerçek zamanla ilerler — `now`
+  // verildiyse ondan başlayıp geçen süre kadar ilerler; liste `next_update`'i geçince sorgular UNKNOWN olur.
+  return { source: new ListTrustSource(store, advancingClock(opts.now)), store, report };
 }

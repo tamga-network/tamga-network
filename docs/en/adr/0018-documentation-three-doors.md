@@ -43,7 +43,7 @@ documentation and an ARF.
 | **Tamga ARF** | `arf.tamga.network` (VitePress, `tamga-network/arf`) | regulator, institution, auditor | main document (FW-ARF-0001) + Annex A Trust Framework + Annex B participant rules + Annex C attestation rulebooks |
 
 Each door links visibly to the other two. The **single public home** of the framework documents is `arf.tamga.network`;
-`docs.tamga.network` does not republish them, it links `[[FW-*]]` references to the ARF site.
+`docs.tamga.network` does not republish them, it links `FW-*` references to the ARF site.
 
 ## K2 — Name and domain
 

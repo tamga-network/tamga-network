@@ -323,14 +323,15 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
   like a person's name is refused.
 - **§4 — form of `dns_name`.** Lower-case labels separated by dots; no trailing dot. A name that appears in two records of
   one list is ambiguous ([[ADR-0075]] implementation note).
-- **§6 — anchor freshness in the directory loader.** `loadTrustSourceFromDir` uses **365 days** as the anchor-log freshness
-  limit when none is given (2 hours in the core loader): this path is also used with development and test folders where the
-  hourly heartbeat does not run. With this default a stopped anchor log does not make the source stale (freshness comes only
-  from the lists' `next_update`); a service that also wants anchor-log freshness as a condition passes the limit itself
-  (`anchorMaxAgeMs`, e.g. 2 hours). The reference verifier (Tamga Verify, 2026-11-12) passes the limit when its public address
-  is HTTPS: the default is **3 hours**, set with `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC`; if the last anchor is older, the source
-  is stale and the result is INDETERMINATE (not REJECTED). In local development (http) the 365-day default applies unless the
-  setting is given. External lists: [[ADR-0036]] implementation note.
+- **§6 — anchor freshness in the directory loader.** `loadTrustSourceFromDir` uses **2 hours** as the anchor-log freshness
+  limit when none is given (the same as the core loader; security review 2026-11-18 — the earlier 365-day default kept a
+  stopped anchor log fresh in a production service that forgot the value). The limit must be finite and positive; NaN,
+  infinity, zero or a negative value is rejected with `RangeError`. Development and test folders where the hourly heartbeat
+  does not run pass a wider limit explicitly (e.g. 365 days); then a stopped anchor log does not make the source stale
+  (freshness comes from the lists' `next_update`). The reference verifier (Tamga Verify, 2026-11-12) passes **3 hours** by
+  default when its public address is HTTPS, set with `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC`; if the last anchor is older, the
+  source is stale and the result is INDETERMINATE (not REJECTED). In local development (http) it passes 365 days explicitly
+  unless the setting is given. External lists: [[ADR-0036]] implementation note.
 - **Registration commands.** They run under `registry.lock` (refreshed while held); if list validation fails before a signed
   list is written, the source file is restored and no line is written to the change log. Without the provisional-operator
   value, publication stops in the real network ([[ADR-0070]] implementation note).

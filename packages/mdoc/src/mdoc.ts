@@ -251,7 +251,11 @@ export function verifyIssuerSigned(
   // okunamayan tarih geçerli sayılmaz (fail-closed): NaN ile her karşılaştırma false olur ve kontrol sessizce geçerdi
   if (!Number.isFinite(vs) || !Number.isFinite(vf) || !Number.isFinite(vu))
     return { valid: false, reason: "validityInfo dates unreadable" };
+  // İmza anı (`signed`) güven sorgularının zamanıdır (C1/C2, D-BC-3 — SD-JWT `iat`): saat payından ileride olamaz; ISO/IEC 18013-5
+  // §9.1.2.4: `validFrom` ≥ `signed` (denetim turu D1-2 — önce ileri tarihli `signed` + geçmiş `validFrom` kabul ediliyordu)
   if (now + skew < vf) return { valid: false, reason: "document not yet valid" };
+  if (vs > now + skew) return { valid: false, reason: "validityInfo.signed is in the future" };
+  if (vf < vs) return { valid: false, reason: "validityInfo.validFrom is before signed" };
   if (now > vu) return { valid: false, reason: "document expired" };
 
   // digest bütünlüğü — açıklanan her alan MSO'daki digest ile eşleşmeli

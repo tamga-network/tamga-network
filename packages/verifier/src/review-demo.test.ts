@@ -9,7 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createPrivateKey, randomBytes } from "node:crypto";
 import { pemIssuerSigner } from "@tamga-network/sd-jwt";
-import { issueMdoc, toPidMdocElements } from "@tamga-network/mdoc";
+import { issueMdoc, toPidMdocElements, type CborValue } from "@tamga-network/mdoc";
 import { signStatusListToken, StatusBitstring, MIN_CAPACITY } from "@tamga-network/sd-jwt";
 import {
   certFingerprintSha256Hex,
@@ -25,6 +25,8 @@ import { epochSeconds } from "@tamga-network/core";
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
 const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
+/** heartbeat'siz test dist'i: geniş çapa tazelik sınırı açıkça (paket varsayılanı 2 saat — güvenlik incelemesi 2026-11-18) */
+const DEV_DIST = { anchorMaxAgeMs: 365 * 86400_000 };
 const ready =
   existsSync(resolve(PKI, "issuer-id-review.pkcs8.pem")) &&
   existsSync(resolve(PKI, "issuer-id-status.pkcs8.pem")) &&
@@ -58,7 +60,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
   let rootDer: Uint8Array[];
   const keys = new SoftwareKeyProvider(new MemoryKeyStore());
   beforeAll(async () => {
-    const r = await loadTrustSourceFromDir(DIST);
+    const r = await loadTrustSourceFromDir(DIST, DEV_DIST);
     trust = r.trust;
     rootDer = [pemToDer(r.rootCertPem!)];
     // Güven listesine DEMO kaydını ekle: kimlik servisinin kaydı + ayrı sertifika + I1 (registry/pending'deki başvuruyla aynı)
@@ -82,7 +84,11 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       if (v.list.issuers.some((x: { slug: string }) => x.slug === "tamga-id")) v.list.issuers.push(rec);
   });
 
-  async function present(now: number) {
+  async function present(
+    now: number,
+    extra: Record<string, CborValue> = {},
+    times: { signed?: number; validFrom?: number } = {},
+  ) {
     const reviewCertDer = pemToDer(readFileSync(resolve(PKI, "issuer-id-review.cert.pem"), "utf8"));
     const jwk = createPrivateKey(readFileSync(resolve(PKI, "issuer-id-review.pkcs8.pem"), "utf8")).export({
       format: "jwk",
@@ -93,21 +99,24 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     const issued = issueMdoc({
       docType: VCT,
       namespaces: {
-        [NS]: toPidMdocElements({
-          family_name: "App Reviewer",
-          given_name: "DEMO",
-          birthdate: "1990-01-01",
-          nationalities: ["TR"],
-          personal_administrative_number: "DEMO-TEST01",
-          issuing_country: "TR",
-          age_over_18: true,
-        }),
+        [NS]: {
+          ...toPidMdocElements({
+            family_name: "App Reviewer",
+            given_name: "DEMO",
+            birthdate: "1990-01-01",
+            nationalities: ["TR"],
+            personal_administrative_number: "DEMO-TEST01",
+            issuing_country: "TR",
+            age_over_18: true,
+          }),
+          ...extra,
+        },
       },
       deviceKeyRaw: jwkToPoint(cnf as never),
       issuerSk: new Uint8Array(Buffer.from(jwk.d, "base64url")),
       x5chain: [reviewCertDer],
-      signed: now,
-      validFrom: now,
+      signed: times.signed ?? now,
+      validFrom: times.validFrom ?? now,
       validUntil: now + 7 * 86400,
       randomBytes: (n) => new Uint8Array(randomBytes(n)),
       status: { idx: 3, uri: STATUS_URI },
@@ -116,7 +125,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       mdocB64u: Buffer.from(issued.issuerSigned).toString("base64url"),
       docType: VCT,
       namespace: NS,
-      disclose: ["age_over_18"],
+      disclose: ["age_over_18", ...Object.keys(extra)],
       clientId: AUD,
       nonce: "n-review",
       responseUri: RESPONSE_URI,
@@ -164,6 +173,51 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     expect(out.result.failed_step).toBe("E1");
   });
 
+  it("D1-2: `validityInfo.signed` saat payından ileride → A3 RED; `validFrom` < `signed` → A7 RED; pay içinde kabul", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const run = async (times: { signed?: number; validFrom?: number }) => {
+      const { pres, cache } = await present(now, {}, times);
+      return (
+        await verifyPresentation({
+          rp: "none",
+          presentation: pres,
+          format: "mso_mdoc",
+          responseUri: RESPONSE_URI,
+          aud: AUD,
+          nonce: "n-review",
+          policy: policyWith("I1"),
+          policyCredentialId: "identity",
+          trust,
+          statusCache: cache,
+          rootCertsDer: rootDer,
+          now: epochSeconds(now),
+        })
+      ).result;
+    };
+    // imza anı bir saat ileride, geçerlilik başlangıcı geçmişte: C1/C2 gelecekteki bir ana göre sorulmasın
+    const future = await run({ signed: now + 3600, validFrom: now - 60 });
+    expect(future).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "A3",
+      failed_reason: "mdoc: validityInfo.signed is in the future",
+    });
+    // imza anı ve geçerlilik başlangıcı birlikte ileride: belge henüz geçerli değil (A7) — yine RED
+    expect(await run({ signed: now + 3600, validFrom: now + 3600 })).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "A7",
+      failed_reason: "mdoc: document not yet valid",
+    });
+    // ISO/IEC 18013-5 §9.1.2.4: validFrom ≥ signed
+    const early = await run({ signed: now, validFrom: now - 3600 });
+    expect(early).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "A7",
+      failed_reason: "mdoc: validityInfo.validFrom is before signed",
+    });
+    // politikanın saat payı (varsayılan 120 sn) içinde ileri imza anı kabul
+    expect((await run({ signed: now + 60, validFrom: now + 60 })).outcome).toBe("ACCEPTED");
+  });
+
   it("I1 kabul eden inceleme politikası (review-age-over-18) → ACCEPTED", async () => {
     const now = Math.floor(Date.now() / 1000);
     const { pres, cache } = await present(now);
@@ -183,5 +237,27 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     });
     expect(out.result.outcome).toBe("ACCEPTED");
     expect(out.result.issuer?.assurance).toBe("I1");
+  });
+
+  it("B6-1: gösterilemeyen öğe değeri (metin olmayan harita anahtarı) → REJECTED A5 (kalıcı içerik kusuru; DOĞRULANAMADI değil)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { pres, cache } = await present(now, { odd_map: new Map<CborValue, CborValue>([[1, "x"]]) });
+    const out = await verifyPresentation({
+      rp: "none",
+      presentation: pres,
+      format: "mso_mdoc",
+      responseUri: RESPONSE_URI,
+      aud: AUD,
+      nonce: "n-review",
+      policy: policyWith("I1"),
+      policyCredentialId: "identity",
+      trust,
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now: epochSeconds(now),
+    });
+    expect(out.result.outcome).toBe("REJECTED");
+    expect(out.result.failed_step).toBe("A5");
+    expect(out.result.failed_reason).toMatch(/element value not representable/);
   });
 });

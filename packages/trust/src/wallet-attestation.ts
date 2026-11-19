@@ -25,11 +25,13 @@ export interface StatusRef {
  * İptal listesi sorgusu (çağıran sağlar; liste indirme + doğrulama + önbellek). `NONCOMPLIANT`: liste indi ve imzası geçerli ama
  * profile uymuyor (ör. CIR 2026/1731 Ek Ib: 10.000'den az girişli WIA/KA listesi) — geçici hata değil, ret. Girişin biti açıksa
  * liste küçük olsa da sonuç `INVALID`dir (sağlayıcının imzalı iptal beyanı; 0.5.2): `NONCOMPLIANT` yalnız bit kapalıyken.
- * `now` Unix saniyesi.
+ * `now` Unix saniyesi. `signerFingerprint` (ADR-0056 K6a): denetlenen kanıtı (WIA / KA) imzalayan sertifikanın SHA-256 parmak izi
+ * (onaltılık) — liste imzacısı aynı cüzdan sağlayıcı kaydında olmalı (`WalletStatusChecker`); kendi sorgu işlevi kullanmayabilir.
  */
 export type StatusValueOf = (
   ref: StatusRef,
   now: EpochSeconds,
+  signerFingerprint: string,
 ) => Promise<"VALID" | "INVALID" | "UNKNOWN" | "NONCOMPLIANT">;
 /**
  * İptal denetimi seçimi (ADR-0056 K3): sorgu işlevi ya da `"none"` — iptal bilerek denetlenmez (yalnız iptal girişi olmayan
@@ -152,7 +154,7 @@ export async function verifyWalletAttestation(p: {
       if (!ref || typeof ref.idx !== "number" || typeof ref.uri !== "string")
         return { ok: false, reason: "WIA client_status malformed" };
       if (p.statusOf !== "none") {
-        const v = await p.statusOf(ref, now);
+        const v = await p.statusOf(ref, now, fp);
         if (v === "INVALID") return { ok: false, reason: "wallet instance revoked (WIA client_status)" };
         if (v === "NONCOMPLIANT") return { ok: false, reason: "WIA status list does not meet the profile" };
         if (v === "UNKNOWN") return { ok: false, reason: "WIA status unavailable", indeterminate: true };

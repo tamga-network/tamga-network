@@ -6,6 +6,7 @@ import type { RelyingParty, ZkCircuit } from "@tamga-network/trust";
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 import { ALL as SCHEMA_DEFS } from "@tamga-network/schemas";
+import { constraintProblems, isRangeConstraint, validRangeConstraint } from "./policy-check.js";
 
 export type Assurance = "I1" | "I2" | "I3";
 export interface PolicyCredential {
@@ -98,6 +99,9 @@ export interface ZkSystemType {
 }
 
 export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {}): DcqlQuery {
+  // Güvenlik incelemesi 2026-11-18: biçimi bozuk aralık kısıtı istek kurulurken reddedilir (T0 doğrulamada güven bloğunu da denetler)
+  const problems = constraintProblems(p);
+  if (problems.length) throw new Error(`policy ${p?.policy_id}: ${problems.join("; ")}`);
   const pseudonym = p.pseudonym
     ? [
         {
@@ -241,9 +245,11 @@ const rank: Record<Assurance, number> = { I1: 1, I2: 2, I3: 3 };
 export const assuranceAtLeast = (have: Assurance, min: Assurance) => rank[have] >= rank[min];
 
 export function constraintOk(value: unknown, cons: unknown): boolean {
-  if (cons !== null && typeof cons === "object" && !Array.isArray(cons)) {
+  if (isRangeConstraint(cons)) {
+    // Güvenlik incelemesi 2026-11-18: bilinmeyen anahtarlı ya da sayısız aralık kısıtı ({ minimum: 18 }) karşılanmış sayılmaz
+    if (!validRangeConstraint(cons)) return false;
     const c = cons as { min?: number; max?: number };
-    if (typeof value !== "number") return false;
+    if (typeof value !== "number" || !Number.isFinite(value)) return false;
     if (c.min !== undefined && value < c.min) return false;
     if (c.max !== undefined && value > c.max) return false;
     return true;

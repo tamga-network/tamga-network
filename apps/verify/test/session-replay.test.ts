@@ -126,8 +126,8 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
       status_token: string;
       dc_api_request?: { protocol: string; data: { request: string } };
     };
-    const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(a)), uri.clientId, LAN);
+    const uri = parseVpUri(created.qr_payload, LAN);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(a), LAN), uri.clientId, LAN);
     return {
       id: created.presentation_id,
       st: created.status_token,
@@ -236,7 +236,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
         copies: [{ combined, keyRef: "r.0", cnf }],
         metadata: meta(ISS, VCT),
       },
-      { now },
+      { now, trust: "none" },
     ).state;
     // kimlik belgesi (SD-JWT + aynı anahtarlı mdoc; DC API köken testi için)
     const idKeyPem = readFileSync(resolve(PKI, "issuer-id.pkcs8.pem"), "utf8");
@@ -299,7 +299,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
         ],
         metadata: meta(ID_ISS, ID_VCT),
       },
-      { now },
+      { now, trust: "none" },
     ).state;
   });
 
@@ -384,8 +384,8 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
 
   it("(3c) kilit dal başına (2026-11-04): başka dalın yanıtı işlenirken gerçek cüzdanın yanıtı 400 almaz ve kabul edilir; eşzamanlı iki geçerli yanıttan yalnız biri kabul", async () => {
     const a = await open(app);
-    const uri = parseVpUri(a.qr);
-    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app)), uri.clientId, LAN);
+    const uri = parseVpUri(a.qr, LAN);
+    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app), LAN), uri.clientId, LAN);
     const p = app.presentations.get(a.id)!;
     // QR'ı gören biri ilk dalı çekti; başka doğrulayıcıya üretilmiş (aud yanlış) yanıtı gönderir — çözülür, A6'ya dek işlenir
     const forOther = await answer({ ...a.req, clientId: "x509_hash:QmFza2FEb2dydWxheWljaQ" });
@@ -401,8 +401,8 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
     // iki dal, iki geçerli yanıt, aynı anda: biri kabul, öteki PV10 (iki kez tamamlanmaz)
     const b = await open(app);
-    const ub = parseVpUri(b.qr);
-    const b2 = verifyRequestObject(await fetchRequestObject(ub.requestUri, http(app)), ub.clientId, LAN);
+    const ub = parseVpUri(b.qr, LAN);
+    const b2 = verifyRequestObject(await fetchRequestObject(ub.requestUri, http(app), LAN), ub.clientId, LAN);
     const both = await Promise.all([postJwe(app, (await answer(b.req)).jwe), postJwe(app, (await answer(b2)).jwe)]);
     expect(both.map((r) => r.statusCode).sort()).toEqual([200, 400]);
     expect(both.find((r) => r.statusCode === 400)!.json().error_description).toMatch(/PV10/);
@@ -432,11 +432,11 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
       });
       expect(r.statusCode).toBe(200);
       const c = r.json() as { presentation_id: string; qr_payload: string; status_token: string };
-      const uri = parseVpUri(c.qr_payload);
+      const uri = parseVpUri(c.qr_payload, LAN);
       return {
         id: c.presentation_id,
         st: c.status_token,
-        req: verifyRequestObject(await fetchRequestObject(uri.requestUri, http(strict)), uri.clientId, LAN),
+        req: verifyRequestObject(await fetchRequestObject(uri.requestUri, http(strict), LAN), uri.clientId, LAN),
       };
     };
     const a = await openS();
@@ -619,7 +619,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
   // ADR-0067 — çekim dalları ve yumuşak ret (sahte ret koruması)
   /** `request_uri`'yi bir kez daha çeker (yeni dal): QR'ı gören herkes bunu yapabilir. */
   const fetchAgain = async (a: typeof app, id: string, clientId: string) =>
-    verifyRequestObject(await fetchRequestObject(`${BASE}/vp/req/${id}`, http(a)), clientId, LAN);
+    verifyRequestObject(await fetchRequestObject(`${BASE}/vp/req/${id}`, http(a), LAN), clientId, LAN);
   const encryptedDecline = (req: VpRequest, state = req.state) =>
     encryptJwe(utf8(JSON.stringify({ error: "access_denied", state })), req.encJwk);
 
@@ -632,10 +632,10 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
         payload: { policy_id: "job-application-degree" },
       })
     ).json() as { presentation_id: string; qr_payload: string; request_uri: string };
-    const uri = parseVpUri(created.qr_payload);
+    const uri = parseVpUri(created.qr_payload, LAN);
     const id = created.presentation_id;
     // gerçek cüzdan çeker (dal 1); QR'ı gören saldırgan iki kez çeker (dal 2, 3)
-    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app)), uri.clientId, LAN);
+    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app), LAN), uri.clientId, LAN);
     const atk2 = await fetchAgain(app, id, uri.clientId!);
     const atk3 = await fetchAgain(app, id, uri.clientId!);
     // state gizlidir: QR'da, request_uri'de ve response_uri'de yok; her dalın state/nonce/anahtarı ayrı
@@ -796,7 +796,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
 
   it("OpenID4VP 1.0 §5.10 cüzdan tarafı (AU4): QR request_uri_method=post taşır; cüzdan POST + wallet_nonce ile çeker, nesnede aynı nonce yoksa reddeder; GET yolu bozulmaz", async () => {
     const a = await open(app);
-    const uri = parseVpUri(a.qr);
+    const uri = parseVpUri(a.qr, LAN);
     expect(uri.requestUriMethod).toBe("post");
     // POST yalnız https adresine (§5.10): sınama sunucusu http — adres https'e çevrilip aynı uygulamaya yönlendirilir
     const seen: Array<{ method?: string; body?: string; headers?: Record<string, string> }> = [];
@@ -819,12 +819,13 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     );
     // http adresine POST yapılmaz
     await expect(fetchRequestObjectFor(uri, https, { randomBytes: bytes })).rejects.toThrow(/https/);
-    // yöntem yoksa GET (eski yol)
-    const g = await fetchRequestObjectFor({ requestUri: uri.requestUri }, http(app));
+    // yöntem yoksa GET (eski yol); 0.8.9: GET de https ister — yerel http yalnız açık izinle
+    await expect(fetchRequestObjectFor({ requestUri: uri.requestUri }, http(app))).rejects.toThrow(/https/);
+    const g = await fetchRequestObjectFor({ requestUri: uri.requestUri }, http(app), LAN);
     expect(g.walletNonce).toBeUndefined();
     expect(verifyRequestObject(g.jwt, uri.clientId, LAN).clientId).toBe(uri.clientId);
     // bilinmeyen yöntem bağlantıda reddedilir
-    expect(() => parseVpUri(`${a.qr.replace("request_uri_method=post", "request_uri_method=PUT")}`)).toThrow(
+    expect(() => parseVpUri(`${a.qr.replace("request_uri_method=post", "request_uri_method=PUT")}`, LAN)).toThrow(
       /request_uri_method/,
     );
     // POST ile çekilen dalla yanıt kabul

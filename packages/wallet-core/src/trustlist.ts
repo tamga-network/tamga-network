@@ -94,7 +94,8 @@ export async function fetchTrustSource(
       rootFingerprints: opts.pins.lotlSigners,
       verifyJws: walletJwsVerifier,
       stateCode: cc,
-      now: new Date(opts.now ?? Date.now()),
+      // `now` yalnız verildiyse geçer (yükleme anı); kaynağın saati her durumda gerçek zamanla ilerler (güvenlik incelemesi 2026-11-18)
+      ...(opts.now !== undefined ? { now: new Date(opts.now) } : {}),
       environment: opts.pins.environment,
       externalLists: opts.externalLists,
       ...(opts.externalListsDirect !== undefined ? { externalListsDirect: opts.externalListsDirect } : {}),

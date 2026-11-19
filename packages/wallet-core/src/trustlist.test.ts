@@ -1,7 +1,7 @@
 /**
  * S-12 (DER ile SAN / SPKI) ve S-13 (imzalı güven listesi) — gerçek dev PKI ve trust-publisher dist'i ile.
  */
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { X509Certificate, createHash } from "node:crypto";
@@ -113,6 +113,22 @@ describe.skipIf(!ready)("S-13: imzalı güven listesi (cüzdan)", () => {
     await expect(
       fetchVerifiedTrust(BASE, httpFor(), { pins: pins(), now: Date.now() + 400 * 86400_000 }),
     ).rejects.toThrow(/stale/);
+  });
+
+  describe("C6-K2: kaynağın saati yükleme anında donmaz (güvenlik incelemesi 2026-11-18)", () => {
+    afterEach(() => vi.useRealTimers());
+    for (const withNow of [false, true])
+      it(`liste next_update'i geçince sorgular UNKNOWN olur (now ${withNow ? "verildi" : "verilmedi"})`, async () => {
+        const { source } = await fetchTrustSource(BASE, httpFor(), {
+          pins: pins(),
+          ...(withNow ? { now: Date.now() } : {}),
+        });
+        expect(source.isCredentialAcceptable("0x00", 0)).toBe("NO"); // taze: kayıt yok
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(Date.now() + 400 * 86400_000);
+        expect(source.isCredentialAcceptable("0x00", 0)).toBe("UNKNOWN"); // bayat: liste artık bilinmiyor
+        expect(source.freshness().healthy).toBe(false);
+      });
   });
 
   it("geri sarma: güncel sürüm görüldükten sonra arşivdeki eski (imzası geçerli) sürüm reddedilir", async () => {

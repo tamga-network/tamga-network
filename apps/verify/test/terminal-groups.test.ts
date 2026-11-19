@@ -286,3 +286,37 @@ describe.skipIf(!ready)("ADR-0069 kapı grupları — Tamga Verify", () => {
     }
   });
 });
+
+describe.skipIf(!ready)(
+  "C1-1 (güvenlik incelemesi 2026-11-18): kapı hız sınırı anahtar başına, kimlikten sonra",
+  () => {
+    it("anahtarsız sel (vekil arkasında tek adres) gerçek kapının kovasını tüketmez; kapının kendi kovası da sınırlı", async () => {
+      const app = await buildVerifyApp(
+        {
+          publicBase: "http://verify.local",
+          port: 0,
+          clientId: "",
+          pkiDir: PKI,
+          trustDist: DIST,
+          stateCode: "TR",
+          trustReloadSec: 60,
+          statusPrefetchSec: 60,
+          dataDir: join(tmpdir(), "tamga-verify-tgrl-" + process.pid),
+          requireRpAuth: false,
+          terminalKeys: "example-events-gate:test-gate-key-0001",
+        },
+        { showcase: true, fetchText: async () => null, rateRules: { terminal: { burst: 2, perMin: 1 } } },
+      );
+      const call = (headers: Record<string, string>) =>
+        app.inject({ method: "POST", url: "/terminal/verify", headers, payload: { token: "bozuk" } });
+      const anon = [];
+      for (let i = 0; i < 4; i++) anon.push((await call({})).statusCode);
+      expect(anon).toEqual([401, 401, 429, 429]); // anahtarsızlar kendi kovasında
+      const key = { authorization: "Bearer test-gate-key-0001" };
+      expect((await call(key)).statusCode).not.toBe(429); // kapının kovası dolu
+      expect((await call(key)).statusCode).not.toBe(429);
+      expect((await call(key)).statusCode).toBe(429); // kapının kovası da sınırlı
+      await app.close();
+    });
+  },
+);

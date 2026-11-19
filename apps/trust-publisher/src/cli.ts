@@ -304,6 +304,15 @@ function writeAtomic(path: string, data: string) {
   writeFileSync(tmp, data);
   renameSync(tmp, path);
 }
+/** Durum dosyasının zaman damgalı arşiv kopyası: `archive/<ad>.<YYYYMMDDTHHMMSSZ>.json` (ne zaman yazılacağına çağıran karar verir). */
+function archiveStateCopy(name: string, json: string, now: Date) {
+  const stamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d+Z$/, "Z");
+  mkdirSync(ARCHIVE, { recursive: true });
+  writeAtomic(resolve(ARCHIVE, `${name}.${stamp}.json`), json);
+}
 /** Bu süreçte imzalı bir liste yayın klasörüne yazıldı mı (kayıt komutu geri alma kararını buna göre verir). */
 let listPublished = false;
 function writeVersioned(file: string, obj: Record<string, unknown>, jws: string) {
@@ -634,14 +643,7 @@ async function publishWrprcStatus(
   const f = WRPRC_STATE_FILE();
   const changed = !existsSync(f) || readFileSync(f, "utf8") !== json;
   writeAtomic(f, json);
-  if (changed) {
-    mkdirSync(ARCHIVE, { recursive: true });
-    const stamp = now
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d+Z$/, "Z");
-    writeAtomic(resolve(ARCHIVE, `wrprc-status.${stamp}.json`), json);
-  }
+  if (changed) archiveStateCopy("wrprc-status", json, now);
 }
 /** Kayıt kurumu imzacısı (LOTL `roles.registrar.signing_certs[0]`); anahtar yoksa null. */
 async function registrarSigner(lotlSrc: Record<string, unknown>, cc: string) {
@@ -774,14 +776,15 @@ function accessCrlConfig(lotlSrc: Record<string, unknown>, cc: string): AccessCr
 }
 const ACCESS_CRL_STATE_FILE = () => resolve(DIST, "access-crl-state.json");
 /**
- * Kalıcı durum. Dosya yoksa ve bir makamın CRL'i daha önce yayımlanmışsa durum yayımlanmış CRL'den kurulur (iptaller CRL'in
- * kendisinde imzalıdır; kaybolan yalnız "görülen sertifikalar" listesidir) ve CHANGELOG'a yazılır.
+ * Kalıcı durum. Dosya yoksa ya da dosyada ayardaki bir makamın kaydı yoksa ve o makamın CRL'i daha önce yayımlanmışsa makamın
+ * durumu yayımlanmış CRL'den kurulur (iptaller CRL'in kendisinde imzalıdır; kaybolan yalnız "görülen sertifikalar" listesidir) ve
+ * CHANGELOG'a yazılır — CRL numarası geri gitmez (RFC 5280 §5.2.3), iptaller kaybolmaz.
  */
 function readAccessCrlState(cfg: AccessCrlConfig, now: Date): AccessCrlState {
   const f = ACCESS_CRL_STATE_FILE();
-  if (existsSync(f)) return readJson(f) as AccessCrlState;
-  const st = emptyAccessCrlState();
+  const st = existsSync(f) ? (readJson(f) as AccessCrlState) : emptyAccessCrlState();
   for (const c of cfg.issuers) {
+    if (st.issuers.some((x) => x.ca === c.ca)) continue;
     const pub = resolve(DIST, crlFileOf(c.uri));
     if (!existsSync(pub)) continue;
     st.issuers.push(recoverIssuerState(c.ca, c.uri, new Uint8Array(readFileSync(pub)), now));
@@ -792,16 +795,11 @@ function readAccessCrlState(cfg: AccessCrlConfig, now: Date): AccessCrlState {
 function writeAccessCrlState(state: AccessCrlState, now: Date) {
   const json = JSON.stringify(state, null, 2) + "\n";
   const f = ACCESS_CRL_STATE_FILE();
-  const changed = !existsSync(f) || readFileSync(f, "utf8") !== json;
+  // arşiv kopyası yalnız iptal / görülen sertifika değişince: saatlik yeniden imzada yalnız CRL numarası artar (arşiv büyümesin)
+  const withoutNumbers = (st: AccessCrlState) => JSON.stringify(st.issuers.map(({ crl_number: _n, ...rest }) => rest));
+  const changed = !existsSync(f) || withoutNumbers(readJson(f) as AccessCrlState) !== withoutNumbers(state);
   writeAtomic(f, json);
-  if (changed) {
-    mkdirSync(ARCHIVE, { recursive: true });
-    const stamp = now
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d+Z$/, "Z");
-    writeAtomic(resolve(ARCHIVE, `access-crl-state.${stamp}.json`), json);
-  }
+  if (changed) archiveStateCopy("access-crl-state", json, now);
 }
 /** Atomik ikili yazım (CRL DER). */
 function writeAtomicBytes(path: string, data: Uint8Array) {
@@ -999,14 +997,7 @@ async function historyReset(args: string[]) {
     const s = await registrarSigner(lotlSrc, cc);
     if (!s) throw new Error("ADR-0068: kayıt kurumu anahtarı yok — durum listesi imzalanamaz");
     await publishWrprcStatus(wrprcState, pol, s, now); // bitler aynı; durum dosyası + (değiştiyse) arşiv kopyası
-    if (!archivedWrprcStates().length) {
-      const stamp = now
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d+Z$/, "Z");
-      mkdirSync(ARCHIVE, { recursive: true });
-      writeAtomic(resolve(ARCHIVE, `wrprc-status.${stamp}.json`), curJson!);
-    }
+    if (!archivedWrprcStates().length) archiveStateCopy("wrprc-status", curJson!, now);
   }
 
   // 3. CHANGELOG yeniden başlar (yalnız bir temizlik satırı)
@@ -2316,7 +2307,9 @@ const cmd = process.argv[2];
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));
     await refreshWrprcStatus(); // ADR-0068: kayıt sertifikası durum listesi her saat yeniden imzalanır
-    await refreshAccessCrls(); // ADR-0087: erişim sertifikası iptal listesi her saat yeniden imzalanır (nextUpdate 24 saat)
+    // ADR-0087: erişim sertifikası iptal listesi her saat yeniden imzalanır (nextUpdate 24 saat) — kayıt kilidi altında: aynı anda
+    // çalışan `crl-revoke` / `build` ile durum dosyası ve CRL numarası yarışmasın (iptal kaybolmasın, iki CRL aynı numarayı almasın)
+    await withDirLock("registry.lock", () => refreshAccessCrls());
     await afterPublish();
   } else if (cmd === "anchor") {
     const row = {

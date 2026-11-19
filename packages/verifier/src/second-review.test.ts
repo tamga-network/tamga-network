@@ -24,6 +24,8 @@ import { scopeCovers } from "./policy.js";
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
 const DIST = resolve(ROOT, "apps/trust-publisher/dist-test");
+/** heartbeat'siz test dist'i: geniş çapa tazelik sınırı açıkça (paket varsayılanı 2 saat — güvenlik incelemesi 2026-11-18) */
+const DEV_DIST = { anchorMaxAgeMs: 365 * 86400_000 };
 const ready = existsSync(resolve(PKI, "issuer-bilgi.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const AUD = existsSync(resolve(PKI, "rp-verify.cert.pem"))
   ? x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8")))
@@ -123,7 +125,17 @@ describe("returnedClaims / isLocalUrl / T0 (birim)", () => {
 
   it("T0: `max_anchor_lag_sec` verilmişse sayı olmalı (bozuk değer denetimi sessizce kapatmaz)", () => {
     const ctxWith = (freshness: unknown) =>
-      ({ fr: { healthy: true, ageSec: 10 }, input: { policy: { freshness } }, done: [] }) as unknown as VerifyCtx;
+      ({
+        fr: { healthy: true, ageSec: 10 },
+        input: {
+          policy: {
+            trust: { min_issuer_assurance: "I1", allowed_categories: [], require_recognition: false, state_code: "TR" },
+            credentials: [],
+            freshness,
+          },
+        },
+        done: [],
+      }) as unknown as VerifyCtx;
     const base = { max_trust_age_sec: 86400, max_status_token_age_sec: 3600 };
     expect(stepT0(ctxWith({ ...base, max_anchor_lag_sec: 600 }))).toBeUndefined();
     for (const bad of ["600", -1, Number.NaN, Number.POSITIVE_INFINITY])
@@ -158,7 +170,7 @@ describe.skipIf(!ready)("ikinci inceleme — verifyPresentation (dev PKI + dist)
     graduated_before: 2026,
   };
   beforeAll(async () => {
-    const r = await loadTrustSourceFromDir(DIST);
+    const r = await loadTrustSourceFromDir(DIST, DEV_DIST);
     trust = r.trust;
     rootDer = [pemToDer(r.rootCertPem!)];
   });

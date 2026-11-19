@@ -75,6 +75,7 @@ describe("sessiz yenileme zamanlaması", () => {
     };
     let calls = 0;
     const r = await autoRefreshCredential({
+      receive: { trust: "none" },
       state: st(cred(9, now + 86400)),
       credentialId: "c",
       keys: quiet,
@@ -107,6 +108,7 @@ describe("sessiz yenileme zamanlaması", () => {
     };
     const urls: string[] = [];
     const r = await autoRefreshCredential({
+      receive: { trust: "none" },
       state: st(cred(9, now + 86400)),
       credentialId: "c",
       keys: quiet,
@@ -121,6 +123,28 @@ describe("sessiz yenileme zamanlaması", () => {
     expect(r).toMatchObject({ ok: false, revoked: false, reason: "auth_required" });
     expect(urls).toEqual([]); // token uç noktasına hiç gidilmedi
     expect(r.state.credentials[0].refresh!.token).toBe("t");
+  });
+
+  it("C6-K1: güven kaynağı verilmezse yenileme AĞA ÇIKMADAN reddedilir (belirteç harcanmaz)", async () => {
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("d");
+    const urls: string[] = [];
+    const run = autoRefreshCredential as unknown as (p: unknown) => Promise<unknown>;
+    await expect(
+      run({
+        state: st(cred(9, now + 86400)),
+        credentialId: "c",
+        keys,
+        http: async (url: string) => {
+          urls.push(url);
+          return { status: 200, text: async () => "{}" };
+        },
+        wua: { jwt: "w", keyRef: "d" },
+        randomBytes: (n: number) => crypto.getRandomValues(new Uint8Array(n)),
+        now,
+      }),
+    ).rejects.toThrow(/trust source missing/);
+    expect(urls).toEqual([]);
   });
 
   it("değişimden sonra imza düşerse yeni yenileme belirteci ve DPoP anahtarı KORUNUR (bağ kopmaz)", async () => {
@@ -159,6 +183,7 @@ describe("sessiz yenileme zamanlaması", () => {
       };
     };
     const r = await autoRefreshCredential({
+      receive: { trust: "none" },
       state: st(cred(9, now + 86400)),
       credentialId: "c",
       keys,
@@ -171,6 +196,58 @@ describe("sessiz yenileme zamanlaması", () => {
     expect(r).toMatchObject({ ok: false, revoked: false, reason: "auth_required", removedKeyRefs: [] });
     expect(r.state.credentials[0].refresh!.token).toBe("t2"); // döndürülen belirteç saklandı
     expect(await inner.publicKey("d")).not.toBeNull(); // DPoP anahtarı silinmedi
+  });
+
+  it("denetim turu D: belirteç döndürüldükten sonra kurumun gönderdiği kopya alınamazsa istisna yok — yeni belirteç saklanır, yeni kopya anahtarları silinir", async () => {
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("d");
+    await keys.generate("wia.x");
+    const http = async (url: string, init?: { body?: string }) => {
+      if (url === "https://i/token")
+        return { status: 200, text: async () => JSON.stringify({ access_token: "a", refresh_token: "t2" }) };
+      if (url === "https://i/nonce") return { status: 200, text: async () => JSON.stringify({ c_nonce: "n" }) };
+      if (url === "https://i/credential") {
+        // kopya sayısı kadar yanıt, ama hiçbiri geçerli belge değil (alma adımı reddeder)
+        const n = (JSON.parse(init?.body ?? "{}") as { proofs?: { jwt?: string[] } }).proofs?.jwt?.length ?? 1;
+        return {
+          status: 200,
+          text: async () => JSON.stringify({ credentials: Array.from({ length: n }, () => ({ credential: "bozuk" })) }),
+        };
+      }
+      return {
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            credential_issuer: "https://i",
+            credential_endpoint: "https://i/credential",
+            nonce_endpoint: "https://i/nonce",
+            credential_configurations_supported: { v: { format: "dc+sd-jwt", vct: "v" } },
+          }),
+      };
+    };
+    const generated: string[] = [];
+    const tracked: KeyProvider = {
+      generate: async (ref) => (generated.push(ref), keys.generate(ref)),
+      publicKey: (ref) => keys.publicKey(ref),
+      delete: (ref) => keys.delete(ref),
+      attestation: () => keys.attestation(),
+      sign: (ref, d) => keys.sign(ref, d),
+    };
+    const r = await autoRefreshCredential({
+      receive: { trust: "none" },
+      state: st(cred(9, now + 86400)),
+      credentialId: "c",
+      keys: tracked,
+      http: http as never,
+      wua: { jwt: "w", keyRef: "wia.x" } as never,
+      randomBytes: (n) => crypto.getRandomValues(new Uint8Array(n)),
+      now,
+    });
+    expect(r).toMatchObject({ ok: false, revoked: false });
+    expect(r.state.credentials[0].refresh!.token).toBe("t2"); // döndürülen belirteç saklandı
+    expect(generated.length).toBeGreaterThan(0);
+    for (const ref of generated) expect(await keys.publicKey(ref)).toBeNull(); // yetim kopya anahtarı kalmaz
+    expect(await keys.publicKey("d")).not.toBeNull(); // DPoP anahtarı silinmedi
   });
 
   it("değişen alanlar: teknik alanlar (cnf, iat, exp …) sayılmaz", () => {
@@ -193,6 +270,7 @@ describe("ADR-0060 K2: invalid_grant ile bağ kalkınca örnek anahtarı", () =>
     await keys.generate("d");
     await keys.generate("inst.1");
     return autoRefreshCredential({
+      receive: { trust: "none" },
       state,
       credentialId: "c",
       keys,

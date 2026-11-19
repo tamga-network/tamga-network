@@ -36,7 +36,7 @@ Layihə rəhbərliyinin istəyi (2026-09-27): sənədlər Aİ-dəki kimi ayrıls
 | **Tamga ARF** | `arf.tamga.network` (VitePress, `tamga-network/arf`) | tənzimləyici, qurum, auditor | əsas sənəd (FW-ARF-0001) + Əlavə A Trust Framework + Əlavə B iştirakçı qaydaları + Əlavə C attestation rulebook-ları |
 
 Hər qapı digər ikisinə görünən keçid verir. Çərçivə sənədlərinin **yeganə ictimai yeri** `arf.tamga.network` ünvanıdır;
-`docs.tamga.network` onları yenidən dərc etmir, `[[FW-*]]` istinadlarını ARF saytına bağlayır.
+`docs.tamga.network` onları yenidən dərc etmir, `FW-*` istinadlarını ARF saytına bağlayır.
 
 ## K2 — Ad və domen adı
 

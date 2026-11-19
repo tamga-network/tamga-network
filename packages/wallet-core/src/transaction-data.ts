@@ -87,6 +87,18 @@ export function parseTransactionData(
 /** Ek B.3.3.1: KB-JWT `transaction_data_hashes` öğesi — gelen dizginin SHA-256'sı, base64url. */
 export const transactionDataHash = (raw: string): string => b64u(sha256(utf8(raw)));
 
-/** Bir DCQL sorgusuna (`queryId`) bağlanan öğeler. */
-export const transactionDataFor = (items: readonly TransactionDataItem[] | undefined, queryId: string) =>
-  (items ?? []).filter((t) => t.credentialIds.includes(queryId));
+/**
+ * Bir DCQL sorgusuna (`queryId`) bağlanan öğeler. `presentedQueryIds` (yanıttaki SD-JWT VC sunumlarının sorgu kimlikleri) verilirse
+ * `respond`'un kuralı uygulanır: öğe, `credential_ids` sırasında yanıtta bulunan İLK sorguya bağlanır (OpenID4VP 1.0 §5.1: birden
+ * çok kimlik varsa yalnız biri kullanılır). Verilmezse öğeyi bu sorguya bağlayabilecek bütün öğeler döner.
+ */
+export const transactionDataFor = (
+  items: readonly TransactionDataItem[] | undefined,
+  queryId: string,
+  presentedQueryIds?: readonly string[],
+) =>
+  (items ?? []).filter((t) =>
+    presentedQueryIds
+      ? t.credentialIds.find((id) => presentedQueryIds.includes(id)) === queryId
+      : t.credentialIds.includes(queryId),
+  );

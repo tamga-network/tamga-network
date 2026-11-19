@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-19 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -105,20 +105,29 @@ follows from this absence and from the issuer's class in the trust list.
 | `family_name`                    | Family name                                                                                                                                                                          | string (1–150)                                                                                | `Yılmaz`                        |
 | `given_name`                     | Given name                                                                                                                                                                           | string (1–150)                                                                                | `Ayşe`                          |
 | `birthdate`                      | Date of birth                                                                                                                                                                        | date (YYYY-MM-DD)                                                                             | `1990-04-12`                    |
-| `nationalities`                  | Nationalities; unknown `QU`, stateless `QS`                                                                                                                                          | array of ISO 3166-1 alpha-2 (at least one)                                                    | `["TR"]`                        |
+| `nationalities`                  | Nationalities; read from the verified document (see the note below)                                                                                                                  | array of ISO 3166-1 alpha-2 (at least one)                                                    | `["TR"]`                        |
 | `personal_administrative_number` | National identity number; only in this type                                                                                                                                          | string (5–32)                                                                                 | `12345678901`                   |
 | `document_type`                  | Type of the verified document                                                                                                                                                        | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE`                            | `ID_CARD`                       |
 | `document_number_hash`           | Keyed digest of the document number (HMAC-SHA256; the key stays in the identity service); the number itself is absent and cannot be recovered                                        | `sha256-…`                                                                                    | `sha256-q1…`                    |
 | `issuing_country`                | In the EU PID sense, the country of the provider that issued the credential; today the value is the country that issued the scanned identity document (§4.6)                         | ISO 3166-1 alpha-2                                                                            | `TR`                            |
 | `document_chip_verified`         | Whether the chip path fully passed: passive authentication of the chip, the clone check and the match of the live face with the chip photo, together (a fact, not a level; ADR-0083) | boolean                                                                                       | `true`                          |
 | `verification_method`            | How identity was verified; `review-demo` only in the demo credential issued for app store review                                                                                     | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
+| `issuing_authority`              | Issuing authority: the name of the provisional operator; in every copy (ADR-0091)                                                                                                    | string (1–150)                                                                                | `Tamga Network (provisional)`   |
+| `date_of_expiry`                 | End of administrative validity: the end of the identity record, in every copy; separate from the copy's technical `exp` (§6.1, [[ADR-0089]] K2)                                      | date (YYYY-MM-DD)                                                                             | `2028-10-10`                    |
+
+> **What the identity service does today (2026-11-19, audit round).** The nationality is read from the verified document. If
+> the identity verification provider gives none, the issuing country counts as the nationality only for an identity card and a
+> passport (an inference: these documents are issued to citizens); for a residence permit, or when the country cannot be read, no
+> credential is issued and the application goes to manual review. The identity service does not write `QU` (unknown nationality)
+> or `QS` (stateless) today; these values are defined in the EU PID encoding and fit the schema's format, but do not appear in the
+> Tamga identity credential today. The identity service writes `issuing_authority` and `date_of_expiry` into every copy; the type
+> schema (JSON Schema `required`) does not make these two attributes mandatory.
 
 **ZK copy (`ShortLivedIdentityAttestation`)**
 
-| Data identifier | Definition                                                                               | Data type | Example value |
-| --------------- | ---------------------------------------------------------------------------------------- | --------- | ------------- |
-| `age_over_18`   | Whether the person is over 18; the only element that can be proven with ZK               | boolean   | `true`        |
-| `age_over_15`   | Whether the person is over 15; an element that can only be proven with ZK ([[ADR-0064]]) | boolean   | `true`        |
+| Data identifier | Definition                                                                                                             | Data type | Example value |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- | ------------- |
+| `age_over_18`   | Whether the person is over 18; an element that can only be proven with ZK; the only mandatory element of the ZK schema | boolean   | `true`        |
 
 **Pseudonym seed (`PseudonymSeed`)**
 
@@ -144,29 +153,32 @@ follows from this absence and from the issuer's class in the trust list.
 
 ### 2.3 Optional attributes
 
-| Type                        | Data identifier      | Definition                                                                                                                                                                                                           | Data type | Example value |
-| --------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------- |
-| Identity credential         | `age_over_18`        | Derived from the date of birth; in age verification only this attribute is disclosed. Not in the EU PID set; a Tamga attribute with the ISO/IEC 18013-5 name ([[ADR-0045]] K3)                                       | boolean   | `true`        |
-| Identity credential         | `age_over_15`        | Derived from the date of birth with the same rule; ISO/IEC 18013-5 `age_over_NN` pattern. The identity credential's age thresholds are a closed set (15, 18); a new threshold is added only by ADR ([[ADR-0064]] K2) | boolean   | `true`        |
-| Driving licence information | `birth_date`         | Date of birth if on the card (ISO/IEC 18013-5 mDL name)                                                                                                                                                              | date      | `1990-04-12`  |
-| Driving licence information | `licence_issue_date` | Issue date of the card (if present)                                                                                                                                                                                  | date      | `2024-06-01`  |
-| Driving licence information | `age_over_18`        | Derived                                                                                                                                                                                                              | boolean   | `true`        |
+| Type                        | Data identifier      | Definition                                                                                                                                                                                                                                                                                                   | Data type | Example value |
+| --------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------- |
+| Identity credential         | `age_over_18`        | Derived from the date of birth; in age verification only this attribute is disclosed. Not in the EU PID set; a Tamga attribute with the ISO/IEC 18013-5 name ([[ADR-0045]] K3)                                                                                                                               | boolean   | `true`        |
+| Identity credential         | `age_over_15`        | Derived from the date of birth with the same rule; ISO/IEC 18013-5 `age_over_NN` pattern. The identity credential's age thresholds are a closed set (15, 18); a new threshold is added only by ADR ([[ADR-0064]] K2)                                                                                         | boolean   | `true`        |
+| ZK copy                     | `age_over_15`        | Whether the person is over 15; an element that can only be proven with ZK ([[ADR-0064]]). The identity service writes it only if the main identity credential carries the attribute (a copy of a credential issued before the attribute was added has none); the ZK schema does not make it mandatory (§7.2) | boolean   | `true`        |
+| Driving licence information | `birth_date`         | Date of birth if on the card (ISO/IEC 18013-5 mDL name)                                                                                                                                                                                                                                                      | date      | `1990-04-12`  |
+| Driving licence information | `licence_issue_date` | Issue date of the card (if present)                                                                                                                                                                                                                                                                          | date      | `2024-06-01`  |
+| Driving licence information | `age_over_18`        | Derived                                                                                                                                                                                                                                                                                                      | boolean   | `true`        |
 
 ### 2.4 Conditional attributes
 
-None.
+| Type                | Data identifier  | Condition and definition                                                                                                                                                                                | Data type                                                          | Example value                    |
+| ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------- |
+| Identity credential | `place_of_birth` | Place of birth (EU PID structure); written only if the verified document carries the place of birth — the text on the document as `locality`; absent when the document does not carry it ([[ADR-0091]]) | object `{country?, region?, locality?}` (at least one; text ≤ 150) | `{"locality": "MADRID, MADRID"}` |
 
 ### 2.5 Mandatory metadata
 
-| Data identifier | Definition                                                                                          | Data type   | Example value                                                                 |
-| --------------- | --------------------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `iss`           | The issuer's address (identity service)                                                             | URI         | `https://id.tamga.network`                                                    |
-| `vct`           | Type (SD-JWT VC); the mdoc docType is the same value                                                | URN         | `urn:tamga:id:IdentityAttestation:1`                                          |
-| `vct#integrity` | Digest of the type definition in the catalogue (RB-SCH-01)                                          | `sha256-…`  | `sha256-…`                                                                    |
-| `iat`           | Moment of issuance; mdoc `validityInfo.signed`                                                      | NumericDate | `1791763200`                                                                  |
-| `exp`           | End of validity; mdoc `validityInfo.validUntil` (§6.1)                                              | NumericDate | `1854835200`                                                                  |
-| `cnf`           | The wallet's device key (holder binding); mdoc `deviceKeyInfo`                                      | JWK         | —                                                                             |
-| `status`        | Status list reference `status_list {idx, uri}`; absent in the ZK copy and the pseudonym seed (§6.2) | object      | `{"status_list":{"idx":48213,"uri":"https://status.tamga.network/7f3a9c21"}}` |
+| Data identifier | Definition                                                                                          | Data type   | Example value                                                                    |
+| --------------- | --------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `iss`           | The issuer's address (identity service)                                                             | URI         | `https://id.tamga.network`                                                       |
+| `vct`           | Type (SD-JWT VC); the mdoc docType is the same value                                                | URN         | `urn:tamga:id:IdentityAttestation:1`                                             |
+| `vct#integrity` | Digest of the type definition in the catalogue (RB-SCH-01)                                          | `sha256-…`  | `sha256-…`                                                                       |
+| `iat`           | Moment of issuance; mdoc `validityInfo.signed`                                                      | NumericDate | `1791763200`                                                                     |
+| `exp`           | End of validity; mdoc `validityInfo.validUntil` (§6.1)                                              | NumericDate | `1854835200`                                                                     |
+| `cnf`           | The wallet's device key (holder binding); mdoc `deviceKeyInfo`                                      | JWK         | —                                                                                |
+| `status`        | Status list reference `status_list {idx, uri}`; absent in the ZK copy and the pseudonym seed (§6.2) | object      | `{"status_list":{"idx":48213,"uri":"https://id.tamga.network/status/7f3a9c21"}}` |
 
 The identity of the issuer (Annex V b) is in the signature header: `x5c` (leaf + intermediate certificate, root excluded).
 
@@ -201,20 +213,23 @@ Element values are the same as in the SD-JWT VC except for dates. The MSO carrie
 `application/statuslist+cwt`, [[ADR-0048]] K3, packages 0.6.0). The signature is ES256 (COSE); `x5chain` is the same issuer
 certificate.
 
-| Data identifier                  | Element identifier               | Encoding                    | Namespace    |
-| -------------------------------- | -------------------------------- | --------------------------- | ------------ |
-| `family_name`                    | `family_name`                    | tstr                        | `tamga.id.1` |
-| `given_name`                     | `given_name`                     | tstr                        | `tamga.id.1` |
-| `birthdate`                      | `birth_date`                     | full-date                   | `tamga.id.1` |
-| `nationalities`                  | `nationality`                    | [+ tstr] (array of alpha-2) | `tamga.id.1` |
-| `personal_administrative_number` | `personal_administrative_number` | tstr                        | `tamga.id.1` |
-| `document_type`                  | `document_type`                  | tstr                        | `tamga.id.1` |
-| `document_number_hash`           | `document_number_hash`           | tstr                        | `tamga.id.1` |
-| `issuing_country`                | `issuing_country`                | tstr                        | `tamga.id.1` |
-| `document_chip_verified`         | `document_chip_verified`         | bool                        | `tamga.id.1` |
-| `verification_method`            | `verification_method`            | tstr                        | `tamga.id.1` |
-| `age_over_18`                    | `age_over_18`                    | bool                        | `tamga.id.1` |
-| `age_over_15`                    | `age_over_15`                    | bool                        | `tamga.id.1` |
+| Data identifier                  | Element identifier               | Encoding                                | Namespace    |
+| -------------------------------- | -------------------------------- | --------------------------------------- | ------------ |
+| `family_name`                    | `family_name`                    | tstr                                    | `tamga.id.1` |
+| `given_name`                     | `given_name`                     | tstr                                    | `tamga.id.1` |
+| `birthdate`                      | `birth_date`                     | full-date                               | `tamga.id.1` |
+| `nationalities`                  | `nationality`                    | [+ tstr] (array of alpha-2)             | `tamga.id.1` |
+| `personal_administrative_number` | `personal_administrative_number` | tstr                                    | `tamga.id.1` |
+| `document_type`                  | `document_type`                  | tstr                                    | `tamga.id.1` |
+| `document_number_hash`           | `document_number_hash`           | tstr                                    | `tamga.id.1` |
+| `issuing_country`                | `issuing_country`                | tstr                                    | `tamga.id.1` |
+| `place_of_birth`                 | `place_of_birth`                 | `map {? country, ? region, ? locality}` | `tamga.id.1` |
+| `issuing_authority`              | `issuing_authority`              | tstr                                    | `tamga.id.1` |
+| `date_of_expiry`                 | `expiry_date`                    | full-date                               | `tamga.id.1` |
+| `document_chip_verified`         | `document_chip_verified`         | bool                                    | `tamga.id.1` |
+| `verification_method`            | `verification_method`            | tstr                                    | `tamga.id.1` |
+| `age_over_18`                    | `age_over_18`                    | bool                                    | `tamga.id.1` |
+| `age_over_15`                    | `age_over_15`                    | bool                                    | `tamga.id.1` |
 
 Names and encoding follow EU PID Table 6 ([[ADR-0045]] K2); the name table is in the open packages (`@tamga-network/core/pid`).
 The namespace `tamga.id.1` is a Tamga-specific namespace (ARB_10): the credential is not a PID, so `eu.europa.ec.eudi.pid.1` is not
@@ -226,7 +241,7 @@ used.
 docType: "urn:tamga:id:IdentityAttestation:1"
 nameSpaces: { "tamga.id.1": [ { elementIdentifier: "age_over_18", elementValue: true } ] }
 MSO.validityInfo: { signed: 2026-10-11T08:00:00Z, validFrom: 2026-10-11T08:00:00Z, validUntil: 2028-10-10T08:00:00Z }
-MSO.status: { status_list: { idx: 48213, uri: "https://status.tamga.network/7f3a9c21" } }
+MSO.status: { status_list: { idx: 48213, uri: "https://id.tamga.network/status/7f3a9c21" } }
 ```
 
 ### 3.2 SD-JWT VC
@@ -250,17 +265,20 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
 
 **Identity credential — EU PID names and Tamga-specific names**
 
-| Data identifier                                              | Claim name                       | Encoding          | Notes                               | Disclosable |
-| ------------------------------------------------------------ | -------------------------------- | ----------------- | ----------------------------------- | ----------- |
-| `personal_administrative_number`                             | `personal_administrative_number` | string            | EU PID name                         | MUST        |
-| `issuing_country`                                            | `issuing_country`                | string (alpha-2)  | EU PID name (§4.6)                  | MUST        |
-| `document_type`                                              | `document_type`                  | string (set)      | Tamga-specific                      | MUST        |
-| `document_number_hash`                                       | `document_number_hash`           | string `sha256-…` | Tamga-specific                      | MUST        |
-| `document_chip_verified`                                     | `document_chip_verified`         | boolean           | Tamga-specific                      | MUST        |
-| `verification_method`                                        | `verification_method`            | string (set)      | Tamga-specific                      | MUST        |
-| `age_over_18`                                                | `age_over_18`                    | boolean           | ISO/IEC 18013-5 name                | MUST        |
-| `age_over_15`                                                | `age_over_15`                    | boolean           | ISO/IEC 18013-5 name ([[ADR-0064]]) | MUST        |
-| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | same                             | —                 | transport profile                   | MUST NOT    |
+| Data identifier                                              | Claim name                       | Encoding           | Notes                                                               | Disclosable |
+| ------------------------------------------------------------ | -------------------------------- | ------------------ | ------------------------------------------------------------------- | ----------- |
+| `personal_administrative_number`                             | `personal_administrative_number` | string             | EU PID name                                                         | MUST        |
+| `issuing_country`                                            | `issuing_country`                | string (alpha-2)   | EU PID name (§4.6)                                                  | MUST        |
+| `place_of_birth`                                             | `place_of_birth`                 | JSON object        | EU PID name; conditional — only if on the document (§2.4, ADR-0091) | MUST        |
+| `issuing_authority`                                          | `issuing_authority`              | string             | EU PID metadata (ADR-0091)                                          | MUST        |
+| `date_of_expiry`                                             | `date_of_expiry`                 | string, YYYY-MM-DD | EU PID name; administrative expiry ([[ADR-0089]] K2)                | MUST        |
+| `document_type`                                              | `document_type`                  | string (set)       | Tamga-specific                                                      | MUST        |
+| `document_number_hash`                                       | `document_number_hash`           | string `sha256-…`  | Tamga-specific                                                      | MUST        |
+| `document_chip_verified`                                     | `document_chip_verified`         | boolean            | Tamga-specific                                                      | MUST        |
+| `verification_method`                                        | `verification_method`            | string (set)       | Tamga-specific                                                      | MUST        |
+| `age_over_18`                                                | `age_over_18`                    | boolean            | ISO/IEC 18013-5 name                                                | MUST        |
+| `age_over_15`                                                | `age_over_15`                    | boolean            | ISO/IEC 18013-5 name ([[ADR-0064]])                                 | MUST        |
+| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | same                             | —                  | transport profile                                                   | MUST NOT    |
 
 **Pseudonym seed**
 
@@ -292,7 +310,7 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
   "iat": 1791763200,
   "exp": 1854835200,
   "cnf": { "jwk": { "kty": "EC", "crv": "P-256", "x": "…", "y": "…" } },
-  "status": { "status_list": { "idx": 48213, "uri": "https://status.tamga.network/7f3a9c21" } },
+  "status": { "status_list": { "idx": 48213, "uri": "https://id.tamga.network/status/7f3a9c21" } },
   "family_name": "Yılmaz",
   "given_name": "Ayşe",
   "birthdate": "1990-04-12",
@@ -304,7 +322,9 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
   "document_chip_verified": false,
   "verification_method": "remote-document-liveness-face",
   "age_over_18": true,
-  "age_over_15": true
+  "age_over_15": true,
+  "issuing_authority": "Tamga Network (provisional)",
+  "date_of_expiry": "2028-10-10"
 }
 ```
 
@@ -420,8 +440,8 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
 | `age_over_18`                                                                            | `age_over_18`                                  | — (separate age verification credential)                                | —                                |
 | `age_over_15`                                                                            | `age_over_15`                                  | — (separate age verification credential)                                | —                                |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | same                                           | no equivalent (Tamga-specific)                                          | no equivalent                    |
-| no equivalent                                                                            | no equivalent                                  | `place_of_birth` (place of birth: country, region, locality; mandatory) | `place_of_birth`                 |
-| no equivalent (the issuer is known from `iss` and the `x5c` certificate)                 | no equivalent                                  | `issuing_authority` (mandatory metadata)                                | `issuing_authority`              |
+| `place_of_birth` (only if the verified document carries it; ADR-0091)                    | `place_of_birth`                               | `place_of_birth` (place of birth: country, region, locality; mandatory) | `place_of_birth`                 |
+| `issuing_authority` (`Tamga Network (provisional)`; ADR-0091)                            | `issuing_authority`                            | `issuing_authority` (mandatory metadata)                                | `issuing_authority`              |
 | `date_of_expiry` (administrative expiry; separate from the copy's technical `exp`)       | `expiry_date`                                  | `date_of_expiry` (optional)                                             | `expiry_date`                    |
 | no equivalent                                                                            | no equivalent                                  | `date_of_issuance` (optional)                                           | `issuance_date`                  |
 
@@ -433,12 +453,13 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
 > the country of the state that issued the PID; in Tamga the issuer is the identity service (Tamga), so the value shows the state
 > that issued the identity card or passport.
 
-> **PID attributes with no equivalent (2026-11-16).** `place_of_birth` and `issuing_authority` are mandatory in the EU PID; the
-> Tamga identity credential does not carry them today. Adding the place of birth is a separate decision that depends on whether
-> the identity verification provider supplies it reliably; `issuing_authority` is filled with the name of a state PID provider
-> when one arrives (§4.7). A verifier therefore cannot use the Tamga identity credential in place of an EU PID. The administrative expiry is
-> written as `date_of_expiry` (mdoc `expiry_date`), separate from the copy's technical `exp` ([[ADR-0089]] K2); `date_of_issuance`
-> is not written (§6.1).
+> **The EU PID's mandatory attributes (2026-11-16; updated in the audit round, 2026-11-19).** Since [[ADR-0091]] the identity
+> service writes `issuing_authority` into every copy with the name of the provisional operator (`Tamga Network (provisional)`);
+> when a state PID provider arrives, its name is used (§4.7). `place_of_birth` is conditional: it is written only if the verified
+> document carries the place of birth (§2.4). Because the place of birth, mandatory in the EU PID, is not always present in the
+> Tamga identity credential, and the credential is not a PID, a verifier cannot use the Tamga identity credential in place of an
+> EU PID. The administrative expiry is written in every copy as `date_of_expiry` (mdoc `expiry_date`), separate from the copy's
+> technical `exp` ([[ADR-0089]] K2); `date_of_issuance` is not written (§6.1).
 
 ### 4.7 Hand-over — state PID provider
 
@@ -509,8 +530,9 @@ Technical and administrative validity are separate: the identity credential's ad
 | Pseudonym seed              | No status list; never presented                                                                                                                                                             | —                                                                                                                                                          |
 | Driving licence information | **Yes, mandatory**                                                                                                                                                                          | Token Status List                                                                                                                                          |
 
-- **Status list address (ARB_24a):** `status.status_list.uri` in each credential; the identity service's lists are under
-  `https://status.tamga.network/`. The address is opaque and encodes no institution, year or group (RB-AP-18).
+- **Status list address (ARB_24a):** `status.status_list.uri` in each credential; the identity service's lists are at the
+  identity service's own address, under `https://id.tamga.network/status/`. The list identifier is opaque and encodes no
+  institution, year or group (RB-AP-18).
 - **Publication:** at a fixed interval (today 2 minutes), even without changes; a list is valid for 6 hours; there is no
   out-of-cycle publication (RB-AP-17, [[SPEC-CRED-0003]] §5). Revocation takes effect within minutes (RB-GEN-10).
 - **Values:** `bits = 1` — valid or revoked. The identity service's types have **no suspension**, and revocation is permanent (the
@@ -537,12 +559,13 @@ Technical and administrative validity are separate: the identity credential's ad
 
 ### 7.2 Known differences and open decisions
 
-| Topic                                                 | Status                                                                                                                                                                                                                                                                  |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Indication of a non-qualified EAA (ARB_12)            | **Decision (2026-10-12, [[ADR-0047]] K6):** the EU template suggests the `category` value `eaa:eu:non-qualified`; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires `category` to be absent in a non-qualified EAA. Tamga follows ETSI; the template's value is not used |
-| Trust anchor location in the credential (ARB_21)      | **Decision (2026-10-12, [[ADR-0047]] K7):** no location attribute is added; the location is the lists in §5. A location in the credential would be the issuer's own claim; a verifier takes the anchor only from a list it chose itself, with a pinned signature        |
-| `nbf` (ETSI TS 119 472-1 technical start of validity) | The issuer writes it at issuance (§2.6); a credential whose start has not been reached is stored in the wallet and not presented                                                                                                                                        |
-| Attestation Revocation List                           | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8)                                                                                            |
+| Topic                                                 | Status                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Indication of a non-qualified EAA (ARB_12)            | **Decision (2026-10-12, [[ADR-0047]] K6):** the EU template suggests the `category` value `eaa:eu:non-qualified`; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires `category` to be absent in a non-qualified EAA. Tamga follows ETSI; the template's value is not used                                                                                                  |
+| Trust anchor location in the credential (ARB_21)      | **Decision (2026-10-12, [[ADR-0047]] K7):** no location attribute is added; the location is the lists in §5. A location in the credential would be the issuer's own claim; a verifier takes the anchor only from a list it chose itself, with a pinned signature                                                                                                         |
+| `nbf` (ETSI TS 119 472-1 technical start of validity) | The issuer writes it at issuance (§2.6); a credential whose start has not been reached is stored in the wallet and not presented                                                                                                                                                                                                                                         |
+| ZK copy `age_over_15`                                 | **Known difference (2026-11-19):** §2.2–2.3 and the identity credential carry `age_over_15`, but the ZK schema makes only `age_over_18` mandatory; the identity service writes `age_over_15` into a ZK copy only if the main credential carries it. A verifier should not rely on `age_over_15` being present in a ZK copy; tightening the schema is a separate decision |
+| Attestation Revocation List                           | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8)                                                                                                                                                                                             |
 
 ## 8. References
 
@@ -553,3 +576,10 @@ The Tamga decisions and specifications this document rests on are listed in Anne
 ## Status
 
 **Active** — version 1.0.0 (16 October 2026).
+
+**Audit round note (2026-11-19; the version stays 1.0).** The text was aligned with what the identity service does today, with no
+change in behaviour: `date_of_expiry` was added to the mandatory attributes and to the mdoc and SD-JWT VC tables; `place_of_birth`
+moved to the conditional attributes (§2.4) and `issuing_authority` joined the tables ([[ADR-0091]]); the nationality is read from
+the document and `QU` / `QS` are not written today (§2.2); `age_over_15` is not mandatory in the ZK copy (§2.3, §7.2); the status
+list address is `https://id.tamga.network/status/` (§2.5, §3, §6.2); the §4.6 note on PID attributes was updated for
+[[ADR-0091]].

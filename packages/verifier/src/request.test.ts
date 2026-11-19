@@ -174,6 +174,34 @@ describe("DC API açıkken iki istek nesnesi (0.6.0)", () => {
     await expect(decryptPresentationResponse(forged, pr, "x")).rejects.toThrow();
   });
 
+  it("D1-3: birden çok `expected_origins` — yanıt çağıranın verdiği sayfa kökenine bağlanır; listede olmayan köken reddedilir", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const pr = await createPresentationRequest({
+      signer,
+      dcql,
+      responseUri: "https://rp.example.test/vp/response",
+      requestUriBase: "https://rp.example.test/vp/req",
+      dcApi: { expectedOrigins: ["https://shop.example", "https://m.shop.example"] },
+    });
+    const sealed = await seal({ vp_token: { q: ["x"] } }, pr.dcApi!.encPublicJwk);
+    // varsayılan (köken verilmedi): ilk köken — tek kökenli kullanım değişmedi
+    expect((await decryptPresentationResponse(sealed, pr, "unused")).binding).toMatchObject({
+      origin: "https://shop.example",
+    });
+    // ikinci kökenden gelen sunum o kökene bağlanır (önce hep ilk kökene bağlanıp A6'da düşüyordu)
+    const second = await decryptPresentationResponse(sealed, pr, "unused", undefined, {
+      origin: "https://m.shop.example",
+    });
+    expect(second.binding).toEqual({ origin: "https://m.shop.example", encJwkThumbprint: pr.dcApi!.encJwkThumbprint });
+    await expect(
+      decryptPresentationResponse(sealed, pr, "unused", undefined, { origin: "https://evil.example" }),
+    ).rejects.toThrow(/not one of the request's expected_origins/);
+    const opened = await openPresentationResponse(sealed, pr, "unused", undefined, {
+      origin: "https://m.shop.example",
+    });
+    expect(opened.binding).toMatchObject({ origin: "https://m.shop.example" });
+  });
+
   it("DC API olmadan tek nesne; DC kid'li yanıt reddedilir", async () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem);
     const pr = await createPresentationRequest({
@@ -331,5 +359,42 @@ describe("çekim dalları (ADR-0067)", () => {
     await expect(
       openPresentationResponse(await seal(body, { ...jwk, kid: `enc-${pr.presentationId}` }), pr, responseUri),
     ).rejects.toThrow(/not for a request branch/);
+  });
+});
+
+describe("0.8.9 (OpenID4VP 1.0 errata): istekteki adresler ve DC API kökenleri güvenli şemada", () => {
+  const base = {
+    dcql,
+    responseUri: "https://rp.example.test/vp/response",
+    requestUriBase: "https://rp.example.test/vp/req",
+  };
+  it("http response_uri / request_uri tabanı / köken reddedilir; yerel http yalnız açık izinle; Android uygulama kökeni geçer", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const make = (o: Record<string, unknown>) => createPresentationRequest({ signer, ...base, ...o } as never);
+    await expect(make({ responseUri: "http://rp.example.test/vp/response" })).rejects.toThrow(
+      /responseUri must be an https/,
+    );
+    await expect(make({ requestUriBase: "http://rp.example.test/vp/req" })).rejects.toThrow(
+      /requestUriBase must be an https/,
+    );
+    await expect(make({ dcApi: { expectedOrigins: ["http://rp.example.test"] } })).rejects.toThrow(/https/);
+    await expect(make({ dcApi: { expectedOrigins: ["https://rp.example.test/path"] } })).rejects.toThrow(/bare origin/);
+    await expect(make({ dcApi: { expectedOrigins: ["ftp://rp.example.test"] } })).rejects.toThrow(/https origin/);
+    await expect(make({ responseUri: "https://user@rp.example.test/vp/response" })).rejects.toThrow(/user information/);
+    // yerel geliştirme: yalnız açık izinle ve yalnız yerel / özel ağ adresine
+    await expect(make({ responseUri: "http://rp.example.org/vp/response", allowLocalDevHost: true })).rejects.toThrow(
+      /https/,
+    );
+    const local = await make({
+      responseUri: "http://192.168.1.5:4004/vp/response",
+      requestUriBase: "http://192.168.1.5:4004/vp/req",
+      dcApi: { expectedOrigins: ["http://localhost:3000"] },
+      allowLocalDevHost: true,
+    });
+    expect(local.presentationId).toMatch(/^prs_/);
+    const app = await make({
+      dcApi: { expectedOrigins: ["https://rp.example.test", "android:apk-key-hash:AbC_d-12"] },
+    });
+    expect(app.presentationId).toMatch(/^prs_/);
   });
 });

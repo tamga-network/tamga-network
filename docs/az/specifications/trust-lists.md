@@ -313,13 +313,14 @@ istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_
 - **§4 — `dns_name` formatı.** Kiçik hərfli etiketlər, nöqtə ilə ayrılmış; sonda nöqtə yoxdur. Eyni siyahıda iki qeyddə
   görünən ad qeyri-müəyyəndir ([[ADR-0075]] tətbiq qeydi).
 - **§6 — qovluq yükləyicisində lövbər aktuallığı.** `loadTrustSourceFromDir` lövbər jurnalının aktuallıq həddini verilmədikdə
-  **365 gün** götürür (əsas yükləyicidə 2 saat): bu yol saatlıq heartbeat-in işləmədiyi inkişaf və test qovluqları ilə də
-  istifadə olunur. Bu standart dəyərlə lövbər jurnalının dayanması aktuallığı pozmur (aktuallıq yalnız siyahıların
-  `next_update`-indən gəlir); lövbər jurnalının aktuallığını da şərt etmək istəyən xidmət həddi (`anchorMaxAgeMs`, məs. 2 saat) özü verir.
-  İstinad yoxlayıcısı (Tamga Verify, 2026-11-12) dərc ünvanı HTTPS olanda həddi verir: standart dəyər **3 saat**,
+  **2 saat** götürür (əsas yükləyici ilə eyni; təhlükəsizlik baxışı 2026-11-18 — əvvəlki 365 günlük standart dəyər dəyəri
+  unudan istehsal xidmətində dayanmış lövbər jurnalını aktual sayırdı). Hədd sonlu və müsbət olmalıdır; NaN, sonsuz, sıfır və ya
+  mənfi dəyər `RangeError` ilə rədd edilir. Saatlıq heartbeat-in işləmədiyi inkişaf və test qovluqlarında daha geniş hədd açıq
+  verilir (məs. 365 gün); onda lövbər jurnalının dayanması aktuallığı pozmur (aktuallıq siyahıların `next_update`-indən gəlir).
+  İstinad yoxlayıcısı (Tamga Verify, 2026-11-12) dərc ünvanı HTTPS olanda standart olaraq **3 saat** verir,
   `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC` ilə tənzimlənir; son lövbər bundan köhnədirsə mənbə köhnəlmiş sayılır və nəticə
-  INDETERMINATE olur (REJECTED deyil). Yerli inkişafda (http) ayar verilmədikdə 365 günlük standart dəyər qüvvədədir. Xarici
-  siyahılar: [[ADR-0036]] tətbiq qeydi.
+  INDETERMINATE olur (REJECTED deyil). Yerli inkişafda (http) ayar verilmədikdə 365 gün açıq verilir. Xarici siyahılar:
+  [[ADR-0036]] tətbiq qeydi.
 - **Qeydiyyat əmrləri.** `registry.lock` altında işləyir (kilid saxlanılarkən yenilənir); siyahı yoxlaması imzalı siyahı
   yazılmadan uğursuz olarsa mənbə faylı əvvəlki vəziyyətinə qayıdır və dəyişiklik jurnalına sətir yazılmır. Müvəqqəti operator
   dəyəri yoxdursa real şəbəkədə dərc dayanır ([[ADR-0070]] tətbiq qeydi).

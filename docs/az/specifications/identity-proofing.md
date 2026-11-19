@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-16
+last_updated: 2026-11-19
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
@@ -203,8 +203,8 @@ I2; rəqəmsal sənəddə `category` claim-i yoxdur — [[ADR-0022]]) verdiyi kv
 | Element | Dəyər |
 |---|---|
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (kataloq: `id/IdentityAttestation/1.0.0`) |
-| Claim-lər | `given_name`, `family_name`, `birthdate`, `nationalities` (massiv; hər element ayrıca açıqlanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (açarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, qapalı çoxluq) — hamısı selective disclosure ilə; portret yoxdur; LoA claim-i yoxdur (PR7) |
-| Müddət / status | `exp` = rəqəmsal sənədin verilməsi + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); eyni rəqəmsal sənəd yenidən yoxlandıqda köhnəsi ləğv edilir (K6) |
+| Claim-lər | `given_name`, `family_name`, `birthdate`, `nationalities` (massiv; hər element ayrıca açıqlanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (açarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, qapalı çoxluq), `place_of_birth` (şərti: yalnız yoxlanılan sənəd daşıyırsa), `issuing_authority` (`Tamga Network (provisional)`), `date_of_expiry` (inzibati bitmə tarixi) ([[ADR-0091]], [[ADR-0089]]; 2026-11-19) — hamısı selective disclosure ilə; portret yoxdur; LoA claim-i yoxdur (PR7) |
+| Müddət / status | `exp` nüsxənin texniki etibarlılığıdır (≤ 30 gün); inzibati bitmə tarixi `date_of_expiry` = şəxsiyyət qeydinin bitməsi (verilmə + ≤ 730 gün), hər nüsxədə eyni ([[ADR-0089]]; 2026-11-19); Token Status List (`https://id.tamga.network/status/{listId}`); eyni rəqəmsal sənəd yenidən yoxlandıqda köhnəsi ləğv edilir (K6) |
 | Axın | Rəqəmsal cüzdan: PAR (WUA) → brauzer `/authorize` (**KVKK üzrə məlumatlandırma + açıq razılıq**) → provayder (istinad adapteri; demo: FAKE, kənarlaşma S-15) → `/idv/return` qərar sorğusu (webhook yalnız tətikdir, IDP5) → `code` → token (PKCE + WUA) → 10 nüsxə |
 | Qurumda istifadə | Sənədi verən qurumun xidməti rəqəmsal sənədi verərkən şəxsiyyət sənədinin **təqdim edilməsini** tələb edir (DCQL: TCKN, doğum tarixi, ad, soyad), T0 + A–E yoxlayır, qeydlə uyğunlaşdırır (TCKN + doğum tarixi; adın normallaşdırılması ilə bağlı xəbərdarlıq) — [[SPEC-PROTO-0001]] §11.2 |
 | Səviyyə | Məsafədən sənəd + canlılıq + üz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` yalnız passiv autentifikasiya, surət yoxlaması (AA və ya CA) və canlı üzün çipdəki fotoşəkillə uyğunluğu birlikdə uğurlu olduqda ([[ADR-0083]]/CV2; texniki baxımdan High; hüquqi baxımdan T3 = NES/Mobil İmza, IDP7) |
@@ -289,6 +289,8 @@ kartdakı kateqoriyaları və tarixləri verir. Bu, rəsmi sürücülük vəsiq�
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-19; audit turu — versiya 1.0 qalır).** §9 cədvəli şəxsiyyət xidmətinin bugünkü davranışına uyğunlaşdırıldı, davranış dəyişmədi: claim siyahısına `place_of_birth` (şərti), `issuing_authority` və `date_of_expiry` əlavə edildi ([[ADR-0091]]); müddət sətrində nüsxənin texniki `exp`-i (≤ 30 gün) inzibati bitmə tarixi `date_of_expiry`-dən ayrıldı ([[ADR-0089]]).
 
 **Versiya qeydi (2026-11-16, ikinci).** §9.3 sürücülük vəsiqəsi məlumatı: D-ID-8 qeydinin (2026-10-30, [[ADR-0039]] açıq sual 1,
 adaş riski) tətbiqi — şəxsiyyət təqdimatında sənəddə varsa `personal_administrative_number` də açılır; kartda şəxsiyyət nömrəsi

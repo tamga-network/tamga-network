@@ -760,3 +760,57 @@ describe("ADR-0045 — dizi öğeleri ayrı ayrı açıklanır (RFC 9901 §4.2.2
     expect(r.claims.nationalities).toEqual(["AZ"]);
   });
 });
+
+describe("D1: bozuk `status` girişi (denetim turu D1-1; mdoc ile aynı kural)", () => {
+  const presentWith = async (status: unknown) => {
+    const out = await issueSdJwtVc({
+      signer,
+      iss: "https://issuer.tamga.network/example-university",
+      vct: "urn:tamga:edu:DiplomaCredential:1",
+      vctIntegrity: "sha256-r+Pdm2xQrKxuuX9WwXGwntrJ7PtDjCbZ5pysOj3u6KA=",
+      iat: NOW - 1000,
+      cnfJwk: holder.jwk,
+      status: status as never,
+      claims: { is_graduate: true },
+      sdPolicy: { is_graduate: "allowed" },
+    });
+    const pres = await presentSdJwtVc({
+      combined: out.combined,
+      discloseClaims: ["is_graduate"],
+      holderKey: holder.priv,
+      aud: AUD,
+      nonce: NONCE,
+      iat: NOW,
+    });
+    return verifySdJwtVc(pres, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+      rootCertsDer: [rootDer],
+    });
+  };
+  it("status_list yok, idx sayı değil, negatif ya da uri boş → D1 RED (status entry malformed)", async () => {
+    for (const bad of [
+      "x",
+      { other: 1 },
+      { status_list: "x" },
+      { status_list: { idx: "1", uri: "https://status.tamga.network/3f9a" } },
+      { status_list: { idx: -1, uri: "https://status.tamga.network/3f9a" } },
+      { status_list: { idx: 1.5, uri: "https://status.tamga.network/3f9a" } },
+      { status_list: { idx: 1, uri: "" } },
+      { status_list: { idx: 1 } },
+    ]) {
+      const r = await presentWith(bad);
+      expect(r.ok, JSON.stringify(bad)).toBe(false);
+      if (r.ok) continue;
+      expect(r.failedStep).toBe("D1");
+      expect(r.reason).toMatch(/^status entry malformed/);
+      expect(r.internal).toBeUndefined();
+    }
+  });
+  it("geçerli status_list kabul edilir", async () => {
+    const r = await presentWith({ status_list: { idx: 7, uri: "https://status.tamga.network/3f9a" } });
+    expect(r.ok).toBe(true);
+  });
+});

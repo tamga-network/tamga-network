@@ -265,10 +265,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [credential_id]
+              required: [credential_id, action]
               properties:
                 credential_id: { type: string }
-                action: { enum: [revoke, suspend, reinstate], default: revoke }
+                action:
+                  enum: [revoke, suspend, reinstate]
+                  description: Required; a request without it is rejected with 400 (no default).
+                  x-tr: Zorunlu; verilmezse istek 400 ile reddedilir (varsayılan yok).
                 reason:
                   type: string
                   description: Kept in your audit log; never published.

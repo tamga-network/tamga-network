@@ -150,11 +150,12 @@ Provayder hər ikisi üçün ləğv siyahısı dərc edir (`wiaRevokedByList` il
 Şəxs qurumun göstərdiyi QR kodu skan edir; PIN (`tx_code`) **ayrıca kanalla** (SMS, e-poçt) gəlir:
 
 ```ts
-import { parseOffer, resolveOffer, redeem, receiveCredentials, newState } from "@tamga-network/wallet-core";
+import { parseOffer, resolveOffer, redeem, receiveCredentials, fetchTrustSource } from "@tamga-network/wallet-core";
 
 const offer = await resolveOffer(parseOffer(scannedQr), fetchHttp);
 const out = await redeem({ offer, txCode: pinFromUser, keys, http: fetchHttp, wua }); // 10 copies, each with its own key
-const { state, credential } = receiveCredentials(walletState, out); // is each copy bound to its own key — local check
+const { source: trust } = await fetchTrustSource(TRUST_BASE, fetchHttp, { pins: TRUST_PINS });
+const { state, credential } = receiveCredentials(walletState, out, { trust }); // local check + trusted list: issuer listed (C1) and authorised for this type (C2); `trust` is required
 ```
 
 Şəxsiyyət sənədi kimi bəzi növlərdə eyni sənədin [[t:mdoc]] formatı da gəlir (`copy.mdoc`, [[ADR-0013]]); o da eyni açara bağlıdır.

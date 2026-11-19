@@ -16,7 +16,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { VerifyContext } from "../app.js";
 import { langOf, noTerminalPage, terminalPage } from "../html.js";
 import { CAMPUS_GROUP } from "../policies.js";
-import { rateLimitHook } from "../rate-limit.js";
+import { clientKeyOf, rateLimited } from "../rate-limit.js";
 import { institutionToken, type TerminalKeyInfo } from "../terminal-keys.js";
 import type { TerminalGroupAnswer } from "@tamga-network/trust";
 
@@ -76,10 +76,20 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
     if (answer.group.institution_id) ctx.terminalKeys.adoptOwner(g, answer.group.institution_id);
     return { kind: "listed", answer };
   };
-  app.post("/terminal/verify", { preHandler: rateLimitHook(ctx.limits.terminal) }, async (req, reply) => {
-    if (!hasGates) return reply.code(404).send({ ok: false, reason: "no terminal groups on this network" });
+  app.post("/terminal/verify", async (req, reply) => {
     // ADR-0065 TK1: önce terminal kimliği — anahtarsız istek jetonu okumaz, tüketmez, sayaçlara girmez
     const term = ctx.terminalKeys.authenticate(req.headers.authorization);
+    // Hız sınırı kimlikten SONRA (güvenlik incelemesi 2026-11-18): doğrulanmış kapı kendi anahtarının kovasından harcar; anahtarsız
+    // istek ayrı (istemci) kovasından — vekil arkasında bütün çağıranlar tek adresken anahtarsız sel gerçek kapıları 429'a düşüremez
+    if (
+      rateLimited(
+        ctx.limits.terminal,
+        term ? `t:${term.id}` : `anon:${clientKeyOf(req, ctx.cfg.clientKeyHeader)}`,
+        reply,
+      )
+    )
+      return reply;
+    if (!hasGates) return reply.code(404).send({ ok: false, reason: "no terminal groups on this network" });
     if (!term) {
       ctx.audit({ event: "terminal.unauthorized" }); // adres ve jeton yazılmaz
       return reply

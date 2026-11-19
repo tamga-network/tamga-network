@@ -19,6 +19,7 @@ import {
   verifyPresentation,
   isYes,
   dcqlFromPolicy,
+  constraintOk,
   policyScopeViolations,
   registrationScopesFor,
   MemoryStatusCache,
@@ -35,6 +36,8 @@ import { epochSeconds } from "@tamga-network/core";
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
 const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
+/** heartbeat'siz test dist'i: geniş çapa tazelik sınırı açıkça (paket varsayılanı 2 saat — güvenlik incelemesi 2026-11-18) */
+const DEV_DIST = { anchorMaxAgeMs: 365 * 86400_000 };
 const ready = existsSync(resolve(PKI, "issuer-bilgi.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const AUD = existsSync(resolve(PKI, "rp-verify.cert.pem"))
   ? x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8")))
@@ -106,7 +109,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     graduated_before: 2026,
   };
   beforeAll(async () => {
-    const r = await loadTrustSourceFromDir(DIST);
+    const r = await loadTrustSourceFromDir(DIST, DEV_DIST);
     trust = r.trust;
     rootDer = [pemToDer(r.rootCertPem!)];
   });
@@ -883,6 +886,37 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(out2.result.failed_step).toBe("T0");
     expect(JSON.stringify(out2.result)).not.toContain("gizli-12345");
     expect(audits).toEqual(["INDETERMINATE", "INDETERMINATE"]);
+  });
+
+  it("C6-Ö5/Ö6 (güvenlik incelemesi 2026-11-18): bozuk aralık kısıtı ya da eksik require_recognition → T0 DOĞRULANAMADI, DCQL kurulmaz", async () => {
+    const base = {
+      presentation: "x~",
+      aud: AUD,
+      nonce: "n",
+      policyCredentialId: "diploma",
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [new Uint8Array([1])],
+      rp: "none" as const,
+      trust,
+    };
+    const unknownKey = {
+      ...policy,
+      credentials: [{ ...policy.credentials[0], constraints: { eqf_level: { minimum: 18 } } }],
+    };
+    const noRecognition = { ...policy, trust: { ...policy.trust, require_recognition: undefined as never } };
+    for (const p of [unknownKey, noRecognition]) {
+      const out = await verifyPresentation({ ...base, policy: p });
+      expect(out.result.outcome).toBe("INDETERMINATE");
+      expect(out.result.failed_step).toBe("T0");
+      expect(out.result.failed_reason).toMatch(/trust block or constraints/);
+    }
+    expect(() => dcqlFromPolicy(unknownKey)).toThrow(/range constraint/);
+    // kısıt denetimi kendi başına da kapalı başarısız: bilinmeyen anahtar, boş nesne, sayı olmayan sınır karşılanmaz
+    expect(constraintOk(20, { minimum: 18 })).toBe(false);
+    expect(constraintOk(20, {})).toBe(false);
+    expect(constraintOk(20, { min: "18" })).toBe(false);
+    expect(constraintOk(20, { min: 18 })).toBe(true);
+    expect(constraintOk(true, true)).toBe(true);
   });
 
   it("ADR-0026 / RPRC_19: kullanım seçimi + verifier_info (tek registration_cert, credential_ids yok); başlıkta iat", async () => {

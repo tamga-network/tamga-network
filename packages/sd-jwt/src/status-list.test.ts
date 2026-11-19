@@ -52,9 +52,15 @@ const rawToken = (payload: Record<string, unknown>) =>
   signer.sign({ alg: "ES256", typ: STATUS_TYP, x5c: signer.x5c.map(derToB64) }, utf8(JSON.stringify(payload)));
 
 describe("status list doğrulama sınırları", () => {
-  it("zlib bombası: açılmış hâli azami boyutu aşan liste D6 ile reddedilir", () => {
+  // Denetim turu D1-8 (davranış değişikliği): boyut aşımı belge hakkında hüküm değildir — D4 (okunamıyor, DOĞRULANAMADI); sınır
+  // listenin kendi `bits` değerinden hesaplanır (önce hep 2 bit sayılıyordu: 4/8 bitlik geçerli büyük liste reddedilirdi)
+  it("zlib bombası: açılmış hâli azami boyutu aşan liste D4 (okunamıyor) ile durur; sınır bits değerine göre", () => {
     const bomb = b64u(new Uint8Array(deflateSync(new Uint8Array(Math.ceil((MAX_CAPACITY * 2) / 8) + 1))));
-    expect(() => StatusBitstring.fromLst(bomb)).toThrow(/^D6: status list exceeds/);
+    expect(() => StatusBitstring.fromLst(bomb)).toThrow(/^D4: status list unreadable \(exceeds the maximum size/);
+    // aynı bayt sayısı 8 bitlik listede sınırın içinde (MAX_CAPACITY girdi × 8 bit)
+    expect(StatusBitstring.fromLst(bomb, MIN_CAPACITY, 8).bits).toBe(8);
+    const bomb8 = b64u(new Uint8Array(deflateSync(new Uint8Array(MAX_CAPACITY + 1))));
+    expect(() => StatusBitstring.fromLst(bomb8, MIN_CAPACITY, 8)).toThrow(/^D4: status list unreadable/);
     expect(() => StatusBitstring.fromLst("bm90LXpsaWI")).toThrow(/^D6:/);
   });
 

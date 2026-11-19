@@ -39,6 +39,7 @@ import { registerMiscRoutes } from "./routes/misc.js";
 import { registerSiteRoutes } from "./routes/site.js";
 import { registerDcTestRoutes } from "./routes/dc-test.js";
 import { policiesFor } from "./policies.js";
+import { installErrorHandler } from "./errors.js";
 import { DEFAULT_RATE_RULES, TokenBucketLimiter, type RateRules } from "./rate-limit.js";
 import { registerAssetRoutes, sandboxBar } from "./brand.js";
 import { ChainHealthMonitor, type ChainHealth } from "./chain-health.js";
@@ -157,14 +158,21 @@ export async function buildVerifyApp(
         const r = await fetch(uri, { signal: AbortSignal.timeout(5000) });
         return r.ok ? await r.text() : null;
       }),
-    (fp) => trust.isWalletProviderKey(fp),
+    // ADR-0056 K6a: liste imzacısı WIA'yı imzalayanla aynı sağlayıcı kaydında (güncel güven kaynağına yönlendirilir)
+    {
+      isWalletProviderKey: (fp) => trust.isWalletProviderKey(fp),
+      walletProviderOfKey: (fp) => trust.walletProviderOfKey?.(fp) ?? null,
+    },
   );
+  /** Yerel geliştirme (http yayın adresi): heartbeat'siz `dist/` için açık, geniş çapa tazelik sınırı. */
+  const LOCAL_DEV_ANCHOR_MAX_AGE_MS = 365 * 86400_000;
   const loadTrust = async () => {
-    // Çapa günlüğü tazeliği: HTTPS yayında sıkı sınır (config.ts; varsayılan 3 saat), yerelde tanımsız → paketin gevşek varsayılanı.
-    // Sınır aşılınca yeni mantık yok: yükleyici kaynağı bayat işaretler, cevaplar UNKNOWN → INDETERMINATE (SPEC-TRUST-0001 §6).
+    // Çapa günlüğü tazeliği: HTTPS yayında sıkı sınır (config.ts; varsayılan 3 saat), yerelde (heartbeat'siz dist) açıkça 365 gün —
+    // paketin varsayılanı 2 saattir (güvenlik incelemesi 2026-11-18). Sınır aşılınca yeni mantık yok: yükleyici kaynağı bayat
+    // işaretler, cevaplar UNKNOWN → INDETERMINATE (SPEC-TRUST-0001 §6).
     const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, {
       environment: cfg.network,
-      anchorMaxAgeMs: cfg.anchorMaxAgeSec === undefined ? undefined : cfg.anchorMaxAgeSec * 1000,
+      anchorMaxAgeMs: cfg.anchorMaxAgeSec === undefined ? LOCAL_DEV_ANCHOR_MAX_AGE_MS : cfg.anchorMaxAgeSec * 1000,
     });
     trust = t;
     rootDer = rootCertPem ? [pemToDer(rootCertPem)] : [];
@@ -245,6 +253,7 @@ export async function buildVerifyApp(
   };
 
   const app = Fastify({ logger: false }) as unknown as VerifyApp;
+  installErrorHandler(app); // beklenmeyen 500'de ileti dışarı çıkmaz (güvenlik incelemesi 2026-11-18)
   await app.register(formbody);
   Object.assign(app, {
     reloadTrust,

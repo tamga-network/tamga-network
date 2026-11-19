@@ -3,7 +3,7 @@
  *  PR1 tx_code zorunlu · PR3 offer tek kullanımlık (on-screen 5 dk; out-of-band ≤72 s, DB-5) · PR4 c_nonce atomik
  *  PR5 ES256 · PR6 batch kopyaları farklı cnf · PR8 hata yanıtlarında kişisel veri yok · PR9 access token ≤ 5 dk
  */
-import { randomBytes, randomInt } from "node:crypto";
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { decodeProtectedHeader, importJWK, jwtVerify, type JWK } from "jose";
 import {
   EMBEDDED_DISCLOSURE_POLICY_MEMBER,
@@ -127,6 +127,15 @@ export function tokenErrorResponse(e: TokenError): {
 } {
   return { error: e === "invalid_request" ? "invalid_request" : "invalid_grant", error_description: e };
 }
+/**
+ * Gizli değer karşılaştırması sabit zamanlı (güvenlik incelemesi 2026-11-18): iki değerin SHA-256 özeti `timingSafeEqual` ile —
+ * uzunluk ya da ilk farklı karakter zamanlamadan sızmaz. Dize olmayan değer eşleşmez.
+ */
+function secretEquals(a: unknown, b: unknown): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const h = (v: string) => createHash("sha256").update(v, "utf8").digest();
+  return timingSafeEqual(h(a), h(b));
+}
 /** Token isteği: pre-authorized_code + tx_code → başarı/hata; offer durumunu döndürür (çağıran kaydeder). */
 export function redeemOffer(
   o: Offer,
@@ -137,12 +146,12 @@ export function redeemOffer(
   // kimliğe bağlı teklifin ön-yetkili kodu yoktur: boş kodla eşleşme olmaz (ADR-0020 AS2)
   if (o.klass === "identity-bound" || !o.preAuthorizedCode || !preAuthorizedCode)
     return { ok: false, error: "invalid_grant" };
-  if (o.preAuthorizedCode !== preAuthorizedCode) return { ok: false, error: "invalid_grant" };
+  if (!secretEquals(o.preAuthorizedCode, preAuthorizedCode)) return { ok: false, error: "invalid_grant" };
   if (o.used) return { ok: false, error: "offer_used" };
   if (now > o.expiresAt) return { ok: false, error: "offer_expired" };
   if (o.attempts >= TX_CODE_ATTEMPTS) return { ok: false, error: "too_many_attempts" };
   if (!txCode) return { ok: false, error: "invalid_request" }; // PR1
-  if (txCode !== o.txCode) {
+  if (!secretEquals(txCode, o.txCode)) {
     o.attempts++;
     if (o.attempts >= TX_CODE_ATTEMPTS) o.used = true;
     return { ok: false, error: o.used ? "too_many_attempts" : "tx_code_mismatch" };

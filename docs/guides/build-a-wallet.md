@@ -149,11 +149,12 @@ Sağlayıcı ikisi için de iptal listesi yayınlar (`wiaRevokedByList` ile dene
 Kişi kurumun gösterdiği QR'ı okutur; PIN (`tx_code`) **ayrı bir kanaldan** (SMS, e-posta) gelir:
 
 ```ts
-import { parseOffer, resolveOffer, redeem, receiveCredentials, newState } from "@tamga-network/wallet-core";
+import { parseOffer, resolveOffer, redeem, receiveCredentials, fetchTrustSource } from "@tamga-network/wallet-core";
 
 const offer = await resolveOffer(parseOffer(scannedQr), fetchHttp);
 const out = await redeem({ offer, txCode: pinFromUser, keys, http: fetchHttp, wua }); // 10 kopya, her biri ayrı anahtar
-const { state, credential } = receiveCredentials(walletState, out); // her kopya kendi anahtarına bağlı mı — yerel doğrulama
+const { source: trust } = await fetchTrustSource(TRUST_BASE, fetchHttp, { pins: TRUST_PINS });
+const { state, credential } = receiveCredentials(walletState, out, { trust }); // yerel doğrulama + güven listesi: kurum listede (C1) ve bu türe yetkili (C2); `trust` zorunlu
 ```
 
 Kimlik belgesi gibi bazı türlerde aynı belgenin [[t:mdoc]] biçimi de gelir (`copy.mdoc`, [[ADR-0013]]); aynı anahtara bağlıdır.

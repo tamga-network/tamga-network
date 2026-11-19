@@ -8,6 +8,8 @@ import {
   encryptJwe,
   verifyRequestObject,
   parseVpUri,
+  fetchRequestObject,
+  fetchRequestObjectFor,
   matchDcql,
   checkRp,
   certHasDnsName,
@@ -68,6 +70,28 @@ describe("parseVpUri / DCQL / RP", () => {
     expect(r.clientId).toBe("x509_san_dns:verify.tamga.network");
     expect(r.requestUri).toContain("/vp/req/prs_1");
     expect(() => parseVpUri("openid4vp://?client_id=x")).toThrow(/request_uri/);
+  });
+  it("0.8.9 (OpenID4VP 1.0 errata): request_uri https — http yalnız açık izinle ve yerel adrese; GET çekimi de denetlenir", async () => {
+    const link = (u: string) => `openid4vp://?client_id=x&request_uri=${encodeURIComponent(u)}`;
+    expect(() => parseVpUri(link("http://verify.example/vp/req/1"))).toThrow(/https/);
+    expect(() => parseVpUri("http://verify.example/vp/req/1")).toThrow(/https/);
+    expect(() => parseVpUri(link("javascript:alert(1)"))).toThrow(/https/);
+    expect(() => parseVpUri(link("http://verify.example/vp/req/1"), { allowLocalDevHost: true })).toThrow(/https/);
+    expect(parseVpUri(link("http://192.168.1.5:4004/vp/req/1"), { allowLocalDevHost: true }).requestUri).toBe(
+      "http://192.168.1.5:4004/vp/req/1",
+    );
+    expect(parseVpUri("http://localhost:4004/vp/req/1", { allowLocalDevHost: true }).requestUri).toContain("localhost");
+    let fetched = 0;
+    const http = async () => {
+      fetched++;
+      return { status: 200, text: async () => "jwt", json: async () => ({}) };
+    };
+    await expect(fetchRequestObject("http://verify.example/vp/req/1", http as never)).rejects.toThrow(/https/);
+    await expect(
+      fetchRequestObjectFor({ requestUri: "http://verify.example/vp/req/1" }, http as never),
+    ).rejects.toThrow(/https/);
+    expect(fetched).toBe(0); // güvensiz adrese istek gitmez
+    expect(await fetchRequestObject("https://verify.example/vp/req/1", http as never)).toBe("jwt");
   });
   it("matchDcql: vct + values koşulu; eşleşmeyen sorgu unmatched (nedeniyle)", () => {
     const creds = [
@@ -521,9 +545,14 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
       sign({ client_id: CID, ...base, response_uri: "https://evil.example/r" }).then(verifyRequestObject),
     ).rejects.toThrow(/response address/);
     // S11: yerel ağ istisnası varsayılan KAPALI — yalnız çağıran (geliştirme derlemesi / sandbox) açarsa
+    // (güvenlik incelemesi 2026-11-18: http yanıt adresi artık şema kuralında, SAN denetiminden önce düşer — ret aynı)
     const lanJwt = await sign({ client_id: CID, ...base, response_uri: "http://192.168.1.100:4004/r" });
-    expect(() => verifyRequestObject(lanJwt)).toThrow(/response address/);
-    expect(() => verifyRequestObject(lanJwt, undefined, { allowLocalDevHost: false })).toThrow(/response address/);
+    expect(() => verifyRequestObject(lanJwt)).toThrow(/must use https/);
+    expect(() => verifyRequestObject(lanJwt, undefined, { allowLocalDevHost: false })).toThrow(/must use https/);
+    // C3-K1: SAN'daki alan adına ait olsa da http yanıt adresi reddedilir (sunum açık kanaldan gitmez)
+    const plain = await sign({ client_id: CID, ...base, response_uri: "http://verify.tamga.network/vp/response" });
+    expect(() => verifyRequestObject(plain)).toThrow(/must use https/);
+    expect(() => verifyRequestObject(plain, undefined, { allowLocalDevHost: true })).toThrow(/must use https/);
     const lan = verifyRequestObject(lanJwt, undefined, { allowLocalDevHost: true });
     expect(lan.responseUri).toContain("192.168.1.100");
     // istisna yalnız yerel adlar için: bayrak açıkken bile genel alan adı SAN'da olmalı

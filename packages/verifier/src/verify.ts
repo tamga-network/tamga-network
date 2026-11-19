@@ -11,6 +11,7 @@
  *  P1  site başına takma ad (ADR-0031 PS5; ayrı vp_token girdisi — pseudonym.ts `verifyPseudonym`)
  * Sonuç nesnesi claim DEĞERİ taşımaz (AP3), idx taşımaz (AP4); değerler ayrı alanda çağırana verilir.
  */
+import { randomBytes } from "node:crypto";
 import type { TrustSource, RelyingParty } from "@tamga-network/trust";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { nowSeconds, epochSeconds, type EpochSeconds } from "@tamga-network/core/time";
@@ -174,7 +175,7 @@ export interface VerifyOutput {
 }
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
-export const SDK_VERSION = "@tamga-network/verifier@0.8.8"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
+export const SDK_VERSION = "@tamga-network/verifier@0.8.9"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
 
 /**
  * Evet/hayır sonucunun güvenli okunuşu (ADR-0056): doğrulama KABUL edildiyse ve açıklanan değer tam olarak `true` ise `true`
@@ -224,6 +225,14 @@ const ALL_STEPS: Step[] = [
   "E4",
 ];
 
+/** 12 karakter küçük harf/rakam, kriptografik rastgele (36'ya göre; 252 = 7 × 36 sapmasız sınır). */
+function randomIdPart(): string {
+  const out: string[] = [];
+  while (out.length < 12)
+    for (const b of randomBytes(16)) if (b < 252 && out.length < 12) out.push((b % 36).toString(36));
+  return out.join("");
+}
+
 /** Güven kaynağı tazeliği; sorgu istisna atarsa "sağlıksız" (T0 → DOĞRULANAMADI, AP2). */
 function freshnessOf(trust: TrustSource): ReturnType<TrustSource["freshness"]> {
   try {
@@ -251,7 +260,8 @@ export async function verifyPresentation(input: VerifyInput): Promise<VerifyOutp
     claims: null,
     status: { value: "UNKNOWN", list_version: null, token_age_sec: null },
   };
-  const vid = input.verificationId ?? `vrf_${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  // Güvenlik incelemesi 2026-11-18: kimlik kriptografik rastgele (Math.random tahmin edilebilir); biçim aynı (`vrf_` + küçük harf/rakam)
+  const vid = input.verificationId ?? `vrf_${now.toString(36)}${randomIdPart()}`;
   // Beklenmeyen istisna (kütüphane hatası, bozuk güven kaydı …) RED değildir ve denetim kaydını atlamaz: DOĞRULANAMADI + E4.
   // Neden metnine istisna iletisi konmaz (kişisel veri içerebilir — AP3); yalnız adım ve hata türü.
   const steps: Array<

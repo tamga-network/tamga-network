@@ -80,6 +80,35 @@ describe("LoTE okuyucusu — katı ayrıştırma", () => {
     ];
     expect(() => parseLote(doc({}, svc({ val: "AA==" })))).toThrow(/X509Certificates is not an array/);
   });
+  it("D1-4: ServiceStatus izin listesi — yok ya da bilinen etkin değer alınır; bilinmeyen değer alınmaz ve uyarı olur", async () => {
+    const { parseLote } = await import("./lote-reader.js");
+    const S = "http://uri.etsi.org/19602/PubEAAProvidersList/SvcStatus/";
+    const withStatus = (...st: Array<string | undefined>) =>
+      doc({}, [
+        {
+          TrustedEntityInformation: { TEName: [{ value: "Kurum" }] },
+          TrustedEntityServices: st.map((s, i) => ({
+            ServiceInformation: {
+              ServiceTypeIdentifier: `http://uri.etsi.org/19602/SvcType/PID/Issuance#${i}`,
+              ServiceName: [{ value: `svc${i}` }],
+              ...(s === undefined ? {} : { ServiceStatus: s }),
+            },
+          })),
+        },
+      ]);
+    const ok = parseLote(
+      withStatus(undefined, `${S}notified`, "http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted"),
+    );
+    expect(ok.entities[0].services.map((x) => x.name)).toEqual(["svc0", "svc1", "svc2"]);
+    expect(ok.warnings ?? []).toEqual([]);
+    // önce yalnız bilinen "etkin değil" sonekleri eleniyordu: yazım hatası ya da yeni bir durum değeri hizmeti etkin sayıyordu
+    const odd = parseLote(withStatus(`${S}withdrawn`, `${S}suspendedd`, "active", `${S}notified`));
+    expect(odd.entities[0].services.map((x) => x.name)).toEqual(["svc3"]);
+    expect(odd.warnings).toEqual([
+      "Kurum/svc1: unknown ServiceStatus — service skipped",
+      "Kurum/svc2: unknown ServiceStatus — service skipped",
+    ]);
+  });
   it("base64: geçerli standart/URL güvenli kabul; karışık alfabe, ortada dolgu, bozuk uzunluk RED", async () => {
     const { b64ToBytes } = await import("./lote-reader.js");
     expect([...b64ToBytes("AAEC")]).toEqual([0, 1, 2]);

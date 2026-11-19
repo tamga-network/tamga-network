@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -176,7 +176,7 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
 | `nonce` | ≥ 128 bit entropi, tek kullanımlık; `request_uri`'nin her çekiminde yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit rastgele, gizli; `request_uri`'nin her çekiminde yenisi — QR'da, `request_uri` ve `response_uri` yolunda yer almaz ([[ADR-0067]]) |
 | `request_uri` çekimi | Her çekim (GET ya da `request_uri_method=post` ile POST, OpenID4VP 1.0 §5.10) yeni bir **çekim dalı** açar: aynı içerikle yeni imzalı istek nesnesi; taze `state`, `nonce` ve efemer şifreleme anahtarı (HAIP §5). POST'ta `wallet_nonce` nesneye geri yazılır. Sabit dal sınırı ve meşru çekime 429 yok; bellek sınırlı (yumuşak sınırda yanıtsız yaşlı dal atılır, ortak dal bütçesi; [[ADR-0067]] Değişiklik notu 2026-10-29); hız sınırı istemci adresi başına |
-| `request_uri_method` | Doğrulayıcı bağlantıya `request_uri_method=post` yazabilir (referans doğrulayıcı yazar); `request_uri` adresi GET ve POST'u birlikte sunar. Cüzdan çekirdeği bu durumda HTTPS POST yapar (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdede taze `wallet_nonce` (128 bit, base64url) gönderir ve istek nesnesinde aynı `wallet_nonce` yoksa isteği reddeder (§5.10.1); http adresine POST yapılmaz; `get` ya da parametre yoksa GET (RFC 9101). Bilinmeyen değer bağlantıda reddedilir |
+| `request_uri_method` | Doğrulayıcı bağlantıya `request_uri_method=post` yazabilir (referans doğrulayıcı yazar); `request_uri` adresi GET ve POST'u birlikte sunar. Cüzdan çekirdeği bu durumda HTTPS POST yapar (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdede taze `wallet_nonce` (128 bit, base64url) gönderir ve istek nesnesinde aynı `wallet_nonce` yoksa isteği reddeder (§5.10.1); http adresine POST yapılmaz — tek istisna yerel geliştirmedir: çağıran bunu açıkça isterse (`allowLocalDevHost`) yalnız yerel geliştirme adresine (localhost, `.localhost` / `.test` / `.local`, özel IPv4 aralıkları) http ile POST yapılır; `get` ya da parametre yoksa GET (RFC 9101). Bilinmeyen değer bağlantıda reddedilir |
 | İstek imzası | **Zorunlu** — imzasız istek reddedilir |
 | `client_metadata.jwks` | Yanıt şifreleme anahtarı; **zorunlu** |
 | `verifier_info` | İsteğe bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — kullanımın kayıt sertifikasını (ETSI TS 119 475 / 119 472-2). Varsa cüzdan kayıt birimi imzasını (LOTL `roles.registrar`), süreyi ve `sub`'ın erişim sertifikasındaki `organizationIdentifier` ile aynı olduğunu doğrular; tutmazsa veri gönderilmez (WRC4). Sertifikada olmayan alan fazla istek sayılır (§6). |
@@ -280,7 +280,9 @@ ekranında anlaması gereken bir karmaşıklıktır.
 
 **Kural:** Bir istekte en fazla **3** belge ve en fazla **2**
 `credential_sets` girişi. Fazlası, kullanıcının bilinçli onay verme
-yeteneğini aşar.
+yeteneğini aşar. Sınırı **cüzdan** uygular: imzalı istek nesnesini doğrularken sınırı aşan isteği reddeder. Takma ad sorgusu da
+DCQL `credentials` dizisinde bir girdi olduğu için sayıya girer. Referans doğrulayıcı (paket ve barındırılan doğrulayıcı) istek
+kurarken bu sınırı denetlemez; sınırı aşan politika cüzdanda reddedilir (2026-11-19).
 
 **Cüzdan davranışı** (OpenID4VP 1.0 §6.4; referans: `@tamga-network/wallet-core` `selectDcql`):
 
@@ -323,7 +325,9 @@ açıklanmaz. `docType` = vct URN.
 ## 4.6 `trusted_authorities` — cüzdan nasıl değerlendirir
 
 Doğrulayıcı, sorgudaki bir belge için kabul ettiği güven kaynaklarını `trusted_authorities` ile söyleyebilir (OpenID4VP 1.0
-§6.1.1); belge en az bir koşula uymalıdır. Tamga doğrulayıcısı `aki` kullanır ([[t:HAIP]] §5). Cüzdan her koşulu üç sonuçtan
+§6.1.1); belge en az bir koşula uymalıdır. Tamga doğrulayıcısı `aki` kullanabilir ([[t:HAIP]] §5): politika `trusted_authorities`
+verirse sorguya olduğu gibi geçer (`@tamga-network/verifier` `akiTrustedAuthority` değeri kök sertifikalardan üretir); politika
+vermezse koşul yazılmaz — referans doğrulayıcı bugün kendiliğinden eklemez (2026-11-19). Cüzdan her koşulu üç sonuçtan
 biriyle değerlendirir (paketler 0.5.2):
 
 | Tür | Cüzdan ne yapar |
@@ -401,7 +405,7 @@ anahtarıyla **JWE** olarak şifrelenir.
 |---|---|
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` ya da `A256GCM` ([[t:HAIP]] §5) — doğrulayıcı ikisini de `encrypted_response_enc_values_supported` içinde ilan eder ve kabul eder; cüzdan ilan edilenler arasından `A256GCM`'i seçer, ilan yoksa OpenID4VP varsayılanı `A128GCM` |
-| Alıcı anahtarı | İstekteki `jwks`'ten, `use: "enc"` |
+| Alıcı anahtarı | İstekteki `jwks`'ten: `kty: "EC"`, `crv: "P-256"`; `use: "enc"` ya da `use` alanı hiç yok (RFC 7517 §4.2: `use` isteğe bağlıdır; 2026-11-19). Başka `use` değeri taşıyan anahtar seçilmez |
 
 ## 5.4 Yanıt ucunun cevabı (2026-10-27)
 
@@ -423,13 +427,17 @@ istisna geçiş kartı veren politikalardır ([[ADR-0012]] B): kabulde `pass_gra
 |---|---|
 | Doğrulayıcı kayıtlı, tüm claim'ler scope içinde | Normal onay ekranı |
 | Doğrulayıcı kayıtlı, **bazı claim'ler scope dışında** | **Aşırı talep uyarısı** — scope dışı alanlar ayrıca işaretlenir; kullanıcı yine de onaylayabilir |
-| Doğrulayıcı **kayıtsız** | "Bu doğrulayıcı Tamga'da kayıtlı değil" uyarısı; sunum engellenmez ama belirgin uyarı |
+| Doğrulayıcı **kayıtsız** (kayıt sertifikası yok ya da geçersiz) | Kişiye sorulmadan **reddedilir** (§7.5, [[ADR-0056]] K10) |
 
 **Değişiklik notu 2026-11-04 — mdoc kapsamı.** mdoc kaydında kapsam **ad alanı + öğe çiftiyle** karşılaştırılır: kayıt sertifikası
 `[ad alanı, öğe]` iznini verdiyse başka ad alanındaki aynı adlı öğe kapsam dışıdır; ad alanı taşımayan tek elemanlı yol (`[öğe]`)
 mdoc kaydında izin vermez. SD-JWT VC kaydında yol `[ad]` olarak kalır.
 
 ## 6.2 Neden engellenmiyor
+
+**Değişiklik notu 2026-11-19.** Bu bölüm yalnız **kayıtlı** doğrulayıcının kapsam aşımı için geçerlidir. Kayıt sertifikası
+olmayan istek [[ADR-0056]] K10'dan (2026-10-19) beri uyarıyla geçmez, kişiye sorulmadan reddedilir (§7.5); aşağıdaki "kayıtsız
+doğrulayıcı" örnekleri o karardan önceki tasarımı anlatır.
 
 Cüzdan, kullanıcının **aracıdır**, bekçisi değil. Bir kullanıcı bilinçli
 olarak kayıtsız bir doğrulayıcıya belge sunmak isteyebilir — bir araştırmacıya,
@@ -476,6 +484,10 @@ identifier olarak kabul etmez; yalnızca tarayıcının verdiği origin'i
 kökenidir (OpenID4VP 1.0 Ek A.4), client identifier değil. `verifyPresentation` `origin` verilip `aud` verilmezse bu değeri
 kendisi türetir; `aud` verilmiş ve farklıysa sunumu açık bir iletiyle A1'de reddeder (yanlış yapılandırma A6'da anlamsız bir
 "aud uyuşmazlığı" olarak görünmez).
+
+**Birden çok köken (2026-11-19).** İstek birden çok `expected_origins` taşıyorsa doğrulayıcı yanıtı, çağıranın verdiği sayfa
+kökenine bağlar (`decryptPresentationResponse` / `openPresentationResponse` `origin` seçeneği); köken isteğin imzalı
+`expected_origins` listesinde değilse yanıt açılmaz. Köken verilmezse ilk köken kullanılır (tek kökenli istekte davranış aynı).
 
 ## 7.2 Zincir kaydıyla ilişki
 
@@ -550,10 +562,15 @@ bağlanır. Böylece sunum, başka bir işlem için yeniden kullanılamaz.
 - İstek: her öğe base64url JSON nesnesi; `type` ve boş olmayan `credential_ids` zorunlu, her kimlik bir `dc+sd-jwt` sorgusunun
   `id`'si (sahip bağı kapatılamaz), `transaction_data_hashes_alg` verilirse `sha-256` içerir (OpenID4VP 1.0 §5.1, Ek B.3.3).
   Doğrulayıcı `transactionDataItem` ile üretir.
-- Cüzdan: tanımadığı tek bir tür bile varsa isteği `invalid_transaction_data` ile reddeder (alan yok sayılmaz; §5, §8.5). Tanınan
+- Cüzdan: tanımadığı tek bir tür bile varsa isteği reddeder (alan yok sayılmaz; §5, §8.5). Ret **cüzdanın içindedir**: hata kodu
+  `invalid_transaction_data` cüzdanın yerel hatasıdır ve doğrulayıcıya gönderilmez — istek doğrulanırken reddedildiği için
+  doğrulayıcıya hiçbir yanıt gitmez. Cüzdanın doğrulayıcıya gönderdiği tek hata yanıtı, kişinin isteği reddettiği durumdaki
+  `access_denied`'dır (§10, PV5; 2026-11-19). Tanınan
   türler cüzdanın listesidir, ağ tür tanımlamaz; varsayılan liste boştur. Kişiye gösterilmemiş işlem verisi imzalanmaz: onay,
   gösterilen öğelerle kaydedilir (`confirmTransactionData`). Her öğe seçilen ilk uygun SD-JWT VC sunumuna bağlanır (§5.1). En çok 10
-  öğe, öğe başına 8 KB; tekrar eden öğe reddedilir.
+  öğe, öğe başına 8 KB; tekrar eden öğe reddedilir. Öğe başına sınırlar: `type` boş olmayan ve en çok 256 karakterlik bir dizgi,
+  `credential_ids` en çok 3 kimlik (bir istekte en çok 3 belge olduğu için, §4.4). Bu sınırları cüzdan uygular; doğrulayıcının
+  `transactionDataItem` yardımcısı yalnız `type` ve boş olmayan `credential_ids` ister (2026-11-19).
 - KB-JWT: `transaction_data_hashes` = istekte gelen dizgilerin (base64url çözülmeden) SHA-256 özetleri (base64url); istek
   `transaction_data_hashes_alg` verdiyse `transaction_data_hashes_alg: "sha-256"` (bu durumda zorunlu).
 - Doğrulama (A6): `VerifyInput.transactionData` verilirse KB-JWT zorunlu ve özetler eksiksiz ve fazlasız eşleşmeli; verilmezse KB-JWT
@@ -677,6 +694,13 @@ kullanıcının hangi belgelere sahip olduğunu sorgu yaparak haritalayabilir.
 | **PV14** | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
 | **PV15** | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek çekimi varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
+**Uygulama notu (2026-11-19; denetim turu).** PV9'u cüzdan uygular (§4.4): sınırı aşan imzalı istek reddedilir ve takma ad
+sorgusu da sayıya girer; referans doğrulayıcı istek kurarken sınırı denetlemez. PV15'in tek istisnası, `@tamga-network/verifier`
+`createPresentationRequest`'in kullanımdan kaldırılmış `initialRequestObject: true` seçeneğidir (yalnız 0.7.x uyumu için): bu
+seçenekle sunumla birlikte üretilen tek cihazlar arası istek nesnesi, onu çeken herkese aynı `state`, `nonce` ve şifreleme
+anahtarını verir ve dalsız yanıt bu nesnenin anahtarıyla açılır. Varsayılan (`false`) ve barındırılan doğrulayıcı bu nesneyi
+üretmez; seçenek bir sürüm sonra kaldırılır.
+
 ---
 
 # Güvenlik ve Mahremiyet Notları
@@ -703,7 +727,7 @@ anahtarına ihtiyaç duyar.
 
 1. ~~Aşırı talep uyarısının sertliği~~ — **KAPANDI** ([[SPEC-WALLET-0001]] §5.2,
    WL8): üç seviye, üç görsel ağırlık. Scope aşımında ayrı blok + 3 sn gecikmeli
-   düğme; kayıtsız doğrulayıcıda akışı kesen ekran. Uyarı yorgunluğu önlemi:
+   düğme; kayıtsız doğrulayıcıda akışı kesen ekran (2026-10-19'dan beri kayıtsız istek reddedilir — §7.5). Uyarı yorgunluğu önlemi:
    normal akışta **hiç** uyarı yok. Görsel tasarım kullanıcı testi bekliyor.
 2. `credential_sets` sınırı (PV9: 3/2) tahminîdir; kullanıcı testiyle
    kalibre edilmeli.
@@ -714,8 +738,9 @@ anahtarına ihtiyaç duyar.
    doküman yazılırken yeniden değerlendirildi; **hâlâ ertelendi** — sürüm
    yönetimini kayıt defterine bağlamak yeni bir bağlaşım yaratıyor ve
    `checks_skipped` mekanizması (M1) pratikte yeterli görünüyor.
-5. DC API akışında imzalı istek nesnesi zorunlu mu olsun? §7.2 öneriyor;
-   zorunlu kılmak bazı tarayıcı entegrasyonlarını zorlaştırabilir.
+5. ~~DC API akışında imzalı istek nesnesi zorunlu mu olsun?~~ — **KAPANDI** (2026-11-19): evet. PV6 her akışta imzalı istek
+   ister; cüzdan DC API'de yalnız imzalı OpenID4VP (`openid4vp-v1-signed`) ve okuyucu imzalı ISO/IEC 18013-7 Ek C isteğini kabul
+   eder, imzasız protokolü reddeder; kayıt sertifikası olmayan istek de reddedilir (§7.5, [[ADR-0056]] K10).
 
 ---
 
@@ -731,6 +756,16 @@ anahtarına ihtiyaç duyar.
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-19, ikinci; denetim turu — sürüm 1.0 kalır).** Denetim turunda şartname metni koda göre düzeltildi,
+davranış değişmedi: `request_uri_method=post`'ta yerel geliştirme için http istisnası (§3); PV9 sınırını cüzdanın uyguladığı ve
+takma ad sorgusunun sayıldığı (§4.4, değişmezler altındaki uygulama notu); doğrulayıcının `aki` kullanabileceği, kendiliğinden
+eklemediği (§4.6); yanıt şifreleme anahtarında `use` alanının bulunmayabileceği (§5.3); işlem verisi reddinin cüzdanda kaldığı
+ve öğe başına sınırlar (§8); PV15'in kullanımdan kaldırılmış `initialRequestObject` istisnası (değişmezler altındaki uygulama notu).
+
+**Sürüm notu (2026-11-19; denetim turu — sürüm 1.0 kalır).** Denetim turu: §6.1–6.2'deki "kayıtsız doğrulayıcı
+uyarıyla geçer" ifadesi §7.5 ve [[ADR-0056]] K10 ile uyumlu hâle getirildi (kayıtsız istek reddedilir); §7.1'e birden çok
+köken notu eklendi (yanıt çağıranın verdiği sayfa kökenine bağlanır); Açık Konu 5 kapatıldı (DC API'de imzalı istek zorunlu, PV6).
 
 **Sürüm notu (2026-11-15; proje yönetimi onayıyla, AB uyum turu 2026-11-15).** §3'e `request_uri_method` satırı eklendi:
 cüzdan çekirdeği OpenID4VP 1.0 §5.10 POST çekimini ve `wallet_nonce` denetimini destekler (`fetchRequestObjectFor`,

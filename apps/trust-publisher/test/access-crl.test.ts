@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { webcrypto } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -94,6 +94,19 @@ describe("ADR-0087 ayar", () => {
     ).toEqual([expect.stringMatching(/iki kez/)]);
     expect(accessCrlConfigProblems({ issuers: [{ ca: "Root CA", uri: `${CRL}/r.crl` }] }, BASE).length).toBe(1);
   });
+  it("ADR-0090: yol makamın adı — bir makamın CRL'i başka makamın dosyasına yazılamaz", () => {
+    expect(
+      accessCrlConfigProblems(
+        {
+          issuers: [
+            { ca: "access-ca-1", uri: `${CRL}/root-ca.crl` },
+            { ca: "root-ca", uri: `${CRL}/access-ca-1.crl` },
+          ],
+        },
+        BASE,
+      ),
+    ).toEqual([expect.stringMatching(/\/access-ca-1\.crl\)$/), expect.stringMatching(/\/root-ca\.crl\)$/)]);
+  });
   it("ADR-0090: CRL alan adı güven listesi alan adından; iki ad önce http sonra https; dosya yayın klasöründe crl/", () => {
     expect(crlHostOf("https://trust.tamga.network")).toBe("crl.tamga.network");
     expect(crlHostOf("https://trust.sandbox.tamga.network")).toBe("crl.sandbox.tamga.network");
@@ -178,6 +191,37 @@ describe("ADR-0087 iptal planı", () => {
     const r = revokeAccessCert(s, "access-ca-1", k, "key_compromise", t0);
     expect(r.entry.reason).toBe("key_compromise");
     expect(() => revokeAccessCert(r.state, "access-ca-1", k, "key_compromise", t0)).toThrow(/zaten iptal/);
+  });
+
+  it("CRL'den kurulan durumda (parmak izi bilinmiyor) iptal seri numarasıyla eşleşir: AR3 görülür, iki kez iptal edilmez", () => {
+    const fp = "12".repeat(32);
+    const recovered = {
+      issuers: [
+        {
+          ca: "access-ca-1",
+          uri: CFG.issuers[0].uri,
+          crl_number: 5,
+          known: [],
+          revoked: [
+            {
+              serial: "7A01",
+              fingerprint_sha256: "unknown-7a01",
+              dns_name: "(recovered)",
+              not_after: t0.toISOString(),
+              revoked_at: t0.toISOString(),
+              reason: "privilege_withdrawn" as const,
+            },
+          ],
+        },
+      ],
+    };
+    const active = planAccessRevocations(recovered, CFG, [view("a.example", "ACTIVE", fp, "7a01")], t0);
+    expect(active.problems).toEqual([expect.stringMatching(/^AR3: a\.example/)]);
+    const suspended = planAccessRevocations(recovered, CFG, [view("a.example", "SUSPENDED", fp, "07a01")], t0);
+    expect(suspended.revoked).toEqual([]);
+    expect(suspended.state.issuers[0].revoked).toHaveLength(1);
+    const k = { serial: "7a01", fingerprint_sha256: fp, dns_name: "a.example", not_after: "2028-01-01T00:00:00Z" };
+    expect(() => revokeAccessCert(recovered, "access-ca-1", k, "key_compromise", t0)).toThrow(/zaten iptal/);
   });
 });
 
@@ -379,5 +423,41 @@ describe.skipIf(!ready)("ADR-0087 yayıncı (geçici klasörde)", { timeout: 240
     expect(run(["heartbeat"]).code).toBe(0);
     expect(crl().entries.length).toBe(before);
     expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).toMatch(/state for access-ca-1 recovered/);
+  });
+
+  it("kurulan durumda iptal seri numarasıyla eşleşir: iptal edilmiş sertifikalı etkin kayıt yine durur (AR3)", () => {
+    expect(run(["build"]).err).toMatch(/AR3/);
+  });
+
+  it("durum dosyası var ama makamın kaydı yoksa CRL'den kurulur: CRL numarası geri gitmez", () => {
+    const n = crlNumberOf(crl())!;
+    const f = join(DIST, "access-crl-state.json");
+    writeFileSync(f, JSON.stringify({ issuers: [] }, null, 2) + "\n");
+    expect(run(["heartbeat"]).code).toBe(0);
+    expect(crlNumberOf(crl())!).toBe(n + 1);
+    expect(JSON.parse(readFileSync(f, "utf8")).issuers.map((s: { ca: string }) => s.ca)).toEqual(["access-ca-1"]);
+  });
+
+  it("saatlik yeniden imza yalnız CRL numarasını artırınca durum arşivine kopya eklenmez", () => {
+    const archived = () => readdirSync(join(DIST, "archive")).filter((x) => x.startsWith("access-crl-state.")).length;
+    const before = archived();
+    expect(run(["heartbeat"]).code).toBe(0);
+    expect(archived()).toBe(before);
+  });
+
+  it("heartbeat CRL'i kayıt kilidi altında yeniler: kilit tutulurken CRL yeniden imzalanmaz", () => {
+    const n = crlNumberOf(crl())!;
+    const lock = join(DIST, "registry.lock");
+    mkdirSync(lock);
+    try {
+      const r = run(["heartbeat"]);
+      expect(r.code).not.toBe(0);
+      expect(r.err).toMatch(/registry\.lock/);
+      expect(crlNumberOf(crl())!).toBe(n);
+    } finally {
+      rmSync(lock, { recursive: true, force: true });
+    }
+    expect(run(["heartbeat"]).code).toBe(0);
+    expect(crlNumberOf(crl())!).toBe(n + 1);
   });
 });

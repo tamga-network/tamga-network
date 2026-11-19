@@ -47,8 +47,22 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   const walletRedirectUri = (p: Presentation, pid: string, outcome: string) =>
     `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` +
     (outcome === "ACCEPTED" ? `&show=${encodeURIComponent(p.showKey)}` : "");
+  /**
+   * SPEC-API-0001 §3 (denetim turu D3-7): güven listesi bayat ya da erişilemezken RP beyanı ve RP kaydı doğrulanamaz — bu bir
+   * bağımlılık sorunudur, çağıranın hatası değil: 503 (önce 401 "invalid_rp_assertion" ya da 400 "policy_exceeds_scope" dönüyordu).
+   * Koşul `TrustSource.freshness().healthy` (bayatlık sınırı dahil). Yanıt gönderildiyse true.
+   */
+  const trustUnavailable = (reply: FastifyReply): boolean => {
+    if (ctx.trust().freshness().healthy) return false;
+    reply
+      .code(503)
+      .header("retry-after", "60")
+      .send({ error: "temporarily_unavailable", error_description: "trusted list stale or unreachable" });
+    return true;
+  };
   const callerOf = async (authorization: string | undefined, reply: FastifyReply): Promise<string | null | false> => {
     if (!authorization) return null;
+    if (trustUnavailable(reply)) return false;
     try {
       return await ctx.rpAuth(authorization);
     } catch (e) {
@@ -98,6 +112,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     }
     const who = await callerOf(req.headers.authorization, reply);
     if (who === false) return reply;
+    // RP kaydı (kapsam, AP6) bayat listeden okunamaz: 503 (D3-7)
+    if (trustUnavailable(reply)) return reply;
     // Hız sınırı kovası: doğrulanmış RP'nin kendi kovası; beyansız istekler istemci anahtarıyla — vekil arkasında adres gelmez,
     // vekil istemci anahtarı başlığı yazmıyorsa hepsi tek ortak kovadır (`clientKeyOf`). Tek bir istemcinin beyansız seli RP'lerin
     // sunum açmasını durduramaz (güvenlik turu 2026-10-19).
@@ -415,35 +431,86 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       const pc = p.policy.credentials[0];
       const pres = pc ? dec.vp_token[pc.id]?.[0] : undefined;
       if (pc && !pres) return failedAttempt(p, pid, reply, null, `${pc.id} missing in vp_token`, branch);
-      // ADR-0031: yalnız takma adla giriş (belge yok) — sonuç takma ad denetiminden
-      let out = !pc
-        ? { result: pseudonymOnlyResult(pid, ctx), claims: {} as Record<string, unknown> | null }
-        : await verifyPresentation({
-            presentation: pres!,
-            // OpenID4VP 1.0 Ek A.4: DC API'de sunumun hedefi `origin:` + köken — imzalı istekte de (SPEC-PROTO-0002 §7.1);
-            // cihazlar arası yolda client identifier (PV7)
-            aud: opened.path === "dc_api" && p.dcApiOrigin ? `origin:${p.dcApiOrigin}` : cfg.clientId,
-            nonce,
-            // D-CRED-5: format politikadan; mdoc SessionTranscript'i yanıtın geldiği yola göre (response_uri ya da köken)
-            format: pc.format,
-            ...opened.binding,
-            policy: p.policy,
-            policyCredentialId: pc.id,
-            trust: ctx.trust(),
-            statusCache: ctx.statusCache,
-            rootCertsDer: ctx.rootDer(),
-            // E3 (AP6, ADR-0017 K7/HV6): açıklanan alanlar sunumu açan (asıl) RP'nin kayıtlı kapsamıyla sınırlı — aracının değil
-            rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId),
-            allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"), // yalnız yerel geliştirme
-            // SPEC-CRED-0003 §9.1 / T1: yalnız sandbox'taki OpenID uyum öz-testi politikası (test aracının liste adresi her testte yeni)
-            ...(statusFetchOnDemandFor(cfg.network, p.policy) ? { statusFetchOnDemand: { timeoutMs: 4000 } } : {}),
-            now: nowSec(),
-            verificationId: `vrf_${pid.slice(4)}`,
-            audit: (e) => {
-              pendingAudit = e;
-            },
-            zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
-          });
+      // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
+      const checkPseudonym = async () => {
+        const tok = dec.vp_token[PSEUDONYM_QUERY_ID]?.[0];
+        const ps = tok
+          ? await verifyPseudonym({
+              token: tok,
+              aud: cfg.clientId,
+              nonce,
+              // ADR-0034: takma ad sitenin kalıcı kimliğine (alan adı) bağlı; client_id sertifika yenilenince değişir
+              rpKey: ctx.trust().relyingParty(p.owner ?? cfg.clientId)?.dns_name ?? p.owner ?? cfg.clientId,
+              trust: ctx.trust(),
+              walletStatusOf: ctx.walletStatusOf, // ADR-0031 PS5: iptal edilmemiş cüzdan
+              // Gerçek ağda iptal girişi olmayan WIA ile takma ad kabul edilmez (iptal edilemeyen birimin takma adı kalıcı bir
+              // giriş anahtarı olurdu); sandbox'ta genel kanıt kabul edilir (kontrol 2026-11-10)
+              clientStatus: (cfg.network ?? "production") === "production" ? "required" : "optional",
+              now: nowSec(),
+            })
+          : { ok: false as const, reason: "pseudonym missing in vp_token", indeterminate: false };
+        p.trace.push({
+          t: Date.now(),
+          step: ps.ok
+            ? "Site pseudonym verified (signature, audience, nonce, wallet instance)"
+            : "Site pseudonym rejected",
+          detail: ps.ok ? undefined : ps.reason,
+        });
+        return ps;
+      };
+      // ADR-0031: yalnız takma adla giriş (belge yok). Takma ad bu sunumun TEK sahiplik kanıtıdır: sunum tüketilmeden ÖNCE
+      // denetlenir (denetim turu D3-2; önce sunum tüketiliyor, takma ad sonra denetleniyordu — boş yanıt sunumu bitirebilirdi).
+      // Geçmeyen takma ad deneme sayılır (sunum açık kalır); P1 yalnız denetim geçince `checks_performed`'e girer.
+      let out: { result: VerificationResult; claims: Record<string, unknown> | null };
+      if (!pc) {
+        const ps = await checkPseudonym();
+        if (!p.branches.isOpen(branch))
+          return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+        if (!ps.ok)
+          return failedAttempt(p, pid, reply, "P1", ps.reason, branch, ps.indeterminate ? "INDEXER_STALE" : null, () =>
+            ctx.audit({
+              verification_id: `vrf_${pid.slice(4)}`,
+              outcome: ps.indeterminate ? "INDETERMINATE" : "REJECTED",
+              failed_step: "P1",
+              disclosed: [],
+              ts: nowSec(),
+            }),
+          );
+        out = { result: pseudonymOnlyResult(pid, ctx), claims: { pseudonym: ps.pseudonym } };
+        pendingAudit = {
+          verification_id: out.result.verification_id,
+          outcome: "ACCEPTED",
+          failed_step: null,
+          disclosed: [],
+          ts: nowSec(),
+        };
+      } else
+        out = await verifyPresentation({
+          presentation: pres!,
+          // OpenID4VP 1.0 Ek A.4: DC API'de sunumun hedefi `origin:` + köken — imzalı istekte de (SPEC-PROTO-0002 §7.1);
+          // cihazlar arası yolda client identifier (PV7)
+          aud: opened.path === "dc_api" && p.dcApiOrigin ? `origin:${p.dcApiOrigin}` : cfg.clientId,
+          nonce,
+          // D-CRED-5: format politikadan; mdoc SessionTranscript'i yanıtın geldiği yola göre (response_uri ya da köken)
+          format: pc.format,
+          ...opened.binding,
+          policy: p.policy,
+          policyCredentialId: pc.id,
+          trust: ctx.trust(),
+          statusCache: ctx.statusCache,
+          rootCertsDer: ctx.rootDer(),
+          // E3 (AP6, ADR-0017 K7/HV6): açıklanan alanlar sunumu açan (asıl) RP'nin kayıtlı kapsamıyla sınırlı — aracının değil
+          rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId),
+          allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"), // yalnız yerel geliştirme
+          // SPEC-CRED-0003 §9.1 / T1: yalnız sandbox'taki OpenID uyum öz-testi politikası (test aracının liste adresi her testte yeni)
+          ...(statusFetchOnDemandFor(cfg.network, p.policy) ? { statusFetchOnDemand: { timeoutMs: 4000 } } : {}),
+          now: nowSec(),
+          verificationId: `vrf_${pid.slice(4)}`,
+          audit: (e) => {
+            pendingAudit = e;
+          },
+          zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
+        });
       // doğrulama sürerken sunum başka yoldan kapandıysa (ör. Ek C yanıtı) bu yanıt sonucu ezmez (tek yönlü durum, PV10)
       if (!p.branches.isOpen(branch)) {
         flushAudit();
@@ -471,51 +538,22 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       mine = true;
       // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
       const verified = out;
-      // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
-      if (p.policy.pseudonym && out.result.outcome === "ACCEPTED") {
-        const tok = dec.vp_token[PSEUDONYM_QUERY_ID]?.[0];
-        const ps = tok
-          ? await verifyPseudonym({
-              token: tok,
-              aud: cfg.clientId,
-              nonce,
-              // ADR-0034: takma ad sitenin kalıcı kimliğine (alan adı) bağlı; client_id sertifika yenilenince değişir
-              rpKey: ctx.trust().relyingParty(p.owner ?? cfg.clientId)?.dns_name ?? p.owner ?? cfg.clientId,
-              trust: ctx.trust(),
-              walletStatusOf: ctx.walletStatusOf, // ADR-0031 PS5: iptal edilmemiş cüzdan
-              // Gerçek ağda iptal girişi olmayan WIA ile takma ad kabul edilmez (iptal edilemeyen birimin takma adı kalıcı bir
-              // giriş anahtarı olurdu); sandbox'ta genel kanıt kabul edilir (kontrol 2026-11-10)
-              clientStatus: (cfg.network ?? "production") === "production" ? "required" : "optional",
-              now: nowSec(),
-            })
-          : { ok: false as const, reason: "pseudonym missing in vp_token", indeterminate: false };
-        p.trace.push({
-          t: Date.now(),
-          step: ps.ok
-            ? "Site pseudonym verified (signature, audience, nonce, wallet instance)"
-            : "Site pseudonym rejected",
-          detail: ps.ok ? undefined : ps.reason,
-        });
+      // Belge + takma ad: belge sahiplik kanıtıyla tüketildi; takma ad sonucu değiştirebilir. Başarısız takma ad, DOĞRULANAMADI da
+      // olsa P1 adımında düşer (denetim turu D3-8: `failed_step: null` yalnız iç hataya ayrılmıştır, SPEC-API-0001 §1.3/§2.3)
+      if (pc && p.policy.pseudonym && out.result.outcome === "ACCEPTED") {
+        const ps = await checkPseudonym();
         if (ps.ok) out = { ...out, claims: { ...(out.claims ?? {}), pseudonym: ps.pseudonym } };
         else
           out = {
             result: {
               ...out.result,
               outcome: ps.indeterminate ? "INDETERMINATE" : "REJECTED",
-              failed_step: ps.indeterminate ? null : "P1",
-              failed_reason: ps.indeterminate ? null : ps.reason,
+              failed_step: "P1",
+              failed_reason: ps.reason,
               indeterminate_reason: ps.indeterminate ? "INDEXER_STALE" : null,
             },
             claims: null,
           };
-        if (!pc)
-          ctx.audit({
-            verification_id: out.result.verification_id,
-            outcome: out.result.outcome,
-            failed_step: out.result.failed_step,
-            disclosed: [],
-            ts: nowSec(),
-          });
       }
       // denetim kaydı saklanan sonuçla aynı çıktıyı taşır (takma ad denetimi sonucu değiştirdiyse onunkini)
       flushAudit({ outcome: out.result.outcome, failed_step: out.result.failed_step });
@@ -715,6 +753,14 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     if (!(await mayRead(p, req.headers.authorization, reply))) return reply;
     if (!p.result) return { claims: null };
     const c = presentations.takeClaims(p);
+    // Denetim turu D3-5: değer okuması denetim kaydına düşer — değer, alan adı ve kişi bilgisi YOK (AP3/AP4); yalnız olay, doğrulama
+    // kimliği, politika ve değerin verilip verilmediği
+    ctx.audit({
+      event: "claims.read",
+      verification_id: p.result.verification_id,
+      policy: p.policy.policy_id,
+      released: c !== "gone" && c !== null,
+    });
     if (c === "gone") return reply.code(410).send({ error: "claims_gone" }); // K3: bir kez, ≤ 5 dk
     return { claims: c };
   });
@@ -773,6 +819,9 @@ export async function createPresentation(
     passGrantOffered: !!policy.proximity, // a3/WL13: cüzdan geçiş kartı için ayrı anahtar hazırlar
     // ADR-0026 K4: isteğin kullanımının kayıt sertifikası (varsa; istek başına tek — RPRC_19) verifier_info ile
     registrationCert: registrationCertFor(cfg.trustDist, owner ?? cfg.clientId, registrationScopesFor(policy, rpRec)),
+    // 0.8.9: istekteki adresler https; yerel / özel ağ yayın adresinde (geliştirme, LAN sahneleri) http. Gerçek ağda TAMGA_LIVE=1
+    // kilidi yayın adresini zaten https'e zorlar — bu izin orada hiçbir adresi açmaz.
+    allowLocalDevHost: true,
   };
   const pr = await createPresentationRequest({
     ...content,
@@ -895,7 +944,11 @@ function sameSecret(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-/** ADR-0031: belgesiz (yalnız takma adlı) sunumun sonuç iskeleti — takma ad denetimi P1 ile tamamlar; değer yok (AP3). */
+/**
+ * ADR-0031: belgesiz (yalnız takma adlı) sunumun sonucu — yalnız takma ad denetimi (P1) GEÇTİKTEN sonra kurulur; değer yok (AP3).
+ * Barındırılan doğrulayıcı sonucu her zaman denetim kaydına yazar: E4 `checks_performed`'te (SPEC-API-0001 E4/AP9; denetim turu
+ * D3-19 — önce E4 iki listede de yoktu).
+ */
 function pseudonymOnlyResult(pid: string, ctx: VerifyContext): VerificationResult {
   const f = ctx.trust().freshness();
   return {
@@ -906,7 +959,7 @@ function pseudonymOnlyResult(pid: string, ctx: VerifyContext): VerificationResul
     indeterminate_reason: null,
     spec_version: SPEC_VERSION,
     sdk_version: SDK_VERSION,
-    checks_performed: ["P1"],
+    checks_performed: ["P1", "E4"],
     checks_skipped: [],
     issuer: null,
     schema: null,

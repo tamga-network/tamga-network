@@ -150,7 +150,8 @@ export interface VerifyOk {
 }
 export interface VerifyFail {
   ok: false;
-  failedStep: FormatStep;
+  /** `D1`: imzalı gövdedeki `status` girişi okunamıyor (SPEC-API-0001 D1; mdoc ile aynı kural) */
+  failedStep: FormatStep | "D1";
   /** Sabit ileti: başlık/gövde değeri ve kütüphane istisnası iletisi taşımaz (SPEC-API-0001 AP3); alan ADI taşıyabilir. */
   reason: string;
   checksPerformed: FormatStep[];
@@ -164,7 +165,7 @@ export type VerifyResult = VerifyOk | VerifyFail;
 
 export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promise<VerifyResult> {
   const done: FormatStep[] = [];
-  const fail = (failedStep: FormatStep, reason: string): VerifyFail => ({
+  const fail = (failedStep: FormatStep | "D1", reason: string): VerifyFail => ({
     ok: false,
     failedStep,
     reason,
@@ -350,6 +351,11 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     done.push("A7");
   }
 
+  // D1 (SPEC-API-0001; mdoc ile aynı kural, denetim turu D1-1): `status` varsa okunabilir olmalı — imzalı ama bozuk giriş iptal
+  // denetimini sessizce atlatamaz ve doğrulayıcının D adımında iç hataya (DOĞRULANAMADI) dönüşmez: belge RED
+  const statusProblem = statusEntryProblem(payload.status);
+  if (statusProblem) return fail("D1", `status entry malformed: ${statusProblem}`);
+
   return {
     ok: true,
     claims,
@@ -368,6 +374,19 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     kb,
     checksPerformed: done,
   };
+}
+
+/** `status` girişinin biçim sorunu (yoksa ya da geçerliyse null): Tamga profilinde yalnız `status_list {idx, uri}`. Değer yazılmaz (AP3/AP4). */
+function statusEntryProblem(st: unknown): string | null {
+  if (st === undefined) return null;
+  if (!st || typeof st !== "object" || Array.isArray(st)) return "not an object";
+  const sl = (st as { status_list?: unknown }).status_list;
+  if (sl === undefined) return "no status_list";
+  if (!sl || typeof sl !== "object" || Array.isArray(sl)) return "status_list";
+  const { idx, uri } = sl as { idx?: unknown; uri?: unknown };
+  if (typeof idx !== "number" || !Number.isSafeInteger(idx) || idx < 0) return "status_list.idx";
+  if (typeof uri !== "string" || !uri) return "status_list.uri";
+  return null;
 }
 
 /** İhraç biçimindeki (KB'siz) SD-JWT'nin gövdesini çözer — yalnızca görüntüleme için; İMZA DOĞRULANMAZ (doğrulama: verifySdJwtVc). */

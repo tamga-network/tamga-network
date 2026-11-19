@@ -23,6 +23,7 @@ import { errors as joseErrors } from "jose";
 import { isIP } from "node:net";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
 import { assuranceAtLeast, constraintOk, scopeClaimName, scopeCovers, type Policy } from "./policy.js";
+import { policyShapeProblems } from "./policy-check.js";
 import { pointOf, verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
 import { verifyIdentifierListToken } from "@tamga-network/mdoc";
 import { b64uToBytes, certFingerprintSha256Hex } from "@tamga-network/core";
@@ -105,6 +106,10 @@ export function stepT0(ctx: VerifyCtx): StepFail | undefined {
     (f?.max_anchor_lag_sec !== undefined && !limit(f.max_anchor_lag_sec))
   )
     return indet("T0", "INDEXER_STALE", "policy freshness limits missing or invalid");
+  // Güvenlik incelemesi 2026-11-18: güven bloğu (require_recognition boolean, devlet kodu, asgari güvence, kategoriler) ve aralık
+  // kısıtları (yalnız sayısal min/max) geçerli olmalı — eksik alan C3'ü ya da E2'yi sessizce kapatmasın
+  if (policyShapeProblems(input.policy).length)
+    return indet("T0", "INDEXER_STALE", "policy trust block or constraints missing or invalid");
   if (!fr.healthy) return indet("T0", "INDEXER_STALE", "trusted list stale or unreachable (CMP4)");
   if (fr.ageSec > input.policy.freshness.max_trust_age_sec)
     return indet(
@@ -125,14 +130,17 @@ export async function stepA(ctx: VerifyCtx): Promise<StepFail | undefined> {
   const chainSkipped = roots === "none" && (input.format ?? "dc+sd-jwt") === "dc+sd-jwt";
   if (!chainSkipped && !(Array.isArray(roots) && roots.length))
     return indet("A3", "CHAIN_UNREACHABLE", "national root certificate not configured; chain cannot be checked");
+  // Denetim turu D1-12: politikada olmayan belge kimliği çağıranın yapılandırma hatasıdır (A1) — belgeye hiç bakılmadan, A adımından
+  // önce (önce A tamamlanıp E2'de "politika credential id bilinmiyor" deniyordu; mdoc yolları boş türle A8'de düşüyordu)
+  const pc = input.policy.credentials.find((c) => c.id === input.policyCredentialId);
+  if (!pc) return reject("A1", "policyCredentialId is not a credential of the policy");
   const a = await formatStep(input, ctx.now);
   if (!a.ok) {
     // ADR-0036 FD3: zincir verilen köklerin hiçbirine bağlanmadıysa RED demeden önce — istenen türe kefil olabilecek bir dış liste
     // şu an kullanılamıyor mu (yüklenememiş ya da süresi geçmiş; çapaları kök kümesine girmez)? Öyleyse belge hakkında hüküm
     // yoktur: DOĞRULANAMADI. Tür, imzası doğrulanmamış belgeden değil politikadan okunur.
     if (!a.indeterminate && a.failedStep === "A3" && /does not chain to any of the given roots$/.test(a.reason)) {
-      const wanted = input.policy.credentials.find((c) => c.id === input.policyCredentialId)?.vct_values ?? [];
-      const down = unavailableExternalList(input.trust, wanted);
+      const down = unavailableExternalList(input.trust, pc.vct_values ?? []);
       if (down) return indet("A3", "INDEXER_STALE", `external list ${down} stale or unavailable`);
     }
     return a.indeterminate ? indet(a.failedStep, a.indeterminate, a.reason) : reject(a.failedStep, a.reason);
@@ -141,11 +149,7 @@ export async function stepA(ctx: VerifyCtx): Promise<StepFail | undefined> {
   ctx.skipped.push(...a.aSkipped);
   ctx.issuerInfo = { issuer_id: a.issuerId, state_code: input.policy.trust.state_code };
   ctx.a = a;
-  ctx.pc = input.policy.credentials.find((c) => c.id === input.policyCredentialId);
-  if (!ctx.pc) {
-    ctx.disclosed = a.disclosedClaimNames;
-    return reject("E2", "politika credential id bilinmiyor");
-  }
+  ctx.pc = pc;
   // AP3/AP4: çağırana dönen değerler yalnız İSTENEN alanlardır; `cnf`, `status` (iptal sırası), `iss`, `iat` gibi teknik
   // alanlar hiç dönmez. Kurumun hep açık bıraktığı (seçici açıklanamayan) alan istenmişse açıklanmış sayılır: `disclosed_claims`'e
   // ve E3 kapsam denetimine girer.
@@ -273,6 +277,9 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
   // SPEC-CRED-0002/C2: Tamga türü `_sd_alg`'ı açıkça taşır; RFC 9901 varsayılanı (alan yok) yalnız dış türlerde kabul
   if (a.sdAlgPresent === false) return reject("A4", "_sd_alg missing (required for Tamga credential types, C2)");
   ctx.schemaInfo.status = schemaRec.status;
+  // SPEC-API-0001 B2: tür kayıtlı ve `REVOKED` değil (denetim turu D3-1; önce B2 geçip C2'de "yetkili değil" diye düşüyordu).
+  // DEPRECATED burada durmaz: kullanımdan kaldırılmadan önce verilmiş belge C2'de kabul edilir (SC3)
+  if (schemaRec.status === "REVOKED") return reject("B2", "schema revoked");
   ctx.done.push("B2");
   const def = SCHEMA_DEFS.find((d) => d.vct === a.vct);
   if (!def) return indet("B3", "SCHEMA_UNREACHABLE", "Type Metadata not in cache");
@@ -451,6 +458,20 @@ function statusKeysOf(
   }
   return { active, lapsed };
 }
+/**
+ * Kurumun şu an geçerli iptal anahtarı yok. Kayıtlı ama penceresi dışında anahtar varsa (süresi dolmuş, henüz başlamamış ya da
+ * emekli) bu bir tazelik sorunudur — SPEC-API-0001 D3: STATUS_STALE (denetim turu D3-18; önce STATUS_UNREACHABLE). Hiç kayıtlı
+ * anahtar yoksa liste doğrulanamaz: STATUS_UNREACHABLE. İkisi de DOĞRULANAMADI.
+ */
+function noActiveStatusKey(lapsed: string[]): StepFail {
+  return lapsed.length
+    ? indet(
+        "D3",
+        "STATUS_STALE",
+        "the institution's status list key is outside its validity window in the trusted list",
+      )
+    : indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
+}
 const LAPSED_STATUS_KEY =
   "signed with a registered status key that is outside its validity window; refreshed on the next prefetch";
 
@@ -527,8 +548,7 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   // S11: iptal listesini kurumun güven listesinde kayıtlı iptal anahtarı imzalamış olmalı — imzacı doğrulamada sabitlenir
   // (ADR-0056 K6); anahtar kayıtlı değilse liste doğrulanamaz
   const { active: statusKeys, lapsed: lapsedKeys } = statusKeysOf(issuerRec, now);
-  if (!statusKeys.length)
-    return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
+  if (!statusKeys.length) return noActiveStatusKey(lapsedKeys);
   // İmzacı kayıtlı ama penceresi dışındaki bir iptal anahtarıysa (anahtar yenilendi, önbellekte eski liste) RED değil DOĞRULANAMADI
   let lapsedSigner = false;
   // ADR-0048 K3: mdoc kopyası CWT gösterimine (ikili; önbellekte `b64u:`), SD-JWT kopyası JWT gösterimine işaret eder — gövde
@@ -536,6 +556,10 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   let tok: Awaited<ReturnType<typeof verifyStatusListAny>>;
   try {
     tok = await verifyStatusListAny(cached.token, a.status.status_list.uri, now, {
+      // azami yaş politikadan (exp taşımayan belirteç de sınırlı kalır; aşım aşağıdakiyle aynı sonuç: D4 DOĞRULANAMADI)
+      maxAgeSec: input.policy.freshness.max_status_token_age_sec,
+      // denetim turu D1-8: listenin `iat`'ı için politikanın saat payı (kütüphane varsayılanı değil)
+      maxSkewSec: input.policy.freshness.max_clock_skew_sec ?? 120,
       expectedSignerFingerprints: (fp) => {
         if (statusKeys.includes(fp)) return true;
         if (lapsedKeys.includes(fp)) lapsedSigner = true;
@@ -756,8 +780,7 @@ async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: strin
     return indet("D4", "STATUS_UNREACHABLE", `identifier list unreadable (${e instanceof Error ? e.name : typeof e})`);
   }
   const { active: statusKeys, lapsed: lapsedKeys } = statusKeysOf(ctx.issuerRec, now);
-  if (!statusKeys.length)
-    return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
+  if (!statusKeys.length) return noActiveStatusKey(lapsedKeys);
   const signerFp = certFingerprintSha256Hex(list.leafDer);
   if (!statusKeys.includes(signerFp)) {
     if (lapsedKeys.includes(signerFp)) return indet("D3", "STATUS_STALE", `identifier list ${LAPSED_STATUS_KEY}`);

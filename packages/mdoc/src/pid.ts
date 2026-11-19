@@ -30,13 +30,23 @@ export function toPidMdocElements(claims: Record<string, unknown>): Record<strin
 /**
  * mdoc öğe değeri → düz değer (JSON): `full-date` (1004) ve `tdate` (0) etiketleri dizgiye; CBOR haritası (ör. AB PID
  * `place_of_birth`, ADR-0091) dizgi anahtarlı düz nesneye, dizi öğeleri de aynı kuralla (iç içe); öteki değerler aynen.
+ * Anahtarlar kendi alanı olarak yazılır (`__proto__` nesnenin prototipini değiştirmez). Dizgi olmayan anahtarlı harita JSON'a
+ * kayıpsız çevrilemez: sessizce düşürülmez, hata verilir.
  */
 export function plainElementValue(v: unknown): unknown {
   if (v instanceof CborTag && (v.tag === CBOR_TAG_FULL_DATE || v.tag === CBOR_TAG_TDATE) && typeof v.value === "string")
     return v.value;
   if (v instanceof Map) {
     const o: Record<string, unknown> = {};
-    for (const [k, x] of v) if (typeof k === "string") o[k] = plainElementValue(x);
+    for (const [k, x] of v) {
+      if (typeof k !== "string") throw new Error("mdoc: element value map key is not a text string");
+      Object.defineProperty(o, k, {
+        value: plainElementValue(x),
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    }
     return o;
   }
   if (Array.isArray(v)) return v.map(plainElementValue);

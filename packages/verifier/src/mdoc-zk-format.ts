@@ -156,9 +156,13 @@ export async function verifyMdocZkFormat(
   }
   if (code !== 0) return fail("Z1", `ZK proof rejected: ${ZK_CODES[code] ?? `code ${code}`}`);
 
-  const claims: Record<string, unknown> = Object.fromEntries(
-    Object.entries(z.disclosed.elements).map(([k, val]) => [k, plainElementValue(val)]),
-  );
+  // Gösterilemeyen öğe değeri (ör. metin olmayan harita anahtarı) kalıcı içerik kusurudur: RED (AP2 — DOĞRULANAMADI değil)
+  let claims: Record<string, unknown>;
+  try {
+    claims = Object.fromEntries(Object.entries(z.disclosed.elements).map(([k, val]) => [k, plainElementValue(val)]));
+  } catch {
+    return fail("Z1", "element value not representable");
+  }
   return {
     ok: true,
     format: "mso_mdoc_zk",

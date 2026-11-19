@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -169,7 +169,7 @@ sübut etmir və həddindən artıq tələb nəzarəti mümkünsüz olur.
 | `nonce` | ≥ 128 bit entropiya, birdəfəlik; `request_uri`-nin hər çəkilişində yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit təsadüfi, gizli; `request_uri`-nin hər çəkilişində yenisi — QR-da, `request_uri` və `response_uri` yolunda yoxdur ([[ADR-0067]]) |
 | `request_uri` çəkilişi | Hər çəkiliş (GET və ya `request_uri_method=post` ilə POST, OpenID4VP 1.0 §5.10) yeni **çəkiliş qolu** açır: eyni məzmunla yeni imzalanmış sorğu obyekti; təzə `state`, `nonce` və efemer şifrələmə açarı (HAIP §5). POST-da `wallet_nonce` obyektə geri yazılır. Sabit qol limiti və qanuni çəkilişə 429 yoxdur; yaddaş məhduddur (yumşaq limitdə cavabsız yaşlı qol atılır, ortaq qol büdcəsi; [[ADR-0067]] dəyişiklik qeydi 2026-10-29); sürət limiti müştəri ünvanı başına |
-| `request_uri_method` | Yoxlayıcı keçidə `request_uri_method=post` yaza bilər (istinad yoxlayıcısı yazır); `request_uri` ünvanı GET və POST-u birlikdə təqdim edir. Bu halda pul kisəsi nüvəsi HTTPS POST edir (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdədə təzə `wallet_nonce` (128 bit, base64url) göndərir və sorğu obyektində eyni `wallet_nonce` yoxdursa sorğunu rədd edir (§5.10.1); http ünvanına POST edilmir; `get` və ya parametr yoxdursa GET (RFC 9101). Naməlum dəyər keçiddə rədd edilir |
+| `request_uri_method` | Yoxlayıcı keçidə `request_uri_method=post` yaza bilər (istinad yoxlayıcısı yazır); `request_uri` ünvanı GET və POST-u birlikdə təqdim edir. Bu halda pul kisəsi nüvəsi HTTPS POST edir (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdədə təzə `wallet_nonce` (128 bit, base64url) göndərir və sorğu obyektində eyni `wallet_nonce` yoxdursa sorğunu rədd edir (§5.10.1); http ünvanına POST edilmir — yeganə istisna yerli inkişafdır: çağıran bunu açıq şəkildə istəsə (`allowLocalDevHost`), http ilə POST yalnız yerli inkişaf ünvanına (localhost, `.localhost` / `.test` / `.local`, xüsusi IPv4 aralıqları) edilir; `get` və ya parametr yoxdursa GET (RFC 9101). Naməlum dəyər keçiddə rədd edilir |
 | Sorğu imzası | **Məcburi** — imzasız sorğu rədd edilir |
 | `client_metadata.jwks` | Cavab şifrələmə açarı; **məcburi** |
 | `verifier_info` | İstəyə bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — istifadənin qeydiyyat sertifikatı (ETSI TS 119 475 / 119 472-2). Varsa, rəqəmsal cüzdan qeydiyyat orqanının imzasını (LOTL `roles.registrar`), müddəti və `sub`-ın giriş sertifikatındakı `organizationIdentifier` ilə eyni olduğunu yoxlayır; uyğun gəlmirsə, məlumat göndərilmir (WRC4). Sertifikatda olmayan sahə artıq tələb sayılır (§6). |
@@ -273,7 +273,9 @@ ekranında anlamalı olduğu əlavə mürəkkəblikdir.
 
 **Qayda:** Bir sorğuda ən çox **3** rəqəmsal sənəd və ən çox **2**
 `credential_sets` girişi. Bundan artığı istifadəçinin şüurlu təsdiq vermə
-qabiliyyətini aşır.
+qabiliyyətini aşır. Həddi **rəqəmsal cüzdan** tətbiq edir: imzalı sorğu obyektini yoxlayarkən həddi aşan sorğunu rədd edir.
+Təxəllüs sorğusu da DCQL `credentials` massivində bir giriş olduğu üçün sayıya daxildir. İstinad yoxlayıcısı (paket və
+yerləşdirilmiş yoxlayıcı) sorğu qurarkən bu həddi yoxlamır; həddi aşan siyasət cüzdanda rədd edilir (2026-11-19).
 
 **Rəqəmsal cüzdanın davranışı** (OpenID4VP 1.0 §6.4; istinad: `@tamga-network/wallet-core` `selectDcql`):
 
@@ -316,7 +318,9 @@ açıqlanmır. `docType` = vct URN.
 ## 4.6 `trusted_authorities` — rəqəmsal cüzdan necə qiymətləndirir
 
 Yoxlayan tərəf sorğudakı rəqəmsal sənəd üçün qəbul etdiyi etibar mənbələrini `trusted_authorities` ilə bildirə bilər (OpenID4VP 1.0
-§6.1.1); rəqəmsal sənəd ən azı bir şərtə uyğun olmalıdır. Tamga yoxlayan tərəfi `aki` istifadə edir ([[t:HAIP]] §5). Rəqəmsal cüzdan hər şərti üç nəticədən
+§6.1.1); rəqəmsal sənəd ən azı bir şərtə uyğun olmalıdır. Tamga yoxlayan tərəfi `aki` istifadə edə bilər ([[t:HAIP]] §5): siyasət
+`trusted_authorities` verərsə, sorğuya olduğu kimi keçir (`@tamga-network/verifier` `akiTrustedAuthority` dəyəri kök
+sertifikatlardan yaradır); verməzsə şərt yazılmır — istinad yoxlayıcısı bu gün onu özbaşına əlavə etmir (2026-11-19). Rəqəmsal cüzdan hər şərti üç nəticədən
 biri ilə qiymətləndirir (paketlər 0.5.2):
 
 | Növ | Cüzdan nə edir |
@@ -394,7 +398,7 @@ açarı ilə **JWE** kimi şifrələnir.
 |---|---|
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` və ya `A256GCM` ([[t:HAIP]] §5) — yoxlayan tərəf hər ikisini `encrypted_response_enc_values_supported` daxilində elan edir və qəbul edir; cüzdan elan olunanlar arasından `A256GCM`-nı seçir, elan yoxdursa, OpenID4VP-nin defolt dəyəri `A128GCM` |
-| Alıcı açarı | Sorğudakı `jwks`-dən, `use: "enc"` |
+| Alıcı açarı | Sorğudakı `jwks`-dən: `kty: "EC"`, `crv: "P-256"`; `use: "enc"` və ya `use` sahəsi ümumiyyətlə yoxdur (RFC 7517 §4.2: `use` istəyə bağlıdır; 2026-11-19). Başqa `use` dəyəri daşıyan açar seçilmir |
 
 ## 5.4 Cavab ucunun cavabı (2026-10-27)
 
@@ -417,13 +421,17 @@ da qaytarılır (Tamga genişlənməsi).
 |---|---|
 | Yoxlayan tərəf qeydiyyatdadır, bütün claim-lər scope daxilindədir | Adi təsdiq ekranı |
 | Yoxlayan tərəf qeydiyyatdadır, **bəzi claim-lər scope xaricindədir** | **Həddindən artıq tələb xəbərdarlığı** — scope xaricindəki sahələr ayrıca işarələnir; istifadəçi yenə də təsdiq edə bilər |
-| Yoxlayan tərəf **qeydiyyatda deyil** | "Bu yoxlayan tərəf Tamga-da qeydiyyatda deyil" xəbərdarlığı; təqdimat bloklanmır, lakin xəbərdarlıq aydın göstərilir |
+| Yoxlayan tərəf **qeydiyyatda deyil** (qeydiyyat sertifikatı yoxdur və ya etibarsızdır) | Şəxsdən soruşulmadan **rədd edilir** (§7.5, [[ADR-0056]] K10) |
 
 **Dəyişiklik qeydi 2026-11-04 — mdoc əhatəsi.** mdoc qeydiyyatında əhatə **ad sahəsi + element cütü** ilə müqayisə edilir:
 qeydiyyat sertifikatı `[ad sahəsi, element]` icazəsini veribsə, başqa ad sahəsindəki eyni adlı element əhatədən kənardır; ad sahəsi
 daşımayan tək elementli yol (`[element]`) mdoc qeydiyyatında icazə vermir. SD-JWT VC qeydiyyatında yol `[ad]` olaraq qalır.
 
 ## 6.2 Niyə bloklanmır
+
+**Dəyişiklik qeydi 2026-11-19.** Bu bölmə yalnız **qeydiyyatda olan** yoxlayan tərəfin əhatəni aşmasına aiddir. Qeydiyyat
+sertifikatı olmayan sorğu [[ADR-0056]] K10-dan (2026-10-19) bəri xəbərdarlıqla keçmir, şəxsdən soruşulmadan rədd edilir (§7.5);
+aşağıdakı "qeydiyyatsız yoxlayan tərəf" nümunələri o qərardan əvvəlki dizaynı təsvir edir.
 
 Cüzdan istifadəçinin keşikçisi deyil, **vasitəsidir**. İstifadəçi şüurlu
 şəkildə qeydiyyatda olmayan yoxlayan tərəfə rəqəmsal sənəd təqdim etmək istəyə bilər — tədqiqatçıya,
@@ -469,6 +477,11 @@ identifier kimi qəbul etmir; yalnız brauzerin verdiyi origin-i
 **Yoxlayan tərəf (PV7, 2026-11-04):** Bu yolda SD-JWT VC təqdimatının KB-JWT `aud`-u imzalı sorğuda da `origin:` + səhifə
 mənşəyidir (OpenID4VP 1.0 Əlavə A.4), client identifier deyil. `verifyPresentation` `origin` verilib `aud` verilməyəndə bu dəyəri
 özü çıxarır; `aud` verilib fərqlidirsə, təqdimatı aydın mesajla A1-də rədd edir.
+
+**Bir neçə mənşə (2026-11-19).** Sorğu bir neçə `expected_origins` daşıyırsa, yoxlayıcı cavabı çağıranın verdiyi səhifə
+mənşəyinə bağlayır (`decryptPresentationResponse` / `openPresentationResponse` `origin` seçimi); mənşə sorğunun imzalı
+`expected_origins` siyahısında deyilsə, cavab açılmır. Mənşə verilməzsə birincisi istifadə olunur (tək mənşəli sorğuda davranış
+dəyişmir).
 
 ## 7.2 Zəncir qeydi ilə əlaqə
 
@@ -540,8 +553,14 @@ bağlanır. Beləliklə, təqdimat başqa bir əməliyyat üçün təkrar istifa
 
 **Tamga-da ([[ADR-0091]] K4, 2026-11-18):** mexanizm paketlərdədir; əməliyyat növü müəyyən edilməyib.
 
-- Cüzdan tanımadığı bir növ olduqda sorğunu `invalid_transaction_data` ilə rədd edir (sahə nəzərə alınmamış qalmır); defolt siyahı
-  boşdur. Şəxsə göstərilməmiş əməliyyat məlumatı imzalanmır (`confirmTransactionData`).
+- Cüzdan tanımadığı bir növ olduqda sorğunu rədd edir (sahə nəzərə alınmamış qalmır); defolt siyahı
+  boşdur. Rədd **cüzdanın daxilində qalır**: `invalid_transaction_data` xəta kodu cüzdanın yerli xətasıdır və yoxlayan tərəfə
+  göndərilmir — sorğu yoxlanarkən rədd edildiyi üçün yoxlayan tərəfə heç bir cavab getmir. Cüzdanın yoxlayan tərəfə göndərdiyi
+  yeganə xəta cavabı şəxs sorğunu rədd etdikdə `access_denied`-dir (§10, PV5; 2026-11-19). Şəxsə göstərilməmiş əməliyyat məlumatı
+  imzalanmır (`confirmTransactionData`). Ən çox 10 element, element başına 8 KB; təkrarlanan element rədd edilir. Element başına
+  hədlər: `type` boş olmayan və ən çox 256 simvolluq sətir, `credential_ids` ən çox 3 identifikator (bir sorğuda ən çox 3
+  rəqəmsal sənəd olduğu üçün, §4.4). Bu hədləri cüzdan tətbiq edir; yoxlayıcının `transactionDataItem` köməkçisi yalnız `type` və
+  boş olmayan `credential_ids` tələb edir (2026-11-19).
 - KB-JWT: `transaction_data_hashes` = sorğuda gələn sətirlərin SHA-256 heşləri. Doğrulama (A6): heşlər tam uyğun gəlməlidir.
 - Tamga profilində mdoc təqdimatına əməliyyat məlumatı bağlanmır. Ödəniş ([[PM-AUTH-0001]]) və ixtisaslı imza növləri ayrıca qərarla
   əlavə edilir.
@@ -664,6 +683,13 @@ sorğular göndərməklə istifadəçinin hansı rəqəmsal sənədlərə malik 
 | **PV14** | Vasitəçi yoxlayan tərəf ([[ADR-0017]] K7) bir RP adından yalnız əlaqə hər iki qeyddə yazılıbsa sorğu göndərə bilər: əsas RP vasitəçini `uses_intermediaries`-də, vasitəçi əsas RP-ni `served_relying_parties`-də sadalayır; birtərəfli bəyanda rəqəmsal cüzdan sorğunu rədd edir. |
 | **PV15** | `request_uri`-nin hər çəkilişi təzə `state` (≥ 128 bit, gizli), təzə `nonce` və təzə efemer şifrələmə açarı ilə ayrıca çəkiliş qoludur; cüzdanın xəta cavabı yalnız öz qolunu bağlayır və təqdimat yalnız bir çəkilişi varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
+**Tətbiq qeydi (2026-11-19; audit turu).** PV9-u cüzdan tətbiq edir (§4.4): həddi aşan imzalı sorğu rədd edilir və təxəllüs
+sorğusu da sayıya daxildir; istinad yoxlayıcısı sorğu qurarkən həddi yoxlamır. PV15-in yeganə istisnası
+`@tamga-network/verifier` `createPresentationRequest`-in istifadədən çıxarılmış `initialRequestObject: true` seçimidir (yalnız
+0.7.x uyğunluğu üçün): bu seçimlə təqdimatla birlikdə yaradılan tək cihazlararası sorğu obyekti onu çəkən hər kəsə eyni `state`,
+`nonce` və şifrələmə açarını verir və qolsuz cavab bu obyektin açarı ilə açılır. Defolt (`false`) və yerləşdirilmiş yoxlayıcı bu
+obyekti yaratmır; seçim bir versiya sonra çıxarılır.
+
 ---
 
 # Təhlükəsizlik və məxfilik qeydləri
@@ -690,7 +716,7 @@ açarı lazımdır.
 
 1. ~~Həddindən artıq tələb xəbərdarlığının sərtliyi~~ — **BAĞLANDI** ([[SPEC-WALLET-0001]] §5.2,
    WL8): üç səviyyə, üç vizual çəki. Scope aşıldıqda ayrıca blok + 3 san gecikməli
-   düymə; qeydiyyatsız yoxlayan tərəfdə axını kəsən ekran. Xəbərdarlıq yorğunluğuna qarşı tədbir:
+   düymə; qeydiyyatsız yoxlayan tərəfdə axını kəsən ekran (2026-10-19-dan bəri qeydiyyatsız sorğu rədd edilir — §7.5). Xəbərdarlıq yorğunluğuna qarşı tədbir:
    normal axında **heç bir** xəbərdarlıq yoxdur. Vizual dizayn istifadəçi testini gözləyir.
 2. `credential_sets` həddi (PV9: 3/2) təxminidir; istifadəçi testi ilə
    kalibrlənməlidir.
@@ -701,8 +727,9 @@ açarı lazımdır.
    sənəd yazılarkən yenidən qiymətləndirildi; **hələ də təxirə salınıb** — versiya
    idarəetməsini reyestrə bağlamaq yeni asılılıq yaradır və
    `checks_skipped` mexanizmi (M1) praktikada kifayət qədər görünür.
-5. DC API axınında imzalı sorğu obyekti məcburi olsunmu? §7.2 bunu tövsiyə edir;
-   məcburi etmək bəzi brauzer inteqrasiyalarını çətinləşdirə bilər.
+5. ~~DC API axınında imzalı sorğu obyekti məcburi olsunmu?~~ — **BAĞLANDI** (2026-11-19): bəli. PV6 hər axında imzalı
+   sorğu tələb edir; cüzdan DC API-də yalnız imzalı OpenID4VP (`openid4vp-v1-signed`) və oxuyucu imzalı ISO/IEC 18013-7 Əlavə C
+   sorğusunu qəbul edir, imzasız protokolu rədd edir; qeydiyyat sertifikatı olmayan sorğu da rədd edilir (§7.5, [[ADR-0056]] K10).
 
 ---
 
@@ -718,6 +745,18 @@ açarı lazımdır.
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-19, ikinci; audit turu — versiya 1.0 qalır).** Audit turunda spesifikasiya mətni koda uyğunlaşdırıldı,
+davranış dəyişmədi: `request_uri_method=post`-da yerli inkişaf üçün http istisnası (§3); PV9 həddini cüzdanın tətbiq etdiyi və
+təxəllüs sorğusunun sayıldığı (§4.4, invariantların altındakı tətbiq qeydi); yoxlayıcının `aki` istifadə edə biləcəyi və onu
+özbaşına əlavə etmədiyi (§4.6); cavab şifrələmə açarında `use` sahəsinin olmaya biləcəyi (§5.3); əməliyyat məlumatı reddinin
+cüzdanda qaldığı və element başına hədlər (§8); PV15-in istifadədən çıxarılmış `initialRequestObject` istisnası (invariantların
+altındakı tətbiq qeydi).
+
+**Versiya qeydi (2026-11-19; audit turu — versiya 1.0 qalır).** Audit turu: §6.1–6.2-dəki "qeydiyyatsız
+yoxlayan tərəf xəbərdarlıqla keçir" ifadəsi §7.5 və [[ADR-0056]] K10 ilə uyğunlaşdırıldı (qeydiyyatsız sorğu rədd edilir);
+§7.1-ə bir neçə mənşə qeydi əlavə olundu (cavab çağıranın verdiyi səhifə mənşəyinə bağlanır); Açıq məsələ 5 bağlandı (DC API-də
+imzalı sorğu məcburidir, PV6).
 
 **Versiya qeydi (2026-11-15; layihə rəhbərliyinin təsdiqi ilə, AB uyğunluq turu 2026-11-15).** §3-ə `request_uri_method` sətri
 əlavə olundu: pul kisəsi nüvəsi OpenID4VP 1.0 §5.10 POST çəkilişini və `wallet_nonce` yoxlamasını dəstəkləyir

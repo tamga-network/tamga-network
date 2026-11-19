@@ -6,7 +6,10 @@
  * Hizmet türü → Tamga rolü (URI'nin yol parçasına göre; ETSI ve AB profillerinin adlandırması):
  *   …/WalletSolution/… → wallet_provider · …/PID/… → pid_provider · …/(Q|Pub|NonQ)?EAA/… → eaa_provider · …/WRPAC/… → access_ca
  * Hizmetin sonu: …/Issuance → belge/sertifika imzalama; …/Revocation → iptal (durum listesi) imzalama.
- * Geri çekilmiş/askıya alınmış hizmet (ServiceStatus …/withdrawn|revoked|suspended|deprecated) alınmaz.
+ * Hizmet durumu izin listesiyle okunur (denetim turu D1-4): `ServiceStatus` yoksa hizmet etkindir (TS 119 602 eklerinin çoğunda
+ * alan yok); varsa yalnız bilinen etkin değerler alınır — `…/SvcStatus/notified` (TS 119 602 Ek H) ve güven listesi biçimindeki
+ * `granted` / `recognisedatnationallevel` (TS 119 612). Bilinen etkin olmayan değer (withdrawn, revoked, …) sessizce, bilinmeyen
+ * değer uyarıyla (`warnings`) alınmaz.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 import type { ExternalEntityKind } from "./types.js";
@@ -32,6 +35,8 @@ export interface ParsedLote {
   loteType: string;
   operatorName: string;
   entities: LoteEntity[];
+  /** Okuma uyarıları (ör. bilinmeyen `ServiceStatus` — hizmet alınmadı); değer içermez, yalnız kurum/hizmet adı */
+  warnings?: string[];
 }
 
 export class LoteParseError extends Error {
@@ -94,6 +99,9 @@ export function serviceKind(typeUri: string): ExternalEntityKind | null {
   for (const [re, k] of SVC_KIND) if (re.test(typeUri)) return k;
   return null;
 }
+/** Etkin hizmet durumları (izin listesi): TS 119 602 Ek H `notified`; TS 119 612 `granted`, `recognisedatnationallevel`. */
+const ACTIVE_STATUS = /\/(notified|granted|recognisedatnationallevel)$/i;
+/** Bilinen etkin olmayan durumlar: alınmaz, uyarı gerekmez. */
 const INACTIVE = /(withdrawn|revoked|suspended|deprecated|expired)$/i;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,6 +130,7 @@ export function parseLote(json: unknown): ParsedLote {
     return v;
   };
   const entities: LoteEntity[] = [];
+  const warnings: string[] = [];
   for (const te of arr(root.TrustedEntitiesList, "TrustedEntitiesList") as Array<Record<string, unknown>>) {
     if (!te || typeof te !== "object") throw new LoteParseError("TrustedEntity is not an object");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,8 +141,14 @@ export function parseLote(json: unknown): ParsedLote {
       const si = s?.ServiceInformation;
       if (!si) continue;
       const typeUri = String(si.ServiceTypeIdentifier ?? "");
-      const status = si.ServiceStatus ? String(si.ServiceStatus) : "";
-      if (status && INACTIVE.test(status)) continue;
+      const status = si.ServiceStatus ? String(si.ServiceStatus).trim() : "";
+      if (status && !ACTIVE_STATUS.test(status)) {
+        if (!INACTIVE.test(status))
+          warnings.push(
+            `${firstText(tei?.TEName)}/${firstText(si.ServiceName)}: unknown ServiceStatus — service skipped`,
+          );
+        continue;
+      }
       const certs: Uint8Array[] = [];
       for (const c of arr(si.ServiceDigitalIdentity?.X509Certificates, "X509Certificates") as Array<{ val?: string }>)
         if (typeof c?.val === "string" && c.val) certs.push(b64ToBytes(c.val));
@@ -161,5 +176,6 @@ export function parseLote(json: unknown): ParsedLote {
     loteType: String(info.LoTEType ?? ""),
     operatorName: firstText(info.SchemeOperatorName),
     entities,
+    ...(warnings.length ? { warnings } : {}),
   };
 }

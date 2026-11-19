@@ -4,7 +4,7 @@
  */
 import { SignJWT, compactVerify, decodeProtectedHeader, importJWK, type JWK } from "jose";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { RpSigner } from "./request.js";
 import type { VerifyOutput } from "./verify.js";
@@ -113,20 +113,44 @@ export interface PassStore {
   save(data: PassStoreData): void;
 }
 
-/** Basit JSON dosya deposu (demo/pilot; üretimde veritabanı). Kişisel veri içermez: pass_id, cnf (holder anahtarı), grup, süreler. */
+/**
+ * Basit JSON dosya deposu (demo/pilot; üretimde veritabanı). Kişisel veri içermez: pass_id, cnf (holder anahtarı), grup, süreler.
+ * Güvenlik incelemesi 2026-11-18: yalnız dosyanın OLMAMASI boş depodur. Okunamayan ya da bozuk dosya hata verir (sessizce boş depo
+ * dönmek tek kullanımlık kartların tüketildi kaydını ve jti tekrar listesini silerdi — kart yeniden kullanılırdı); servis
+ * açılışta durur, dosya elle onarılır. Yazma atomiktir (geçici dosya + yeniden adlandırma), yarım yazılmış dosya kalmaz.
+ */
 export function filePassStore(path: string): PassStore {
   return {
     load: () => {
+      let text: string;
       try {
-        const j = JSON.parse(readFileSync(path, "utf8")) as Partial<PassStoreData> | PassRecord[];
-        return Array.isArray(j) ? { records: j, replay: [] } : { records: j.records ?? [], replay: j.replay ?? [] };
-      } catch {
-        return { records: [], replay: [] };
+        text = readFileSync(path, "utf8");
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "ENOENT") return { records: [], replay: [] };
+        throw new Error(`pass store could not be read (${(e as NodeJS.ErrnoException).code ?? "error"})`);
       }
+      let j: unknown;
+      try {
+        j = JSON.parse(text);
+      } catch {
+        throw new Error("pass store is damaged (not JSON) — repair or remove the file deliberately");
+      }
+      if (Array.isArray(j)) return { records: j as PassRecord[], replay: [] };
+      const o = j as Partial<PassStoreData> | null;
+      if (
+        o === null ||
+        typeof o !== "object" ||
+        (o.records !== undefined && !Array.isArray(o.records)) ||
+        (o.replay !== undefined && !Array.isArray(o.replay))
+      )
+        throw new Error("pass store is damaged (unexpected shape) — repair or remove the file deliberately");
+      return { records: o.records ?? [], replay: o.replay ?? [] };
     },
     save: (data) => {
       mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, JSON.stringify(data, null, 2));
+      const tmp = `${path}.${process.pid}.tmp`;
+      writeFileSync(tmp, JSON.stringify(data, null, 2));
+      renameSync(tmp, path);
     },
   };
 }

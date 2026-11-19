@@ -2,13 +2,23 @@
  * Güvenlik turu 2026-10-19 (sharp-edges): yanlış kullanımda sessizce geçen denetimler kapalı kalır — eksik politika tazelik
  * sınırları, yerel adres eşleşmesi, boş beklenen değerli takma ad. Kişisel veri yok.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { isLocalUrl, stepT0, type VerifyCtx } from "./steps.js";
 import { verifyPseudonym } from "./pseudonym.js";
 import type { TrustSource } from "@tamga-network/trust";
 
 const ctxWith = (freshness: unknown) =>
-  ({ fr: { healthy: true, ageSec: 10 }, input: { policy: { freshness } }, done: [] }) as unknown as VerifyCtx;
+  ({
+    fr: { healthy: true, ageSec: 10 },
+    input: {
+      policy: {
+        trust: { min_issuer_assurance: "I1", allowed_categories: [], require_recognition: false, state_code: "TR" },
+        credentials: [],
+        freshness,
+      },
+    },
+    done: [],
+  }) as unknown as VerifyCtx;
 
 describe("yanlış kullanım korumaları", () => {
   it("T0: politika tazelik sınırları eksik/bozuk → DOĞRULANAMADI (yaş denetimi sessizce kapanmaz)", () => {
@@ -55,5 +65,33 @@ describe("yanlış kullanım korumaları", () => {
         ok: false,
         reason: expect.stringMatching(/expected/),
       });
+  });
+});
+
+describe("C6-Kü7 (güvenlik incelemesi 2026-11-18): verification_id kriptografik rastgele", () => {
+  it("Math.random kullanılmaz; biçim vrf_ + küçük harf/rakam; iki kimlik farklı", async () => {
+    const { verifyPresentation } = await import("./verify.js");
+    const ids: string[] = [];
+    const spy = vi.spyOn(Math, "random");
+    for (let i = 0; i < 2; i++)
+      await verifyPresentation({
+        presentation: "x~",
+        aud: "a",
+        nonce: "n",
+        policyCredentialId: "c",
+        rp: "none",
+        rootCertsDer: "none",
+        statusCache: { get: () => null } as never,
+        trust: {
+          freshness: () => ({ source: "list", version: 1, ageSec: 0, healthy: true }),
+        } as unknown as TrustSource,
+        policy: { freshness: undefined } as never,
+        audit: (e: { verification_id: string }) => void ids.push(e.verification_id),
+      } as never);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+    expect(ids).toHaveLength(2);
+    for (const id of ids) expect(id).toMatch(/^vrf_[0-9a-z]{12,}$/);
+    expect(ids[0]).not.toBe(ids[1]);
   });
 });

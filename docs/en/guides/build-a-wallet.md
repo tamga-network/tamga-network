@@ -160,11 +160,12 @@ hands the device over, the unit is revoked.
 The person scans the QR code shown by the institution; the PIN (`tx_code`) arrives **over a separate channel** (SMS, email):
 
 ```ts
-import { parseOffer, resolveOffer, redeem, receiveCredentials, newState } from "@tamga-network/wallet-core";
+import { parseOffer, resolveOffer, redeem, receiveCredentials, fetchTrustSource } from "@tamga-network/wallet-core";
 
 const offer = await resolveOffer(parseOffer(scannedQr), fetchHttp);
 const out = await redeem({ offer, txCode: pinFromUser, keys, http: fetchHttp, wua }); // 10 copies, each with its own key
-const { state, credential } = receiveCredentials(walletState, out); // is each copy bound to its own key — local check
+const { source: trust } = await fetchTrustSource(TRUST_BASE, fetchHttp, { pins: TRUST_PINS });
+const { state, credential } = receiveCredentials(walletState, out, { trust }); // local check + trusted list: issuer listed (C1) and authorised for this type (C2); `trust` is required
 ```
 
 For some types, such as the identity credential, the [[t:mdoc]] format of the same credential comes too (`copy.mdoc`,

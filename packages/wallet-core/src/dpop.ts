@@ -5,6 +5,7 @@
  * kez yeniden gönderilir; yanıtlardaki `DPoP-Nonce` sunucu (origin) başına saklanıp sonraki kanıtlara eklenir.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
+import { randomBytes as nobleRandom } from "@noble/hashes/utils.js";
 import { b64u, utf8 } from "./b64.js";
 import { signJwt } from "./jws.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
@@ -32,7 +33,8 @@ export async function dpopProof(
   opts: { now?: number; accessToken?: string; randomBytes?: (n: number) => Uint8Array; nonce?: string } = {},
 ): Promise<string> {
   const now = opts.now ?? Math.floor(Date.now() / 1000);
-  const jti = b64u(opts.randomBytes ? opts.randomBytes(16) : utf8(`${now}.${Math.random()}.${Math.random()}`));
+  // Güvenlik incelemesi 2026-11-18: yedek de kriptografik rastgele (crypto.getRandomValues yoksa hata — tahmin edilebilir jti yok)
+  const jti = b64u(opts.randomBytes ? opts.randomBytes(16) : nobleRandom(16));
   return signJwt(
     { typ: DPOP_TYP, jwk: s.jwk },
     {

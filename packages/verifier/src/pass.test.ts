@@ -3,7 +3,7 @@
  * dosya deposu (kayıtlar + tekrar listesi yeniden başlatmada korunur).
  */
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { pemToDer, x509HashClientId } from "@tamga-network/core";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -272,6 +272,24 @@ describe("PassRegistry (ADR-0012 B)", () => {
     expect((await reg2.verifyToken(t.token, { terminalGroup: "g1" })).reason).toMatch(/replay/); // K3: liste korunur
     const t2 = await mintPassToken(grant, keys, nodeRandom);
     expect((await reg2.verifyToken(t2.token, { terminalGroup: "g1" })).ok).toBe(true);
+  });
+  it("C6-Ö15 (güvenlik incelemesi 2026-11-18): yalnız olmayan dosya boş depo; bozuk ya da okunamayan dosya hata (bilet yeniden kullanılmaz)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "tamga-pass-"));
+    expect(filePassStore(join(dir, "none.json")).load()).toEqual({ records: [], replay: [] });
+    for (const [name, body] of [
+      ["trunc.json", '{"records": [{"passId": "p1"'],
+      ["null.json", "null"],
+      ["shape.json", '{"records": {"passId": "p1"}}'],
+    ] as const) {
+      writeFileSync(join(dir, name), body);
+      expect(() => filePassStore(join(dir, name)).load(), name).toThrow(/damaged/);
+    }
+    mkdirSync(join(dir, "adir.json")); // okunamayan yol (klasör)
+    expect(() => filePassStore(join(dir, "adir.json")).load()).toThrow(/could not be read/);
+    // atomik yazma: yazılan dosya geri okunur
+    const st = filePassStore(join(dir, "ok.json"));
+    st.save({ records: [], replay: [{ jti: "j", exp: 1 }] });
+    expect(st.load().replay).toEqual([{ jti: "j", exp: 1 }]);
   });
 });
 

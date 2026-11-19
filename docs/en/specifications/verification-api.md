@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-19
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -51,22 +51,29 @@ The protocol endpoints ([[SPEC-PROTO-0001]] OID4VCI, [[SPEC-PROTO-0002]] OID4VP)
 
 # 1. Step code registry (normative)
 
-Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]] §4.1 is a summary view of it.
+Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]] §4.1 is a summary view of it. A preliminary step (`T0`, §1.0) runs before the five layers, and the hosted
+verifier adds a pseudonym step (`P1`, §1.F) (2026-11-19).
+
+## 1.0 — Preliminary step: trust source freshness and policy shape
+
+| Code | Step |
+|---|---|
+| `T0` | Runs before the credential is looked at. If the policy's freshness limits (`max_trust_age_sec`, `max_status_token_age_sec`; when given, `max_clock_skew_sec` ≤ 600 and `max_anchor_lag_sec`) are missing or invalid, the trust block (`require_recognition`, a two-letter `state_code` when recognition is required, `min_issuer_assurance`, `allowed_categories`) or the range constraints are malformed, the trust source is unhealthy (list stale or unreadable — [[ARCH-0003]]/CMP4) or its age exceeds the policy's `max_trust_age_sec`, the result is **always** `INDETERMINATE`/`INDEXER_STALE`; `T0` never gives `REJECTED` |
 
 ## 1.A — Format layer → [[SPEC-CRED-0002]] §8
 
 | Code | Step |
 |---|---|
-| `A1` | Split the combined string on `~`; is there a KB-JWT. A1 also carries the caller's configuration errors (2026-11-04): e.g. on the Digital Credentials API path an `aud` that differs from the one derived from the page origin, or `origin` given together with `aud` = `client_id` — REJECTED with an explicit message |
+| `A1` | Split the combined string on `~`; is there a KB-JWT. A1 also carries the caller's configuration errors (2026-11-04): e.g. a `policyCredentialId` that is not a credential of the policy is REJECTED before any A step, without looking at the credential (2026-11-19); on the Digital Credentials API path an `aud` that differs from the one derived from the page origin, or `origin` given together with `aud` = `client_id` — REJECTED with an explicit message |
 | `A2` | Header: `alg=ES256`, `typ=dc+sd-jwt`, is `x5c` present |
-| `A3` | `x5c` chain + JWT signature: the leaf chains to one of the given trust anchors (the Tamga root CA or the anchor of an external list within its freshness). Intermediates must be CAs (`basicConstraints cA=true`), **must carry the KeyUsage extension with `keyCertSign`** (an intermediate without the extension is REJECTED) and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. The status of the root CA is checked not here but at **`C1`**: the root the institution is bound to must be `ACTIVE` or `ROLLING_OVER` at the credential's `iat` and must never have been `REVOKED` ([[SPEC-ID-0002]] §3; a root retired later does not invalidate credentials issued earlier; a credential under a revoked root is rejected with code `C1`). In a single-certificate `x5c` the leaf itself may be the anchor (a service certificate in an external list, [[ADR-0036]]); `issuerId` is still derived from the leaf and `C1` looks it up in the list. If the caller deliberately turned the chain check off (`rootCertsDer: "none"`, SD-JWT VC only), A3 appears in `checks_skipped`, not in `checks_performed`. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) |
+| `A3` | `x5c` chain + JWT signature: the leaf chains to one of the given trust anchors (the Tamga root CA or the anchor of an external list within its freshness). Intermediates must be CAs (`basicConstraints cA=true`), **must carry the KeyUsage extension with `keyCertSign`** (an intermediate without the extension is REJECTED) and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. The status of the root CA is checked not here but at **`C1`**: the root the institution is bound to must be `ACTIVE` or `ROLLING_OVER` at the credential's `iat` and must never have been `REVOKED` ([[SPEC-ID-0002]] §3; a root retired later does not invalidate credentials issued earlier; a credential under a revoked root is rejected with code `C1`). In a single-certificate `x5c` the leaf itself may be the anchor (a service certificate in an external list, [[ADR-0036]]); `issuerId` is still derived from the leaf and `C1` looks it up in the list. If the caller deliberately turned the chain check off (`rootCertsDer: "none"`, SD-JWT VC only), A3 appears in `checks_skipped`, not in `checks_performed`. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) **mdoc `validityInfo.signed`** (the signing time; C1/C2 are asked at this time, the counterpart of the SD-JWT `iat`) more than the clock tolerance in the future is REJECTED; when `validFrom` is in the future as well, the credential is not yet valid and the result is `A7` (2026-11-19). |
 | `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2). The `iss` consistency check needs the trust record, so it runs after the B steps and before `C1`, and is reported with this code |
 | `A3c` | Is the leaf certificate revoked in CRL/OCSP ([[SPEC-ID-0002]]) |
 | `A3d` | Is the `cnf` claim **present** — if not, REJECT (in Tamga KB is mandatory without exception) |
 | `A4` | `_sd_alg == "sha-256"` |
 | `A5` | Every disclosure: **hash first, then decode**; does the digest match in `_sd` |
 | `A6` | KB-JWT: signature, `aud`, `nonce`, `iat`, `sd_hash` |
-| `A7` | Has `exp` passed, or is `nbf` not yet reached |
+| `A7` | Has `exp` passed, or is `nbf` not yet reached mdoc: `validFrom` < `signed` is REJECTED (ISO/IEC 18013-5 `validFrom` ≥ `signed`; 2026-11-19). |
 | `A8` | No duplicate digests / no collision with a plaintext claim |
 
 **`Z1` — zero-knowledge proof (`mso_mdoc_zk`, [[ADR-0032]]):** the circuit is in the signed list and the file digest matches
@@ -79,8 +86,8 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | Code | Step |
 |---|---|
 | `B1` | Read `vct` and `vct#integrity` |
-| `B2` | `schemaId = keccak256(vct)`; registered and not `REVOKED` |
-| `B3` | Fetch Type Metadata (cache → URL → registry) |
+| `B2` | `schemaId = keccak256(vct)`; registered and not `REVOKED`. A type that is not in the Tamga catalogue is accepted only if the credential chain leads to an external list that vouches for the type ([[ADR-0036]] FD2); if an external list that could vouch for the type is unavailable at the moment (not loaded or expired), or the matched external list is stale, the result is `INDETERMINATE`/`INDEXER_STALE`, not REJECTED (FD3; 2026-11-19) |
+| `B3` | Fetch Type Metadata. In the reference implementation the type definitions are bundled in the package (`@tamga-network/schemas`, same content as the catalogue): nothing is fetched from a URL or a registry during verification; a definition missing from the package is `INDETERMINATE`/`SCHEMA_UNREACHABLE`. The integrity binding is still `B4` (2026-11-19) |
 | `B4` | Integrity: hash `== vct#integrity` **and** `== contentHash` (registry) |
 | `B5` | `extends` chain; `extends#integrity` at every step |
 | `B6` | JSON Schema 2020-12 conformance (`schema_uri` is a Tamga extension, [[SPEC-SCHEMA-0001]] §2.1) |
@@ -98,10 +105,10 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 
 | Code | Step |
 |---|---|
-| `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below. A non-ZK credential without `status`: if the type schema says `uses_status_list: true` it is REJECTED (the revocation check is never skipped silently — [[ADR-0056]] K13), otherwise `NOT_APPLICABLE` |
+| `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below. A non-ZK credential without `status`: if the type schema says `uses_status_list: true` it is REJECTED (the revocation check is never skipped silently — [[ADR-0056]] K13), otherwise `NOT_APPLICABLE` An unreadable `status` entry (not an object; `status_list` missing or not an object; `idx` not a non-negative integer; empty `uri`) does not bypass the revocation check: `REJECTED` with `status entry malformed` for SD-JWT VC and mdoc (2026-11-19). |
 | `D2` | Take the Status List Token **from the prefetch cache** |
 | `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE`. A status key counts as a signer only inside its validity window (`valid_from`…`valid_to`, when given). If the signer is a **registered** status key outside its window (or a `RETIRED` one) — the key was renewed and the cache still holds the old list — the result is not REJECTED but `INDETERMINATE`/`STATUS_STALE`; a signer that is not registered (or is `REVOKED` / `SUSPENDED`) stays `REJECTED`. If the cached body cannot be read as a token (for example the server's error page) the result is not REJECTED but `INDETERMINATE`/`STATUS_UNREACHABLE` |
-| `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` |
+| `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` If the decompressed list would exceed the size bound computed from `bits`, the list is unreadable: `INDETERMINATE` (`D4`); the `iat` clock tolerance in D3 is the policy's `max_clock_skew_sec` (2026-11-19). |
 | `D5` | Anchor: does the token digest (`contentHash`) match the latest row for the list in the anchor log. The token carries no version field; rollback is detected by time. If the mismatching token is **older** than the anchor: `INDETERMINATE`/`STATUS_STALE` when the cache was fetched before the anchor (or within clock tolerance), `REJECTED` when it was clearly fetched after. If the mismatching token is **newer** than the anchor, that is the normal publication order (CDN first, then the anchor — [[SPEC-CRED-0003]] §5.2) and D5 appears in `checks_skipped`; the allowance is bounded: a token newer than the latest known anchor by more than `max_anchor_lag_sec` (+ clock tolerance) has an overdue anchor → `INDETERMINATE`/`STATUS_STALE`. If the list is not in the anchor log at all, the same allowance is counted from the credential's `iat`: D5 is skipped for a freshly issued credential, and the result is `INDETERMINATE`/`STATUS_STALE` once the allowance has passed. There is no anchor log for the status list of an institution in an external list; D5 is skipped ([[ADR-0036]]). `max_anchor_lag_sec` is a freshness field of the policy (§4.4): default 3600 s (the hourly cadence of the anchor log); Tamga Verify uses 600 s |
 | `D6` | Read `idx` with `bits=2`; anything other than `0x00` → REJECT |
 
@@ -113,6 +120,12 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `E2` | Have all requested claims been disclosed |
 | `E3` | No RP scope overrun ([[SPEC-PROTO-0002]] §6). The RP registration is a required input: omission is REJECTED, `null` (unregistered RP) is REJECTED; `"none"` skips the step deliberately and E3 appears in `checks_skipped` ([[ADR-0056]] K4). The scope check covers every selectively disclosed claim plus those always-visible claims that the policy asks for; both appear in `disclosed_claims` |
 | `E4` | Audit record written — in `checks_performed` only when an audit sink (`audit`) was given and the record was written; otherwise in `checks_skipped` ([[ADR-0056]] K11). If the audit sink fails, the verification result is still returned and E4 appears in `checks_skipped` |
+
+## 1.F — Pseudonym → [[ADR-0031]] (hosted verifier only)
+
+| Code | Step |
+|---|---|
+| `P1` | The per-site pseudonym presentation (a separate `vp_token` entry) is verified: signature, audience (`aud`), `nonce` and the wallet-unit binding. `P1` is reported by the hosted verifier (Tamga Verify), not by the package (`verifyPresentation`). For a policy that asks only for a pseudonym, the pseudonym is the presentation's only proof of possession and is checked before the presentation is consumed: a failing pseudonym is an attempt (`400`, the presentation stays open); a passing one gives `checks_performed: ["P1", "E4"]`. For a credential-plus-pseudonym policy, a pseudonym that fails after the credential was accepted makes the result `REJECTED` (or `INDETERMINATE`) with `failed_step: "P1"`. `P1` is outside the step list: it never appears in `checks_skipped` for a policy without a pseudonym (2026-11-19) |
 
 **Reading a yes/no attribute:** `isYes(output, claim)` returns `true` only when the outcome is `ACCEPTED` and the disclosed value
 is exactly `true` (e.g. `age_over_18`, plain or ZK presentation); a rejection, an indeterminate result, a missing value or another
@@ -166,7 +179,7 @@ The steps are run **in order**. Execution stops at the first failure and that co
 **Exception:** `E4` always runs — a rejected verification is logged as well (in a verifier with an audit sink; without one E4 is
 reported as skipped — [[ADR-0056]] K11).
 
-**How codes are reported (implementation note, 2026-11-11).** The reference implementation reports some steps under a neighbouring code: a missing `cnf` (`A3d`) is returned as `A3`, and a duplicate digest or a collision (`A8`) as `A5` for SD-JWT VC; for mdoc and ZK, `A8` means the document type (docType) is not in the policy. `A2` (legacy `typ` on a Tamga type) and `A4` (no `_sd_alg` on a Tamga type) are checked once it is known whether the type is in the catalogue, that is after `B2`; `A3b` (`iss` consistency) is checked once the trust record has been read, that is after `B6` — for a credential with more than one defect the returned code may not be the first one in order. On an unexpected exception `failed_step` is the first code of that layer (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). The A order for mdoc: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. The checks themselves are all carried out: in a successful verification `A3d` and `A8` appear in `checks_performed`; the exact cause of a failure is in the `failed_reason` field. With the approval of project management (2026-11-12) this reporting is the binding behaviour of the reference implementation; it is not changed, so that the reading of codes in existing records does not change (AP1) ([[ADR-0056]] implementation note).
+**How codes are reported (implementation note, 2026-11-11).** The reference implementation reports some steps under a neighbouring code: a missing `cnf` (`A3d`) is returned as `A3`, and a duplicate digest or a collision (`A8`) as `A5` for SD-JWT VC; for mdoc and ZK, `A8` means the document type (docType) is not in the policy. `A2` (legacy `typ` on a Tamga type) and `A4` (no `_sd_alg` on a Tamga type) are checked once it is known whether the type is in the catalogue, that is after `B2`; `A3b` (`iss` consistency) is checked once the trust record has been read, that is after `B6` — for a credential with more than one defect the returned code may not be the first one in order. On an unexpected exception `failed_step` is the first code of that layer (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). The A order for mdoc: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. The SD-JWT VC A order is A1 · A2 · A3 (including a missing `cnf`) · A4 · A5 (including a duplicate digest) · A6 · A7; the `policyCredentialId` check (A1) runs before them (2026-11-19). When the chain does not lead to any of the given roots (`A3`), or the type is not in the catalogue and the anchor does not resolve to an external institution (`B2`), the verifier first checks whether an external list that could vouch for the requested type is unavailable at the moment; if so, the result is `INDETERMINATE` (§2.3). The checks themselves are all carried out: in a successful verification `A3d` and `A8` appear in `checks_performed`; the exact cause of a failure is in the `failed_reason` field. With the approval of project management (2026-11-12) this reporting is the binding behaviour of the reference implementation; it is not changed, so that the reading of codes in existing records does not change (AP1) ([[ADR-0056]] implementation note).
 
 ## 1.4 Code stability
 
@@ -208,31 +221,33 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 
 ```json
 {
-  "verification_id": "vrf_01J8XKQ2M4",
+  "verification_id": "vrf_tl1f9cq8k2m7x4p0a3d5",
   "outcome": "ACCEPTED",
   "failed_step": null,
+  "failed_reason": null,
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
   "sdk_version": "@tamga-network/verifier@0.8.8",
-  "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
+  "checks_performed": ["T0",
+                       "A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",
                        "D1","D2","D3","D4","D5","D6",
                        "E1","E2","E3","E4"],
-  "checks_skipped": ["A3c","B5"],
+  "checks_skipped": ["A3c","B5","Z1"],
 
   "issuer": {
     "issuer_id": "0x7f3a…",
     "state_code": "TR",
     "category": "EDUCATION",
     "assurance": "I2",
-    "class": "EAA"
+    "class": "EAA",
+    "legal_name": "Example University"
   },
   "schema": {
     "schema_id": "0x9c21…",
     "vct": "urn:tamga:edu:DiplomaCredential:1",
-    "version": "1.0.0",
     "status": "ACTIVE"
   },
   "disclosed_claims": ["is_graduate","qualification_title","eqf_level",
@@ -244,15 +259,15 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
     "token_age_sec": 1830
   },
   "freshness": {
-    "indexer_last_block": 918273,
-    "indexer_age_sec": 4,
-    "chain_read_mode": "INDEXER"
+    "trust_source": "list",
+    "trust_version": 412,
+    "trust_age_sec": 95
   },
-  "evaluated_at": "2026-09-09T09:12:44Z"
+  "evaluated_at": "2026-11-19T09:12:44.000Z"
 }
 ```
 
-**`checks_skipped` in the example (implementation note, 2026-11-12).** The example is the result the reference implementation (`@tamga-network/verifier`) returns for an SD-JWT VC presentation when an audit sink is given. The reference implementation does not perform two steps today and reports them in `checks_skipped` for every presentation: `A3c` (CRL/OCSP query for the leaf certificate) and `B5` (`extends` chain). `E4` is in `checks_performed` because the audit record was written; without an audit sink it also appears in `checks_skipped` (§1.E, `E4`).
+**`checks_skipped` in the example (implementation note, 2026-11-12).** The example is the result the reference implementation (`@tamga-network/verifier`) returns for an SD-JWT VC presentation when an audit sink is given. The reference implementation does not perform two steps today and reports them in `checks_skipped` for every presentation: `A3c` (CRL/OCSP query for the leaf certificate) and `B5` (`extends` chain). Steps that do not exist in the presentation's format are listed in `checks_skipped` too: `Z1` for every non-ZK presentation (2026-11-19); `P1` is outside the step list and never appears in `checks_skipped` (§1.F). In the result object `failed_reason` is always present (`null` on acceptance); `freshness` carries the trust source's kind, version and age (`trust_source`, `trust_version`, `trust_age_sec`); `schema` has no version field; `issuer.legal_name` comes from the trust list record. Field order carries no meaning. `E4` is in `checks_performed` because the audit record was written; without an audit sink it also appears in `checks_skipped` (§1.E, `E4`).
 
 | Field | Meaning |
 |---|---|
@@ -319,11 +334,17 @@ If correlation is needed, an institution-specific [[t:salted-hash]] is used: `HM
 | `200` | Verification ran — whatever the `outcome` |
 | `400` | Malformed request body, missing parameter |
 | `401` / `403` | API authentication / authorisation |
-| `404` | Unknown `verification_id` |
-| `409` | Idempotency conflict |
+| `404` | Unknown presentation, or another verifier's presentation (existence is not revealed) |
+| `410` | The disclosed values were already read or have expired (`/claims`, `claims_gone`; values can be read once, at most 5 minutes after the result — §4.3; 2026-11-19) |
+| `409` | Idempotency conflict (planned — §6.2) |
 | `429` | Rate limit |
 | `500` | Service error |
-| `503` | A dependency is unreachable **and** no result could be produced |
+| `503` | A dependency is unreachable **and** no result could be produced. While the trust list is stale or unreadable the reference verifier answers a request to open a presentation (with or without an RP assertion) with `503` + `Retry-After`, not `400`/`401` (2026-11-19) |
+
+**A response to a consumed presentation (2026-11-19).** Once a presentation has been consumed by a response that reached
+proof of possession, every further wallet response to it (`/vp/response`, `/vp/dc-mdoc/{id}`) gets `400 invalid_request`
+(`nonce already used (PV10)`); this is a transport error, not a second verification result, and it does not change the stored
+result. Fetching the request object of a closed or expired presentation gets `404`.
 
 Mixing these up is a common mistake and causes two problems: (1) clients cannot tell a network error from an invalid
 credential, (2) monitoring systems treat rejected credentials as an "error rate" and real failures get lost in the noise.
@@ -332,31 +353,46 @@ credential, (2) monitoring systems treat rejected credentials as an "error rate"
 
 # 4. Verifier service API
 
-Base: `https://verifier.<institution>/api/v1`
+Base (hosted verifier, Tamga Verify): `https://verify.tamga.network` (real network), `https://verify.sandbox.tamga.network`
+(sandbox). The endpoints sit at the root; there is no version prefix (`/api/v1`) in the path (2026-11-19). Authentication: the
+verifier that opens the presentation and reads the result sends `Authorization: Bearer <RP assertion>` — a short-lived JWS signed
+with the key of its access certificate registered in the trust list (`typ: tamga-rp+jwt`, ES256, single-use `jti`; §6.4). The
+browser uses only the status token (`X-Tamga-Status-Token` or `?st=`) and sees only the status.
+
+This section describes the core of the flow. The complete definition of every endpoint (QR image, policy list, ISO/IEC 18013-7
+Annex C response endpoint, page kit), of the request and response fields and of the error codes is in the OpenAPI reference:
+[Tamga Verify API](/api/verify).
 
 ## 4.1 Start a presentation request
 
 ```http
 POST /presentations
+Authorization: Bearer <RP assertion>
+Accept: application/json
 Content-Type: application/json
 Idempotency-Key: 3f9a1c...
 
 {
-  "policy_id": "job-application-degree",
-  "purpose": { "tr-TR": "İş başvurusu değerlendirmesi" },
-  "response_mode": "direct_post.jwt",
-  "ttl_sec": 300
+  "policy_id": "job-application-degree"
 }
 ```
 
 ```json
 {
-  "presentation_id": "prs_01J8XK",
-  "request_uri": "https://verifier.ornek.com/vp/req/01J8XK",
-  "qr_payload": "openid4vp://?client_id=x509_hash%3AUvo3…&request_uri=…",
-  "expires_at": "2026-09-09T09:17:44Z"
+  "presentation_id": "prs_Q2x0dVJmNkp3",
+  "request_uri": "https://verify.tamga.network/vp/req/prs_Q2x0dVJmNkp3",
+  "qr_payload": "openid4vp://?client_id=x509_hash%3AUvo3…&request_uri=…&request_uri_method=post",
+  "expires_at": "2026-11-19T09:17:44.000Z",
+  "status_token": "9VdB0qXr7mYk2LwPq1sZ3A"
 }
 ```
+
+Only two fields of the request body are read: `policy_id` (required) and the optional `dc_api_origin` (the page origin for the
+browser's Digital Credentials API; when given, the answer also carries `dc_api_request` / `dc_api_requests`). Any other field is
+ignored: the purpose comes from the policy and the registration certificate ([[SPEC-PROTO-0002]] §3), the response mode follows
+the path (`direct_post.jwt` cross-device, `dc_api.jwt` in the browser), and the presentation lifetime is a fixed 300 seconds
+(2026-11-19). Without `Accept: application/json` the verifier redirects to its own waiting page instead of answering with JSON.
+Give `status_token` only to the browser.
 
 `policy_id` points to a predefined policy (§4.4). The DCQL query is **not written by hand** in the request body — it is
 generated from the policy. Over-asking therefore requires a policy change, not a code change.
@@ -409,11 +445,12 @@ record, and access to this endpoint is authorised and logged separately.
   "trust": {
     "min_issuer_assurance": "I2",
     "allowed_categories": ["EDUCATION"],
-    "require_recognition": true
+    "require_recognition": true,
+    "state_code": "TR"
   },
   "freshness": {
     "max_status_token_age_sec": 21600,
-    "max_indexer_age_sec": 60
+    "max_trust_age_sec": 86400
   }
 }
 ```
@@ -426,12 +463,18 @@ The policy feeds both the DCQL query ([[SPEC-PROTO-0002]] §4) and the `E1`–`E
 checks this when the policy is saved and **rejects** a policy that exceeds them — over-asking is blocked when the policy is
 defined, not at presentation time.
 
+**In the hosted verifier (implementation note, 2026-11-19).** In Tamga Verify the policies are the service's configuration (listed
+by `GET /policies`); there is no endpoint that saves a policy. AP6 is therefore checked **when a presentation is opened**: if the
+policy exceeds the scope of the opening verifier in the trust list, `POST /presentations` answers `400 policy_exceeds_scope`
+(`detail` lists what goes beyond it) and no request object is created — the over-asking request never reaches a wallet.
+
 ---
 
 # 5. Issuer service API
 
-Base: `https://issuer.<institution>/api/v1`. The OID4VCI endpoints are separate ([[SPEC-PROTO-0001]]); the ones here are the
-**operator and integration** surface.
+Base: `https://issuer.tamga.network/{slug}/api/v1` (a path per institution). The OID4VCI endpoints are separate
+([[SPEC-PROTO-0001]]); the ones here are the **operator and integration** surface. The complete definition of the implemented
+endpoints is in the OpenAPI reference: [Issuer API](/api/issuer) (2026-11-19).
 
 ## 5.1 Create a credential offer
 
@@ -525,7 +568,20 @@ GET /status-lists/{list_id}
 
 # 6. Common rules
 
-## 6.1 Error format — RFC 9457
+## 6.1 Error format
+
+**Today's reference services (2026-11-19).** The two services use two formats:
+
+- **Issuer API** (`/{slug}/api/v1`): the minimal RFC 9457 problem details, `application/problem+json`:
+  `{ "type": "about:blank", "title": "<short message>", "status": <code> }`. `detail`, `instance` and `tamga_code` are not
+  produced today.
+- **Verifier (Tamga Verify):** the OAuth format `{ "error": "<code>", "error_description": "<optional message>" }`; on a scope
+  overrun also `detail` (the list of what goes beyond the scope, `policy_exceeds_scope`). Framework errors such as a body parse
+  error, and unexpected errors, are `{ "statusCode": <code>, "error": "<HTTP reason phrase>", "message": "<message>" }`; for a
+  5xx the message is always `internal error` (no internal detail in the response).
+
+The example below shows the full RFC 9457 format with the planned `tamga_code` extension; today the issuer produces only `type`,
+`title` and `status`.
 
 ```json
 {
@@ -544,14 +600,16 @@ is returned; the details are only in the institution's own audit record (the ser
 
 ## 6.2 Idempotency
 
-Every `POST` with side effects (`/offers`, `/revocations`, `/presentations`) **accepts** the `Idempotency-Key` header. A
-repeated call with the same key returns the same response; the same key with a different body produces `409`.
-
-Retention: **24 hours**.
+**Planned — not implemented yet (2026-11-19).** The reference services (the verifier `apps/verify`, the issuer) do not
+process the `Idempotency-Key` header today; the header is ignored and `409` is never produced. A repeated call opens a new
+presentation or operation. Target behaviour: every `POST` with side effects (`/offers`, `/revocations`, `/presentations`)
+accepts the header; a repeated call with the same key returns the same response, the same key with a different body produces
+`409`; retention 24 hours. The header in the §4.1 and §5.1 examples shows this target.
 
 ## 6.3 Versioning
 
-Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel for at least **12 months** (the same policy as
+The issuer API is path-based: `/{slug}/api/v1`. The hosted verifier has no version prefix in its paths (§4); the OpenAPI
+document carries its version (2026-11-19). A breaking change opens `/v2`; `/v1` lives in parallel for at least **12 months** (the same policy as
 [[ARCH-0005]] §5.3).
 
 ## 6.4 Authentication
@@ -560,7 +618,7 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 |---|---|
 | Operator panel → issuer API | OIDC + role-based authorisation |
 | Student information system → issuer API | mTLS or client credentials |
-| Verifier application → verifier API | API key or mTLS |
+| Verifier application → verifier API | RP assertion: `Authorization: Bearer <tamga-rp+jwt>` — a JWS signed with the key of the access certificate in the trust list, valid for at most 60 seconds, single-use `jti`; no shared secret (`createRpAssertion()`). The browser reads only the status, with the status token (`X-Tamga-Status-Token` or `?st=`) (2026-11-19) |
 | Gate terminal → verifier `/terminal/verify` | Terminal key: an operator-issued bearer key bound to a terminal group (`Authorization: Bearer`); a request without a key gets 401 and the token is not read ([[ADR-0065]] TK1–TK3). Keys are issued and revoked through the admin endpoints (`/terminal/keys`, internal address). |
 | Institution Console → verifier `/terminal/keys` (on behalf of an institution) | Institution-scoped token: `x-tamga-institution` + `x-institution-token` = base64url(HMAC-SHA256(admin token, `tamga-terminal-keys/v1:` + institution)); the institution gets, sees and revokes keys only for the groups bound to it in the signed list (`terminal_groups[].institution_id`); a key of a group withdrawn from the list gets 403 at the gate ([[ADR-0069]] TG1–TG3). |
 | OID4VCI / OID4VP endpoints | The protocol's own mechanism |
@@ -597,8 +655,11 @@ The sample site's start endpoint (`/sample-site/start`, sandbox only) is limited
 
 # Security and privacy notes
 
-**The result object is an audit artefact.** It is kept for a long time ([[ARCH-0004]] §5.4: 12 months). AP3 and AP4 together
-prevent this period from becoming a tracking surface.
+**The result object is an audit artefact.** AP3 and AP4 together prevent the stored record from becoming a tracking surface.
+The reference verifier (`apps/verify`) keeps the audit log **in memory only** today: the last 1000 events, lost when the
+process restarts; durable retention and the 12-month period of [[ARCH-0004]] §5.4 are **planned** behaviour, not a guarantee
+today (2026-11-19). A `/claims` read is also logged as a value-free event (`claims.read`: verification id, policy, released or
+not).
 
 **The `/claims` endpoint is authorised separately.** Seeing the verification result and reading the disclosed values are
 different permissions. An HR assistant may see "candidate verified" without seeing the grade average (if disclosed).
@@ -638,6 +699,23 @@ student exist". It is an internal endpoint of the institution; it must not be ex
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-19, second; audit round — the version stays 1.0).** In the audit round the specification text was
+aligned with the reference implementation and the OpenAPI document, with no change in behaviour: the preliminary step `T0`
+(§1.0) and the pseudonym step `P1` (§1.F) joined the registry; the A order, the `policyCredentialId` check and `B2`'s
+`INDETERMINATE` while an external list is unavailable were written down (§1.A, §1.B, §1.3); `B3` now says the type definitions
+are bundled in the package; the example result follows the real output shape (§2.2); `410` and the `400` for a response to a
+consumed presentation were added (§3); the verifier's base, authentication, the request fields that are read and the OpenAPI
+reference were corrected (§4, §4.1); AP6 is checked when a presentation is opened in the hosted verifier (§4.4); the error format,
+versioning and authentication table describe today's services (§6.1, §6.3, §6.4).
+
+**Version note (2026-11-19; audit round — the version stays 1.0).** Protocol audit round: an
+unreadable `status` entry is REJECTED at `D1` (§1.D); for mdoc a future `signed` is REJECTED at `A3` and `validFrom` < `signed`
+at `A7` (§1.A; in a ZK presentation `signed` is hidden, so this check does not apply — on the ZK path the time checks are the
+proof timestamp and the certificate); a `REVOKED` type is REJECTED at `B2`; the size of a status list is bounded by `bits` and
+an overflow is `D4` INDETERMINATE (§1.D); `503` while the trust list is stale (§3); the policy example was corrected so that it
+passes T0 (§4.4); `Idempotency-Key` is marked as planned (§6.2); the audit retention text now describes today's in-memory
+behaviour (Security notes).
 
 **Version note (2026-11-12; approved by project management — behaviour unchanged).** Three deviations left from the
 document–code scan were closed on the document side and tied to decision records: asking `C1`/`C2` at proof time in a ZK

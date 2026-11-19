@@ -32,6 +32,8 @@ import {
   cryptoProvider,
 } from "@peculiar/x509";
 
+import { crlHostOf, crlUrisOf } from "../../../ops/crl-dp.js";
+
 cryptoProvider.set(webcrypto as unknown as Crypto);
 
 /** Kayıt defterindeki ayar (`national_lists[].roles.access_ca.crl`). */
@@ -88,18 +90,10 @@ export interface RpAccessCertView {
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
 /**
- * ADR-0090 K1: güven listesi alan adından CRL alan adı — `trust.tamga.network` → `crl.tamga.network`,
- * `trust.sandbox.tamga.network` → `crl.sandbox.tamga.network` (`trust.` öneki yoksa ad başına `crl.` eklenir).
+ * ADR-0090 K1/K3: CRL alan adı (`trust.tamga.network` → `crl.tamga.network`) ve dağıtım noktasının iki adresi (önce `http`, sonra
+ * aynı yolun `https` adresi). Tek kaynak `ops/crl-dp.ts` (sertifika veren araçlar da onu kullanır); burada yeniden dışa açılır.
  */
-export function crlHostOf(publicBase: string): string {
-  const h = new URL(publicBase).hostname;
-  return "crl." + (h.startsWith("trust.") ? h.slice("trust.".length) : h);
-}
-/** ADR-0090 K3: dağıtım noktasının iki adresi, bu sırayla — önce `http`, sonra aynı yolun `https` adresi. */
-export function crlUrisOf(uri: string): [string, string] {
-  const u = new URL(uri);
-  return [`http://${u.host}${u.pathname}`, `https://${u.host}${u.pathname}`];
-}
+export { crlHostOf, crlUrisOf };
 
 /** Ayar denetimi; boş dizi = geçerli. `publicBase` = güven listesi yayın kökü (ör. https://trust.tamga.network). */
 export function accessCrlConfigProblems(cfg: unknown, publicBase: string): string[] {
@@ -115,10 +109,14 @@ export function accessCrlConfigProblems(cfg: unknown, publicBase: string): strin
       p.push(`${w}: nesne olmalı`);
       continue;
     }
+    let caOk = false;
     if (typeof it.ca !== "string" || !NAME_RE.test(it.ca))
       p.push(`${w}.ca: PKI'daki sertifika adı (küçük harf, rakam, tire)`);
     else if (seenCa.has(it.ca)) p.push(`${w}.ca: ${it.ca} iki kez`);
-    else seenCa.add(it.ca);
+    else {
+      seenCa.add(it.ca);
+      caOk = true;
+    }
     let u: URL | null = null;
     try {
       u = new URL(String(it.uri));
@@ -131,6 +129,8 @@ export function accessCrlConfigProblems(cfg: unknown, publicBase: string): strin
       p.push(`${w}.uri: CRL alan adında http adresi olmalı (http://${host}/<ad>.crl; https eşi türetilir — ADR-0090)`);
     if (!/^\/[a-z0-9][a-z0-9-]*\.crl$/.test(u.pathname) || u.search || u.hash)
       p.push(`${w}.uri: yol /<ad>.crl biçiminde, alan adının kökünde (küçük harf, rakam, tire)`);
+    // ADR-0090: yol makamın adıdır (`/<makam>.crl`) — başka makamın CRL dosyasına yazılmasın (pki-issue de aynı kuralı denetler)
+    else if (caOk && u.pathname !== `/${it.ca}.crl`) p.push(`${w}.uri: yol makamın adı olmalı (/${it.ca}.crl)`);
     if (seenUri.has(u.href)) p.push(`${w}.uri: ${u.href} iki kez`);
     seenUri.add(u.href);
   }
@@ -141,6 +141,16 @@ export function accessCrlConfigProblems(cfg: unknown, publicBase: string): strin
 export const crlFileOf = (uri: string) => "crl" + new URL(uri).pathname;
 
 export const emptyAccessCrlState = (): AccessCrlState => ({ issuers: [] });
+
+/** Seri numarası karşılaştırma biçimi: küçük harf onaltılık, baştaki sıfırlar atılır. */
+const serialKey = (s: string) => s.toLowerCase().replace(/^0+(?=.)/, "");
+/**
+ * Aynı makamın iptal kaydı bu sertifikayı mı gösteriyor: parmak iziyle ya da (seri numarası makam içinde tektir, RFC 5280 §4.1.2.2)
+ * seri numarasıyla — yayımlanmış CRL'den kurulan durumda parmak izi bilinmez (`recoverIssuerState`).
+ */
+type CertKey = Pick<KnownAccessCert, "serial" | "fingerprint_sha256">;
+const sameCert = (r: CertKey, c: CertKey) =>
+  r.fingerprint_sha256 === c.fingerprint_sha256 || serialKey(r.serial) === serialKey(c.serial);
 
 /** Doğrulayıcı durumundan iptal gerekçesi; `ACTIVE` → null. */
 export function reasonForRpStatus(status: string): AccessCrlReason | null {
@@ -179,7 +189,7 @@ export function planAccessRevocations(
     }
     s.uri = c.uri;
     const mine = rps.filter((r) => r.ca === c.ca);
-    const isRevoked = (fp: string) => s!.revoked.some((r) => r.fingerprint_sha256 === fp);
+    const isRevoked = (k: CertKey) => s!.revoked.some((r) => sameCert(r, k));
     const revoke = (k: KnownAccessCert, reason: AccessCrlReason) => {
       const e: RevokedAccessCert = { ...k, revoked_at: at, reason };
       s!.revoked.push(e);
@@ -192,7 +202,7 @@ export function planAccessRevocations(
         dns_name: r.dns_name,
         not_after: r.not_after,
       };
-      if (isRevoked(r.fingerprint_sha256)) {
+      if (isRevoked(k)) {
         if (r.status === "ACTIVE")
           problems.push(
             `AR3: ${r.dns_name} etkin ama erişim sertifikası iptal listesinde (seri ${r.serial}) — yeni erişim sertifikası verin ` +
@@ -207,14 +217,10 @@ export function planAccessRevocations(
     // kayıttan kalkan (yenisiyle değişen ya da kaydı listeden çıkan) ve süresi dolmamış sertifika → superseded
     const referenced = new Set(mine.map((r) => r.fingerprint_sha256));
     for (const k of s.known)
-      if (
-        !referenced.has(k.fingerprint_sha256) &&
-        !isRevoked(k.fingerprint_sha256) &&
-        Date.parse(k.not_after) > now.getTime()
-      )
+      if (!referenced.has(k.fingerprint_sha256) && !isRevoked(k) && Date.parse(k.not_after) > now.getTime())
         revoke(k, "superseded");
     // görülen listesinde yalnız kayıtta duran ve iptal edilmemiş sertifikalar kalır
-    s.known = s.known.filter((k) => referenced.has(k.fingerprint_sha256) && !isRevoked(k.fingerprint_sha256));
+    s.known = s.known.filter((k) => referenced.has(k.fingerprint_sha256) && !isRevoked(k));
   }
   return { state: { issuers }, revoked, problems };
 }
@@ -233,7 +239,7 @@ export function revokeAccessCert(
     );
   const s = prev.issuers.find((x) => x.ca === ca);
   if (!s) throw new Error(`crl-revoke: ${ca} için CRL durumu yok (önce build)`);
-  if (s.revoked.some((r) => r.fingerprint_sha256 === cert.fingerprint_sha256))
+  if (s.revoked.some((r) => sameCert(r, cert)))
     throw new Error(`crl-revoke: ${cert.dns_name} sertifikası (seri ${cert.serial}) zaten iptal`);
   const entry: RevokedAccessCert = { ...cert, revoked_at: now.toISOString(), reason: reason as AccessCrlReason };
   const issuers = prev.issuers.map((x) =>

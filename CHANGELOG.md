@@ -6,6 +6,146 @@ published on npm as test releases; `0.8.8` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+## 0.8.9 — 2026-11-19
+
+All ten packages move to 0.8.9 together. This test release is **breaking** for callers: it carries the fixes of the
+2026-11 audit round (safer package defaults, protocol checks) and the EU alignment decisions of 2026-11-19. Before updating,
+read the behaviour changes below — in particular `receiveCredentials` now needs `trust`, `WalletStatusChecker` takes an object
+as its second argument, and request addresses must be https (`allowLocalDevHost` for local development).
+
+### Changed
+
+EU alignment round 2026-11-19 (project management approval). Breaking; released together with the changes below.
+
+- **issuer + trust: a wallet provider's status list must be signed within the same provider record (ADR-0056 K6a).**
+  `StatusValueOf` takes a third argument, the SHA-256 fingerprint of the certificate that signed the checked WIA or KA;
+  `verifyWalletAttestation` and `verifyKeyAttestation` pass it. `WalletStatusChecker`'s second argument is now the trust
+  source's `isWalletProviderKey` and `walletProviderOfKey` (an object with both): the list signer must be a provider key and
+  belong to the same provider record as the attestation signer (a key rotation inside the record keeps the list valid; another
+  provider's key does not). When no record is found (external list) the list signer must be the attestation signer itself. A
+  mismatch or a missing signer argument answers `UNKNOWN`. Custom status functions may ignore the new argument.
+- **wallet-core: batch copy consistency in `receiveCredentials` (EU ARF ISSU_11a/11b).** All copies of one batch must carry
+  the same issuer signing certificate, the same `nbf` / `exp` and the same claim values (per-copy `cnf`, `status`, `iat`
+  excluded); mdoc copies must carry the same decoded element values and the same `validFrom` / `validUntil`. Otherwise the
+  whole batch is rejected (`copies are not consistent: …`); the caller deletes the batch's keys. `verifyReceivedMdoc` also
+  returns `validity` and `values` (additive).
+- **wallet-core: `request_uri` must be https (OpenID4VP 1.0 errata).** `parseVpUri` and `fetchRequestObject` (GET) take
+  `{ allowLocalDevHost }` like the POST path already did; without it an `http` request URI is rejected before any request.
+  `fetchRequestObjectFor` forwards the option to both methods.
+- **verifier: secure addresses in signed requests (OpenID4VP 1.0 errata).** `createPresentationRequest` and
+  `createRequestBranch` reject an `http` `responseUri` / `requestUriBase` and DC API `expectedOrigins` that are not bare
+  `https` origins or Android app origins (`android:apk-key-hash:`). `allowLocalDevHost` (on `RequestContent` and
+  `PresentationRequestParams`) admits `http` only for localhost, private network and `.test` / `.local` / `.localhost` hosts.
+  The reference verifier passes it (its live lock already forces an https base).
+
+Security review 2026-11-18 (package API misuse resistance, wallet core, reference verifier). Breaking for callers that relied on
+the old defaults.
+
+- **wallet-core: `receiveCredentials` requires a trust source (behaviour change).** `ReceiveOptions.trust` is now required:
+  a verified `TrustSource`, or the explicit `"none"` to skip the check deliberately (tests, development; the ADR-0056 MR1
+  convention). A missing value throws (`trust source missing`) instead of silently accepting a self-signed credential. With a
+  trust source, the issuer must now also be authorised for the credential type at `iat` (C2, `isCredentialSchemaAcceptable`),
+  not only listed (C1). `autoRefreshCredential` and `renewIdentityCredential` take a required `receive` with the same rule and
+  check it before any network call (the single-use refresh token is not spent).
+- **trust: the source's clock no longer freezes at load (behaviour change).** `now` passed to `fetchListTrustSource` (and
+  wallet-core `fetchTrustSource`, which always passed it) is only the load time; the source's clock advances with real time from
+  there, so a list past its `next_update` answers `UNKNOWN`. wallet-core forwards `now` only when the caller gives it.
+- **trust: `loadTrustSourceFromDir` anchor freshness defaults to 2 hours (behaviour change).** Was 365 days; development and
+  test folders without the hourly heartbeat pass a wider `anchorMaxAgeMs` explicitly (the reference verifier does so for an
+  http base). `anchorMaxAgeMs` must be finite and positive in every loader (`RangeError` otherwise; `NaN` used to disable the
+  staleness check).
+- **verifier: policy shape checks (behaviour change).** A range constraint must have only numeric `min` / `max` (at least one):
+  `constraintOk` fails closed on anything else and `dcqlFromPolicy` throws. T0 also checks the trust block
+  (`require_recognition` boolean, two-letter `state_code` when recognition is required, `min_issuer_assurance`,
+  `allowed_categories`) and returns INDETERMINATE when it is missing or malformed, so C3 can no longer be skipped silently.
+- **wallet-core: signed issuer metadata (behaviour change).** When `signerFingerprints` is given, an unsigned (JSON) response
+  is rejected instead of being used.
+- **sd-jwt: status list tokens without a lifetime bound (behaviour change).** A JWT or CWT status token with no `exp` is
+  rejected (D4) unless `maxAgeSec` is given. The verifier passes the policy's `max_status_token_age_sec`.
+- **verifier: `filePassStore` (behaviour change).** Only a missing file is an empty store; an unreadable or damaged file throws
+  (the reference verifier then stops at startup) instead of silently dropping consumed tickets and the replay list. Writes are
+  atomic (temporary file + rename).
+- **wallet-core: https for response and issuer endpoints (behaviour change).** `verifyRequestObject` requires an https
+  `response_uri` (http only for a local development host with `allowLocalDevHost`), even when the host matches the signing
+  certificate. An offer fetched from an https address must name an https `credential_issuer`; the issuer's
+  `credential_endpoint` and `nonce_endpoint` must be https unless the issuer itself is a local http development address.
+- **wallet-core: `applyMigration` validates `x_tamga` (behaviour change).** Malformed log entries, events and settings in an
+  imported TS10 file are dropped instead of being written into the wallet state.
+- **verify: terminal rate limit per terminal key (behaviour change).** `POST /terminal/verify` authenticates the terminal key
+  first and limits per key; keyless requests use a separate client bucket, so keyless traffic behind the proxy can no longer
+  exhaust real gates' budget.
+- **verify: production refuses a short admin token (behaviour change).** On the production network the service does not start
+  with a `TAMGA_ADMIN_TOKEN` shorter than 24 characters.
+
+Protocol audit round 2026-11-19 (verification pipeline, reference verifier, trust lists). Specification text was aligned
+without a version change (SPEC-API-0001, SPEC-PROTO-0002 and the issuer OpenAPI stay 1.0).
+
+- **sd-jwt: malformed `status` entry is REJECTED at D1 (behaviour change).** `verifySdJwtVc` checks the shape of `status`
+  (object, `status_list` object, non-negative integer `idx`, non-empty `uri`) and fails with `D1` `status entry malformed`
+  instead of letting the revocation check be skipped. An SD-JWT VC whose `status` carries only `identifier_list` is now
+  rejected the same way.
+- **sd-jwt: status list size is bounded by `bits` (behaviour change).** The decompressed size limit is computed from the
+  token's `bits` (an 8-bit list larger than the old fixed limit is now readable); an overflow is `D4` (unreadable list,
+  INDETERMINATE) instead of `D6` REJECTED.
+- **mdoc: `validityInfo` order (behaviour change).** `verifyIssuerSigned` rejects a `signed` time beyond the clock tolerance
+  (`validityInfo.signed is in the future`) and `validFrom` earlier than `signed` (ISO/IEC 18013-5); the verifier reports these as
+  `A3` and `A7`. The ZK path is unaffected (`signed` is hidden in the proof).
+- **verifier: pipeline (behaviour change).** A `policyCredentialId` that is not a credential of the policy fails at `A1` before
+  any format step (was `E2`); a schema with status `REVOKED` is REJECTED at `B2`; a status key that is no longer valid
+  gives `STATUS_STALE` instead of `STATUS_UNREACHABLE`; D3 uses the policy's `max_clock_skew_sec` for the token `iat`.
+- **verifier: DC API origin.** `openPresentationResponse` / `decryptPresentationResponse` take an optional `{ origin }` (the
+  page origin), which must be one of the request's `expected_origins`; without it the first origin is bound as before.
+- **trust: LoTE `ServiceStatus` allow-list (behaviour change).** A service without `ServiceStatus` is active; with one, only
+  `…/notified` (TS 119 602) and `granted` / `recognisedatnationallevel` (TS 119 612) are taken. An unknown value is skipped
+  and reported as a load warning (`ParsedLote.warnings`); known inactive values are skipped silently as before.
+- **verify: pseudonym-only presentations (behaviour change).** For a policy that asks only for a pseudonym, the pseudonym is
+  checked before the presentation is consumed: a failing pseudonym is an attempt (`400`, `failed_step: "P1"`, the presentation
+  stays open), not a REJECTED result. A successful result lists `P1` and `E4` in `checks_performed`. When a credential plus
+  pseudonym fails the pseudonym check, `failed_step` is `P1` (was `null`).
+- **verify: `503` while the trust list is unhealthy (behaviour change).** Opening a presentation (with or without an RP
+  assertion) answers `503 temporarily_unavailable` with `Retry-After` instead of `400` / `401`.
+- **verify: `/claims` reads are audited.** A value-free `claims.read` event (verification id, policy, released or not).
+- **verify: `TAMGA_LIVE` lock.** `TAMGA_LIVE=1` (process environment only; ignored in `.env`) makes the service refuse to start
+  with a non-https `TAMGA_VERIFY_BASE` or on the sandbox network; any value other than `0` / `1` is an error.
+
+### Fixed
+
+- **verify: 5xx messages are never returned.** An error carrying a 5xx status code is answered with `internal error` like an
+  unexpected one (only 4xx messages are passed through).
+- **wallet-core: `autoRefreshCredential` failure during receive.** An error from `receiveCredentials` no longer escapes: the
+  partial copies are dropped and the refresh is skipped with the reason, keeping the existing credential.
+- **verify: unexpected errors no longer leak their message.** An error handler returns a generic `internal error` for
+  unexpected 500s (logging only method, route pattern and error type); errors carrying a status code keep their message.
+- **issuer: constant-time comparison** of the pre-authorized code and the PIN (`tx_code`) in `redeemOffer`.
+- **verifier: `verification_id`** uses a cryptographic random part (same `vrf_` + lowercase alphanumeric format).
+- **wallet-core: DPoP `jti` fallback** uses a cryptographic random source (`crypto.getRandomValues`; fails loudly without one)
+  instead of `Math.random`.
+- **verifier: unrepresentable mdoc element values are REJECTED.** An element whose value cannot be represented (e.g. a map with
+  a non-text key) fails A5 (classic mdoc) or Z1 (ZK) as REJECTED — a permanent content defect, not INDETERMINATE (AP2).
+
+- **wallet-core: transaction data binding.** `respond` binds an item listing several `credential_ids` to the first of those ids
+  that has an SD-JWT VC presentation in the response (no longer the order of `matches`); `transactionDataFor(items, queryId,
+  presentedQueryIds)` applies the same rule. The request's transaction data is now part of the `checkRp` approval: changing or
+  removing it after approval makes `respond` refuse (`trust_error`).
+- **mdoc: `plainElementValue`.** A CBOR map key `__proto__` becomes an own property (the object's prototype is not changed); a
+  map with a non-text key is rejected instead of silently dropping that entry.
+- **trust-publisher: access certificate CRL (ADR-0087, ADR-0090).** The hourly `heartbeat` re-signs the CRLs under the registry
+  lock (a concurrent `crl-revoke` can no longer be lost or reuse a CRL number); revocations recovered from a published CRL match
+  certificates by serial number (AR3 still stops the build); an issuer missing from an existing state file is recovered from its
+  published CRL (the CRL number never goes back); the CRL path must be `/<ca>.crl`; the state archive gets a copy only when
+  revocations change. `ops/pki-issue.ts --crl-uri` checks the CRL host against the PKI folder's network (`pki.json` profile).
+
+### Documentation
+
+- **Specifications aligned with the code (audit round, 2026-11-19; versions stay 1.0, no behaviour change).** OpenID4VP: the
+  local-development `http` exception for `request_uri_method=post`, the request size limit enforced by the wallet (a pseudonym
+  query counts), the recipient key without `use`, the local rejection of bad `transaction_data` and its limits, notes on PV9 and
+  the deprecated `initialRequestObject`. Verification API: the `T0` pre-step and the `P1` pseudonym step, the SD-JWT step order,
+  `B2`/`B3` behaviour, the real result shape, `410` and the consumed-presentation `400`, the hosted verifier's base URL,
+  authentication and request fields, AP6 at presentation start, the two error formats. Identity rulebook and identity proofing:
+  `date_of_expiry` and `issuing_authority` in every copy, `place_of_birth` conditional, nationality and `QU`/`QS`, `age_over_15`
+  optional in the ZK copy, status list address `https://id.tamga.network/status/`.
+
 ## 0.8.8 — 2026-11-18
 
 All ten packages move to 0.8.8 together (patch release). The code changes are in `wallet-core` (`tws2`, transaction data, MD1

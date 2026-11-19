@@ -178,7 +178,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           credential_configurations_supported: { [VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     );
     // verifier: politika → QR
     const created = (
@@ -191,8 +191,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     ).json() as { presentation_id: string; qr_payload: string };
     expect(created.qr_payload).toContain("request_uri=");
     // cüzdan: istek nesnesi
-    const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN);
+    const uri = parseVpUri(created.qr_payload, LAN);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http, LAN), uri.clientId, LAN);
     expect(req.responseUri).toBe(`${BASE}/vp/response`);
     // OpenID4VP 1.0 §5.1 (öz-test U1, 2026-10-27): istek nesnesinde standart dışı `purpose` yok; amaç kayıt sertifikasında
     expect(req.payload).not.toHaveProperty("purpose");
@@ -271,8 +271,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       })
     ).json() as { presentation_id: string; qr_payload: string; dc_api_requests: Array<{ protocol: string }> };
     expect(withDc.dc_api_requests.map((x) => x.protocol)).toEqual(["openid4vp-v1-signed"]);
-    const uri2 = parseVpUri(withDc.qr_payload);
-    const req2 = verifyRequestObject(await fetchRequestObject(uri2.requestUri, http), uri2.clientId, LAN);
+    const uri2 = parseVpUri(withDc.qr_payload, LAN);
+    const req2 = verifyRequestObject(await fetchRequestObject(uri2.requestUri, http, LAN), uri2.clientId, LAN);
     expect(req2.responseUri).toBe(`${BASE}/vp/response`);
     const m2 = matchDcql(req2.dcql, r.state.credentials).matches[0];
     const out2 = await respond({
@@ -302,10 +302,10 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           payload: { policy_id: "job-application-degree", dc_api_origin: SHOP },
         })
       ).json() as { presentation_id: string; qr_payload: string; dc_api_request: { protocol: string; data: unknown } };
-      const u = parseVpUri(c.qr_payload);
+      const u = parseVpUri(c.qr_payload, LAN);
       return {
         id: c.presentation_id,
-        qr: verifyRequestObject(await fetchRequestObject(u.requestUri, http), u.clientId, LAN),
+        qr: verifyRequestObject(await fetchRequestObject(u.requestUri, http, LAN), u.clientId, LAN),
         dc: parseDcApiRequest(c.dc_api_request as never, SHOP),
       };
     };
@@ -453,7 +453,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
             credential_configurations_supported: { [SVCT]: { format: "dc+sd-jwt" } },
           },
         },
-        { now },
+        { now, trust: "none" },
       );
       const created = (
         await app.inject({
@@ -463,8 +463,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           payload: { policy_id: "campus-access" },
         })
       ).json() as { presentation_id: string; qr_payload: string };
-      const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN);
+      const uri = parseVpUri(created.qr_payload, LAN);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http, LAN), uri.clientId, LAN);
       expect(req.passGrantOffered).toBe(true);
       const { matches } = matchDcql(req.dcql, st.state.credentials);
       const copy = matches[0].credential.copies[0];
@@ -603,7 +603,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           credential_configurations_supported: { [ID_VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     ).state;
 
     // ADR-0031: cüzdanın takma ad tohumu (kimlik servisinin verdiği) + cüzdan örneği kanıtı (WIA, dev PKI'nin test cüzdan sağlayıcısı)
@@ -646,7 +646,10 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     // Sunumu örnek sitenin sunucusu açar (/sample-site/start) ve başlatan tarayıcıya akış çereziyle bağlar; oturum yalnız o
     // çerezle açılır (tarayıcının çerez kavanozu: flowCookie)
     let flowCookie = "";
-    const present = async (policy: string, o: { rpOverride?: string; noPseudonym?: boolean; expect?: string } = {}) => {
+    const present = async (
+      policy: string,
+      o: { rpOverride?: string; noPseudonym?: boolean; expect?: string; attempt?: boolean } = {},
+    ) => {
       const started = await app2.inject({
         method: "POST",
         url: "/sample-site/start",
@@ -661,8 +664,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       const created = started.json() as { presentation_id: string; qr_payload: string };
       const png = await app2.inject({ method: "GET", url: `/presentations/${created.presentation_id}/qr.png` });
       expect(png.headers["content-type"]).toContain("image/png");
-      const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http2), uri.clientId, LAN);
+      const uri = parseVpUri(created.qr_payload, LAN);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http2, LAN), uri.clientId, LAN);
       const { matches, unmatched } = matchDcql(req.dcql, wallet.credentials);
       expect(unmatched).toEqual([]); // takma ad sorgusu belge sorgusu sayılmaz
       expect(matches.length).toBe(policy === "site-signin" ? 0 : 1);
@@ -685,7 +688,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       });
       seen.push(ps.pseudonym);
       const copy = matches[0]?.credential.copies[0];
-      const out = await respond({
+      const sent = respond({
         approval: testApproval(req),
         request: req,
         matches: matches[0]
@@ -696,6 +699,20 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         http: http2,
         now,
       });
+      // Denetim turu D3-2 (davranış değişikliği): yalnız takma adlı sunumda takma ad sahiplik kanıtıdır ve sunum tüketilmeden önce
+      // denetlenir — geçmeyen takma ad deneme sayılır (400, sunum açık kalır, sonuç yok), sunumu RED'e düşürmez
+      if (o.attempt) {
+        await expect(sent).rejects.toThrow(/400/); // yanıt ucu 400 invalid_request döndü
+        const pr = app2.presentations.get(created.presentation_id)!;
+        expect(pr.result).toBeUndefined();
+        expect(pr.lastAttempt).toMatchObject({ failed_step: "P1", outcome: "REJECTED" });
+        return {
+          id: created.presentation_id,
+          disclosed: [] as string[],
+          res: pr.lastAttempt as unknown as Record<string, unknown>,
+        };
+      }
+      const out = await sent;
       expect(out.status).toBe(200);
       // sunumun sahibi örnek sitenin kendi kaydıdır: sonuç dış çağırana verilmez (HV2) — test saklanan sonuca bakar
       const res = app2.presentations.get(created.presentation_id)!.result as unknown as {
@@ -728,6 +745,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     // giriş: hesap yok → 404
     const login0 = await present("site-signin");
     expect(login0.disclosed).toEqual([]); // hiçbir belge alanı açıklanmadı — yalnız takma ad (PS4)
+    // D3-19: P1 geçti ve sonuç denetim kaydına yazıldı (barındırılan doğrulayıcı): E4 `checks_performed`'te
+    expect((login0.res as unknown as { checks_performed: string[] }).checks_performed).toEqual(["P1", "E4"]);
     expect((await session(login0.id)).statusCode).toBe(404);
 
     // kayıt: ad + soyad + anahtar → hesap + çerez
@@ -763,11 +782,12 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(s2.json()).toMatchObject({ ok: true, new: false });
     // bu tarayıcının başlatmadığı (bilinmeyen) sunum → 403
     expect((await session("prs_yok")).statusCode).toBe(403);
-    // ADR-0031: başka bir site için türetilmiş takma ad → RED (P1); takma adsız yanıt → RED; oturum açılmaz
-    const other = await present("site-signin", { rpOverride: "baska-site.example", expect: "REJECTED" });
+    // ADR-0031: başka bir site için türetilmiş takma ad ve takma adsız yanıt P1'de düşer — deneme (sunum açık kalır, D3-2);
+    // oturum açılmaz
+    const other = await present("site-signin", { rpOverride: "baska-site.example", attempt: true });
     expect((other.res as { failed_step?: string }).failed_step).toBe("P1");
     expect((await session(other.id)).statusCode).toBe(400);
-    const none = await present("site-signin", { noPseudonym: true, expect: "REJECTED" });
+    const none = await present("site-signin", { noPseudonym: true, attempt: true });
     expect((await session(none.id)).statusCode).toBe(400);
     // aynı site → aynı takma ad; başka site → farklı (siteler eşleştiremez)
     expect(new Set(seen.slice(0, 3)).size).toBe(1);
@@ -776,7 +796,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     process.env.TAMGA_ADMIN_TOKEN = "t";
     const audit = (await app2.inject({ method: "GET", url: "/audit", headers: { "x-admin-token": "t" } })).body;
     expect(audit).toContain("site.signup");
-    // E4/AP9 (ikinci inceleme): takma ad denetimi sonucu RED'e çevirdiyse denetim kaydı da RED'dir — ACCEPTED satırı kalmaz
+    // E4/AP9: geçmeyen takma ad denemesi denetim kaydına REJECTED P1 olarak düşer — ACCEPTED satırı yok
     const rows = (
       JSON.parse(audit) as Array<{ verification_id?: string; outcome?: string; failed_step?: string }>
     ).filter((e) => e.verification_id === `vrf_${other.id.slice(4)}`);
@@ -921,8 +941,17 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       showcase: true,
       fetchText: async (u) => (u === WIA_STATUS ? revokedTok : u === STATUS_URI ? statusTok : null),
     });
-    const revoked = await present("site-signin", { expect: "REJECTED" });
+    const revoked = await present("site-signin", { attempt: true }); // D3-2: deneme (sunum tüketilmez)
     expect(revoked.res.failed_reason).toMatch(/revoked|status/i);
+    // D3-8: cüzdan birimi listesi okunamıyorsa belge + takma adlı sunum DOĞRULANAMADI olur ve P1'de düşer — `failed_step: null`
+    // yalnız iç hataya ayrılmıştır (SPEC-API-0001 §1.3)
+    app2 = await buildVerifyApp(cfg, {
+      showcase: true,
+      fetchText: async (u) => (u === ID_STATUS ? idStatusTok : u === STATUS_URI ? statusTok : null),
+    });
+    await app2.statusCache.refresh([ID_STATUS]);
+    const unknownWallet = await present("site-signup", { expect: "INDETERMINATE" });
+    expect(unknownWallet.res).toMatchObject({ failed_step: "P1", indeterminate_reason: "INDEXER_STALE" });
   });
 
   it("SPEC-PROTO-0002 §10: cüzdan reddi (error+state) sunumu kapatır, neden saklanmaz; başarısız denemeler sunumu açık bırakır, 5'te kapanır", async () => {
@@ -935,10 +964,10 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           payload: { policy_id: "job-application-degree" },
         })
       ).json() as { presentation_id: string; qr_payload: string };
-      const uri = parseVpUri(created.qr_payload);
+      const uri = parseVpUri(created.qr_payload, LAN);
       return {
         id: created.presentation_id,
-        req: verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN),
+        req: verifyRequestObject(await fetchRequestObject(uri.requestUri, http, LAN), uri.clientId, LAN),
       };
     };
     const status = async (id: string) =>
@@ -1131,7 +1160,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           credential_configurations_supported: { [ID_VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     ).state; // çapraz doğrulama (MD1–MD3) burada geçti
     expect(wallet.credentials[0].copies[0].mdoc).toBeTruthy();
 
@@ -1144,8 +1173,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           payload: { policy_id },
         })
       ).json() as { presentation_id: string; qr_payload: string };
-      const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId, LAN);
+      const uri = parseVpUri(created.qr_payload, LAN);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3, LAN), uri.clientId, LAN);
       return { id: created.presentation_id, req };
     };
     const result = async (id: string) =>
@@ -1271,8 +1300,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         payload: { policy_id: "age-over-18-zk" },
       })
     ).json() as { presentation_id: string; qr_payload: string };
-    const zkUri = parseVpUri(zkCreated.qr_payload);
-    const zkReq = verifyRequestObject(await fetchRequestObject(zkUri.requestUri, http3), zkUri.clientId, LAN);
+    const zkUri = parseVpUri(zkCreated.qr_payload, LAN);
+    const zkReq = verifyRequestObject(await fetchRequestObject(zkUri.requestUri, http3, LAN), zkUri.clientId, LAN);
     const zq = zkReq.dcql.credentials[0] as unknown as {
       format: string;
       meta: { doctype_value: string; zk_system_type: Array<{ system: string; params: { circuit_hash: string } }> };
@@ -1356,8 +1385,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         qr_payload: string;
         dc_api_request: { protocol: string; data: { request: string } };
       };
-      const uri = parseVpUri(c.qr_payload);
-      const qrJwt = await fetchRequestObject(uri.requestUri, http3);
+      const uri = parseVpUri(c.qr_payload, LAN);
+      const qrJwt = await fetchRequestObject(uri.requestUri, http3, LAN);
       expect(qrJwt).not.toBe(c.dc_api_request.data.request);
       return {
         id: c.presentation_id,
@@ -1859,10 +1888,10 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           credential_configurations_supported: { [VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     );
-    const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, httpS), uri.clientId, LAN);
+    const uri = parseVpUri(created.qr_payload, LAN);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, httpS, LAN), uri.clientId, LAN);
     expect(req.onBehalfOf).toBeUndefined(); // sahibi doğrulayıcının kendisi → aracı değil
     const { matches } = matchDcql(req.dcql, w.state.credentials);
     const copy = matches[0].credential.copies[0];
@@ -1937,6 +1966,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       responseUri: `${BASE}/vp/response`,
       requestUriBase: `${BASE}/vp/req`,
       onBehalfOf: SITE,
+      allowLocalDevHost: true, // sınama yayın adresi http://verify.local
     });
     const req = verifyRequestObject(pr.requestJwt, cfg.clientId, LAN);
     expect(req.onBehalfOf).toBe(SITE);
@@ -2027,7 +2057,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           credential_configurations_supported: { [ID_VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     ).state;
     // Asıl RP: test listesindeki ikinci kayıt (kimlik kapsamı: kimlik no, doğum tarihi, ad, soyad — `age_over_18` YOK);
     // doğrulayıcının kendi kaydında `age_over_18` var
@@ -2045,8 +2075,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       });
       expect(made.statusCode).toBe(200);
       const { presentation_id, qr_payload } = made.json() as { presentation_id: string; qr_payload: string };
-      const uri = parseVpUri(qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId, LAN);
+      const uri = parseVpUri(qr_payload, LAN);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3, LAN), uri.clientId, LAN);
       expect(req.onBehalfOf).toBe(owner.clientId);
       const { matches } = matchDcql(req.dcql, wallet.credentials);
       const copy = matches[0].credential.copies[0];

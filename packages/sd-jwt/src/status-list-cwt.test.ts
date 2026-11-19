@@ -90,6 +90,22 @@ describe("bits = 1 (ADR-0048 K1)", () => {
     expect(v.bitstring.get(42)).toBe(StatusValue.INVALID);
     expect(v.bitstring.get(43)).toBe(StatusValue.VALID);
   });
+
+  it("C6-Ö13 (güvenlik incelemesi 2026-11-18): exp yok ve azami yaş verilmemiş → D4 (sonsuz taze sayılmaz)", async () => {
+    const bs = new StatusBitstring(MIN_CAPACITY, undefined, 1);
+    const tok = await signer.sign(
+      { typ: "statuslist+jwt", alg: "ES256", x5c: [Buffer.from(signer.x5c[0]).toString("base64")] },
+      new TextEncoder().encode(
+        JSON.stringify({ iss: "x", sub: JWT_URI, iat: NOW, status_list: { bits: 1, lst: bs.encodeLst() } }),
+      ),
+    );
+    await expect(verifyStatusListToken(tok, JWT_URI, NOW, { ...PIN })).rejects.toThrow(/^D4: .*no exp/);
+    // azami yaş verilince sınırlıdır: tazeyse kabul, eskiyse D4
+    expect((await verifyStatusListToken(tok, JWT_URI, NOW, { ...PIN, maxAgeSec: 3600 })).format).toBe("jwt");
+    await expect(
+      verifyStatusListToken(tok, JWT_URI, epochSeconds(NOW + 7200), { ...PIN, maxAgeSec: 3600 }),
+    ).rejects.toThrow(/^D4: status token stale/);
+  });
 });
 
 describe("CWT gösterimi (ADR-0048 K3)", () => {

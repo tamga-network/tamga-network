@@ -50,6 +50,9 @@ export interface VerifyConfig {
   clientKeyHeader?: string;
 }
 
+/** Gerçek ağda yönetici belirtecinin en kısa uzunluğu (karakter). */
+export const MIN_ADMIN_TOKEN_LENGTH = 24;
+
 /** HTTPS yayın adresinde çapa günlüğü tazelik sınırının varsayılanı: 3 saat (saatlik heartbeat'in üç turu). */
 export const DEFAULT_ANCHOR_MAX_AGE_SEC = 3 * 3600;
 
@@ -79,6 +82,13 @@ export const sandboxSampleSiteUrl = (live: boolean | undefined, lang: "en" | "tr
 
 /** .env sırası: apps/verify/.env → tamga-network/.env → ../tamga-platform/.env (tek sunucuda ortak dosya). */
 export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")): VerifyConfig {
+  // Canlı kilit (denetim turu D; belge verme ve kimlik servisleriyle aynı kural): `TAMGA_LIVE=1` YALNIZ süreç ortamından (gerçek ağın systemd
+  // birimi) okunur, .env'den değil (`loadDotenv` satırı yok sayar). Açıkken servis geliştirme (http) ya da sandbox kipinde açılmaz:
+  // .env kaybolsa ya da yanlış yazılsa da sessizce gevşek kipte değil, açılış hatasıyla durur.
+  const liveRaw = process.env.TAMGA_LIVE;
+  if (liveRaw !== undefined && liveRaw !== "0" && liveRaw !== "1")
+    throw new Error("[verify] TAMGA_LIVE must be 0 or 1");
+  const live = liveRaw === "1";
   loadServiceEnv([resolve(root, "apps/verify/.env"), resolve(root, ".env"), resolve(root, "../tamga-platform/.env")]);
   const e = process.env;
   const network = networkOf(e);
@@ -87,6 +97,9 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
   // unutulsa ya da 0 yazılsa da sıkı kip; eski beyansız yol yalnız yerelde (http) ve sandbox'ta açılabilir
   const https = publicBase.startsWith("https://");
   const production = https && network !== "sandbox";
+  if (live && !https)
+    throw new Error("[verify] TAMGA_LIVE=1: TAMGA_VERIFY_BASE must be an https address — is .env missing?");
+  if (live && network === "sandbox") throw new Error("[verify] TAMGA_LIVE=1: TAMGA_NETWORK=sandbox is not allowed");
   if (production && e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "0")
     console.warn(
       "[verify] TAMGA_VERIFY_REQUIRE_RP_AUTH=0 is ignored on the production network (ADR-0017 K6) — strict mode on",
@@ -98,6 +111,12 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     throw new Error(
       "[verify] TAMGA_VERIFY_TERMINAL_KEYS is not allowed on the production network (ADR-0065 TK3) — " +
         "remove it from the .env; issue terminal keys via POST /terminal/keys (Institution Console)",
+    );
+  // Güvenlik incelemesi 2026-11-18: gerçek ağda kısa yönetici belirteci (tahmin edilebilir) ile servis başlamaz — en az 24 karakter
+  const adminToken = e.TAMGA_ADMIN_TOKEN;
+  if (production && adminToken !== undefined && adminToken !== "" && adminToken.length < MIN_ADMIN_TOKEN_LENGTH)
+    throw new Error(
+      `[verify] TAMGA_ADMIN_TOKEN is too short for the production network (at least ${MIN_ADMIN_TOKEN_LENGTH} characters)`,
     );
   return {
     network,

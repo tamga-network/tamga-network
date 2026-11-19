@@ -20,6 +20,7 @@ import {
 import { epochSeconds } from "@tamga-network/core/time";
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import { b64u, b64uDecode, toHex } from "./b64.js";
+import { stableJson } from "./stable-json.js";
 import { jwkThumbprint } from "./jwe.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
 import { certFingerprintHex, p256PointFromCertDer, type LocalVerifyOk } from "./sdjwt.js";
@@ -60,11 +61,13 @@ const eqVal = (a: unknown, b: unknown) => JSON.stringify(canon(a)) === JSON.stri
 /**
  * Alınan mdoc'u SD-JWT kopyasıyla çapraz doğrular; tutarsızlıkta hata fırlatır (kopya reddedilir).
  * MD3: aynı issuer sertifikası · issuerAuth imzası · MD2: deviceKey = cnf · MD1: ortak alanlar birebir · status idx aynı.
+ * Dönen `validity` (geçerlilik başlangıcı / bitişi, MSO'daki biçimiyle) ve `values` (çözülmüş öğe değerlerinin kararlı JSON'u)
+ * toplu kopyaların birbirleriyle karşılaştırılması içindir (ARF ISSU_11a; `receiveCredentials`).
  */
 export function verifyReceivedMdoc(
   mdocB64u: string,
   ctx: { sdjwt: LocalVerifyOk; cnf: PublicJwk; now?: number },
-): { namespace: string; elements: string[] } {
+): { namespace: string; elements: string[]; validity: { validFrom: string; validUntil: string }; values: string } {
   const bytes = b64uDecode(mdocB64u);
   const leaf = leafOf(bytes);
   if (certFingerprintHex(leaf) !== ctx.sdjwt.leafFingerprint)
@@ -91,7 +94,14 @@ export function verifyReceivedMdoc(
   const sdIdx = ctx.sdjwt.status?.status_list.idx;
   if (sdIdx !== undefined && res.status && res.status.idx !== sdIdx)
     throw new Error("mdoc: status idx differs from the SD-JWT copy");
-  return { namespace: ns, elements: Object.keys(el) };
+  const plain: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(el)) plain[k] = plainElementValue(v);
+  return {
+    namespace: ns,
+    elements: Object.keys(el),
+    validity: { validFrom: res.validity?.validFrom ?? "", validUntil: res.validity?.validUntil ?? "" },
+    values: `${ns}:${stableJson(plain)}`,
+  };
 }
 
 /**

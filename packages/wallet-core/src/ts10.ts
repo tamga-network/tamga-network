@@ -356,18 +356,74 @@ export function applyMigration(
   /** ARF Mig_07b: günlüğün geri yüklenmesi kişiye sorulur; `false` → yalnız belge listesi ve ayarlar */
   opts: { restoreLog?: boolean } = {},
 ): { state: WalletState; toReissue: Ts10MigrationData["listOfCredentials"] } {
-  const x = data.x_tamga;
+  // Güvenlik incelemesi 2026-11-18: taşıma dosyası dışarıdan gelir (parola yalnız gizliliği korur) — `x_tamga` biçimi
+  // denetlenir; biçimi bozuk günlük satırı ve ayar alınmaz (cüzdan durumuna yanlış türde değer girmez)
+  const x = isObj(data?.x_tamga) ? (data.x_tamga as Rec) : undefined;
+  const log = Array.isArray(x?.presentationLog) ? (x.presentationLog as unknown[]).filter(validLogEntry) : [];
+  const events = Array.isArray(x?.events) ? (x.events as unknown[]).filter(validEvent) : [];
+  const set = isObj(x?.settings) ? (x.settings as Rec) : {};
   const next: WalletState = {
     ...state,
-    presentationLog: [...(opts.restoreLog === false ? [] : (x?.presentationLog ?? [])), ...state.presentationLog],
-    events: [...(opts.restoreLog === false ? [] : (x?.events ?? [])), ...(state.events ?? [])],
+    presentationLog: [...(opts.restoreLog === false ? [] : log), ...state.presentationLog],
+    events: [...(opts.restoreLog === false ? [] : events), ...(state.events ?? [])],
     settings: {
       ...state.settings,
-      ...(x?.settings?.autoRefresh !== undefined ? { autoRefresh: x.settings.autoRefresh } : {}),
-      ...(x?.settings?.theme ? { theme: x.settings.theme } : {}),
+      ...(typeof set.autoRefresh === "boolean" ? { autoRefresh: set.autoRefresh } : {}),
+      ...(THEMES.has(set.theme) ? { theme: set.theme as "system" | "dark" | "light" } : {}),
     },
   };
-  return { state: next, toReissue: data.listOfCredentials ?? [] };
+  return { state: next, toReissue: Array.isArray(data?.listOfCredentials) ? data.listOfCredentials : [] };
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
+const isStrList = (v: unknown) => Array.isArray(v) && v.every((s) => typeof s === "string");
+const optStr = (v: unknown) => v === undefined || typeof v === "string";
+const THEMES = new Set<unknown>(["system", "dark", "light"]);
+const OUTCOMES = new Set<unknown>(["sent", "declined", "error"]);
+const EVENT_KINDS = new Set<unknown>([
+  "deleted",
+  "deletion_request",
+  "dpa_report",
+  "pseudonym_created",
+  "pseudonym_deleted",
+  "issuance_failed",
+  "reissued",
+  "w2w_verified",
+]);
+const CHANNELS = new Set<unknown>([undefined, "web", "email", "phone"]);
+const W2W_OUTCOMES = new Set<unknown>([undefined, "valid", "invalid", "indeterminate"]);
+/** `PresentationLogEntry` biçimi (değer yok; yalnız tür denetimi). */
+function validLogEntry(e: unknown): e is PresentationLogEntry {
+  if (!isObj(e)) return false;
+  return (
+    typeof e.ts === "number" &&
+    Number.isFinite(e.ts) &&
+    typeof e.clientId === "string" &&
+    typeof e.vct === "string" &&
+    isStrList(e.disclosed) &&
+    (e.requested === undefined || isStrList(e.requested)) &&
+    OUTCOMES.has(e.outcome) &&
+    optStr(e.intermediary) &&
+    (e.reused === undefined || e.reused === true)
+  );
+}
+/** `WalletEvent` biçimi (bilinen tür, alanlar doğru türde). */
+function validEvent(e: unknown): e is WalletEvent {
+  if (!isObj(e)) return false;
+  return (
+    typeof e.ts === "number" &&
+    Number.isFinite(e.ts) &&
+    EVENT_KINDS.has(e.kind) &&
+    typeof e.vct === "string" &&
+    typeof e.typeName === "string" &&
+    optStr(e.clientId) &&
+    CHANNELS.has(e.channel) &&
+    optStr(e.authority) &&
+    (e.claims === undefined || isStrList(e.claims)) &&
+    optStr(e.issuer) &&
+    optStr(e.reason) &&
+    W2W_OUTCOMES.has(e.outcome)
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

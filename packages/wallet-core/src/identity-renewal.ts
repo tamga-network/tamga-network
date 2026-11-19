@@ -13,6 +13,7 @@
  * Kişisel veri döndürmez, loglamaz. SIRA (0.8.3 sözleşmesi): çağıran önce dönen `state`'i yazar, sonra `removedKeyRefs`'i siler.
  */
 import { b64u } from "./b64.js";
+import { assertReceiveTrust } from "./receive-trust.js";
 import { readJson, type Http } from "./http.js";
 import { isAuthRequired, type KeyProvider, type PublicJwk } from "./keys.js";
 import { wuaForBinding, type WuaRecord } from "./wua.js";
@@ -124,7 +125,8 @@ export interface IdentityRenewalInput {
   wuaForInstance?: (keyRef: string) => Promise<WuaRecord>;
   randomBytes: (n: number) => Uint8Array;
   now?: number;
-  receive?: ReceiveOptions;
+  /** ZORUNLU (güvenlik incelemesi 2026-11-18): yeni paket `receiveCredentials` ile alınır — `trust` zorunlu (ya da açık `"none"`); ağa çıkmadan denetlenir */
+  receive: ReceiveOptions;
   /** ADR-0025: yeni paketin anahtarları için anahtar kanıtı */
   keyAttestor?: (jwks: PublicJwk[]) => Promise<string>;
   /** Önceden alınmış metadata (yoksa çekilir) */
@@ -148,6 +150,7 @@ export type IdentityRenewalResult =
  * varsa mdoc; her kopya yeni anahtar) → eski kaydın yerini alır (ZK kopyaları ve geçiş kartları korunur).
  */
 export async function renewIdentityCredential(p: IdentityRenewalInput): Promise<IdentityRenewalResult> {
+  assertReceiveTrust(p.receive); // belirteç harcanmadan önce
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const old = p.state.credentials.find((c) => c.id === p.credentialId);
   const skip = (reason: string, state = p.state, extra: { suspended?: boolean } = {}): IdentityRenewalResult => ({

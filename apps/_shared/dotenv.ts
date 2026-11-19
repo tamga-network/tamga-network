@@ -21,10 +21,13 @@ export function loadServiceEnv(paths: string[], env: NodeJS.ProcessEnv = process
   for (const p of paths) loadDotenv(p, env);
 }
 
+/** Yalnız süreç ortamından okunan ayarlar: `.env`'deki satırları yok sayılır (canlı kilit — systemd birimi verir). */
+const ENV_ONLY_KEYS: ReadonlySet<string> = new Set(["TAMGA_LIVE"]);
+
 export function loadDotenv(p: string, env: NodeJS.ProcessEnv = process.env): void {
   if (!existsSync(p)) return;
   for (const line of readFileSync(p, "utf8").split(/\r?\n/)) {
     const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*(#.*)?$/.exec(line);
-    if (m && env[m[1]] === undefined) env[m[1]] = m[2];
+    if (m && !ENV_ONLY_KEYS.has(m[1]) && env[m[1]] === undefined) env[m[1]] = m[2];
   }
 }

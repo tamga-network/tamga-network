@@ -118,8 +118,8 @@ describe.skipIf(!ready)("apps/verify — ikinci inceleme", () => {
         payload: { policy_id },
       })
     ).json() as { presentation_id: string; qr_payload: string; status_token: string };
-    const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(a)), uri.clientId, LAN);
+    const uri = parseVpUri(created.qr_payload, LAN);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(a), LAN), uri.clientId, LAN);
     return { id: created.presentation_id, st: created.status_token, req };
   };
   const answer = async (req: VpRequest, disclose?: string[]) => {
@@ -218,7 +218,7 @@ describe.skipIf(!ready)("apps/verify — ikinci inceleme", () => {
           credential_configurations_supported: { [VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     ).state;
   });
   afterAll(() => {
@@ -238,6 +238,52 @@ describe.skipIf(!ready)("apps/verify — ikinci inceleme", () => {
     expect(claims.eqf_level).toBe(6);
     expect(body).not.toContain(String(IDX));
     expect(body).not.toMatch(/"idx"|"status"|"cnf"|"jwk"|"iss"|"iat"|"vct/);
+  });
+
+  it("D3-5: `/claims` okuması denetim kaydına değersiz bir olay olarak düşer (olay, doğrulama kimliği, politika, verildi mi)", async () => {
+    const a = await open(app);
+    expect((await postJwe(app, await answer(a.req))).statusCode).toBe(200);
+    const vid = (await result(app, a.id)).verification_id;
+    expect((await app.inject({ method: "GET", url: `/presentations/${a.id}/claims` })).statusCode).toBe(200);
+    expect((await app.inject({ method: "GET", url: `/presentations/${a.id}/claims` })).statusCode).toBe(410);
+    const rows = (await auditOf(app)).filter((e) => e.event === "claims.read" && e.verification_id === vid);
+    expect(rows.map((e) => e.released)).toEqual([true, false]);
+    for (const r of rows)
+      expect(Object.keys(r).sort()).toEqual(["event", "policy", "released", "ts", "verification_id"]);
+    expect(JSON.stringify(rows)).not.toMatch(/Yılmaz|Örnek|eqf_level|is_graduate/);
+  });
+
+  it("D3-7: güven listesi bayat ya da erişilemezken sunum açma ve RP beyanı 503 döner (400/401 değil)", async () => {
+    const t = app.trust();
+    const real = t.freshness.bind(t);
+    t.freshness = () => ({ ...real(), healthy: false });
+    try {
+      const plain = await app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        payload: { policy_id: "job-application-degree" },
+      });
+      expect(plain.statusCode).toBe(503);
+      expect(plain.json()).toMatchObject({ error: "temporarily_unavailable" });
+      const asserted = await app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json", authorization: "Bearer x.y.z" },
+        payload: { policy_id: "job-application-degree" },
+      });
+      expect(asserted.statusCode).toBe(503);
+    } finally {
+      t.freshness = real;
+    }
+    // sağlıklı listede bozuk beyan yine 401
+    const bad = await app.inject({
+      method: "POST",
+      url: "/presentations",
+      headers: { accept: "application/json", "content-type": "application/json", authorization: "Bearer x.y.z" },
+      payload: { policy_id: "job-application-degree" },
+    });
+    expect(bad.statusCode).toBe(401);
   });
 
   it("AP2: sahiplik kanıtından önceki DOĞRULANAMADI denemeler sınırda sunumu REJECTED yapmaz — INDETERMINATE ve nedeni korunur", async () => {

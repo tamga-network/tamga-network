@@ -24,6 +24,26 @@ describe("toPidMdocElements / plainElementValue", () => {
     const el = toPidMdocElements({ place_of_birth: { locality: "Madrid", country: "ES" } });
     expect(plainElementValue(decode(encode(el.place_of_birth)))).toEqual({ locality: "Madrid", country: "ES" });
   });
+  it("harita anahtarı `__proto__` prototipi değiştirmez; dizgi olmayan anahtar sessizce düşmez (hata)", () => {
+    const o = plainElementValue(
+      new Map<unknown, unknown>([
+        ["__proto__", { polluted: true }],
+        ["country", "ES"],
+      ]),
+    ) as Record<string, unknown>;
+    expect(Object.getPrototypeOf(o)).toBe(Object.prototype);
+    expect((o as { polluted?: unknown }).polluted).toBeUndefined();
+    expect(Object.keys(o).sort()).toEqual(["__proto__", "country"]);
+    expect(o.country).toBe("ES");
+    expect(() =>
+      plainElementValue(
+        new Map<unknown, unknown>([
+          [1, "x"],
+          ["country", "ES"],
+        ]),
+      ),
+    ).toThrow(/text string/);
+  });
   it("birthdate → birth_date #6.1004(tstr); nationalities → nationality dizisi; öteki claim'ler aynen", () => {
     const el = toPidMdocElements({
       given_name: "Ayşe",

@@ -118,7 +118,7 @@ export async function verifyKeyAttestation(
       return { ok: false, reason: "KA key_storage_status missing (TS3 §2.4.2)" };
     const statusChecked = !!status && p.statusOf !== "none";
     if (status && p.statusOf !== "none") {
-      const v = await p.statusOf(status, p.now);
+      const v = await p.statusOf(status, p.now, fp);
       if (v === "INVALID") return { ok: false, reason: "key storage revoked (KA status)" };
       if (v === "NONCOMPLIANT") return { ok: false, reason: "KA status list does not meet the profile" };
       if (v === "UNKNOWN") return { ok: false, reason: "KA status unavailable", indeterminate: true };
@@ -244,14 +244,19 @@ export const WALLET_STATUS_MIN_ENTRIES = 10_000;
 
 /**
  * Cüzdan sağlayıcı iptal listesi denetleyicisi (WIA `client_status`, KA `key_storage_status`). Liste imzacısı güven listesindeki
- * bir sağlayıcı anahtarı olmalı; token kısa süre önbellekte tutulur (sorgu başına indirme yok).
+ * bir sağlayıcı anahtarı olmalı ve kanıtı imzalayan anahtarla AYNI sağlayıcı kaydında bulunmalı (ADR-0056 K6a; kayıt bulunamazsa
+ * aynı anahtar); token kısa süre önbellekte tutulur (sorgu başına indirme yok). İkinci girdi güven kaynağının iki işlevi
+ * (`TrustSource.isWalletProviderKey`, `TrustSource.walletProviderOfKey`; liste yenilendikçe güncel kaynağa yönlendirin).
  */
 export class WalletStatusChecker {
   private cache = new Map<string, { at: number; token: string }>();
   private minEntries: number;
   constructor(
     private fetchToken: (uri: string) => Promise<string | null>,
-    private isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN",
+    private providers: {
+      isWalletProviderKey(fp: string): "YES" | "NO" | "UNKNOWN";
+      walletProviderOfKey(fp: string): string | null;
+    },
     private maxAgeSec = 300,
     opts: {
       /**
@@ -263,7 +268,9 @@ export class WalletStatusChecker {
   ) {
     this.minEntries = opts.minEntries ?? WALLET_STATUS_MIN_ENTRIES;
   }
-  statusOf: StatusValueOf = async (ref, now) => {
+  statusOf: StatusValueOf = async (ref, now, signerFingerprint) => {
+    // ADR-0056 K6a: kanıtın imzacısı bilinmeden liste imzacısı bağlanamaz
+    if (typeof signerFingerprint !== "string" || !signerFingerprint) return "UNKNOWN";
     let c = this.cache.get(ref.uri);
     if (!c || now - c.at >= this.maxAgeSec) {
       const t = await this.fetchToken(ref.uri).catch(() => null);
@@ -274,9 +281,16 @@ export class WalletStatusChecker {
     }
     if (!c) return "UNKNOWN";
     try {
-      // ADR-0056 K6: imzacı güven listesindeki bir sağlayıcı anahtarı olmalı (doğrulama içinde sabitlenir; değilse UNKNOWN)
+      // ADR-0056 K6 + K6a: imzacı güven listesindeki bir sağlayıcı anahtarı olmalı VE kanıtı imzalayanla aynı sağlayıcı kaydında
+      // (anahtar geçişinde liste geçerli kalır); kayıt bulunamıyorsa (dış liste) aynı anahtar. Değilse UNKNOWN (kabul yok).
+      const att = signerFingerprint.toLowerCase();
+      const attProvider = this.providers.walletProviderOfKey(att);
       const v = await verifyStatusListToken(c.token, ref.uri, now, {
-        expectedSignerFingerprints: (fp) => this.isProviderKey(fp) === "YES",
+        expectedSignerFingerprints: (fp) => {
+          if (this.providers.isWalletProviderKey(fp) !== "YES") return false;
+          if (attProvider === null) return fp.toLowerCase() === att;
+          return this.providers.walletProviderOfKey(fp) === attProvider;
+        },
       });
       // Bit önce okunur (0.5.2): sağlayıcının imzaladığı "iptal" beyanı liste küçük olsa da geçerlidir — iptal edilmiş birim
       // profile uymayan bir listede de iptal görünür (zincirleme iptal sürer). Bit kapalıysa küçük liste "geçerli" demeye yetmez.

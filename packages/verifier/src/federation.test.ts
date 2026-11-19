@@ -37,6 +37,8 @@ cryptoProvider.set(webcrypto as unknown as Crypto);
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
 const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
+/** heartbeat'siz test dist'i: geniş çapa tazelik sınırı açıkça (paket varsayılanı 2 saat — güvenlik incelemesi 2026-11-18) */
+const DEV_DIST = { anchorMaxAgeMs: 365 * 86400_000 };
 const ready = existsSync(resolve(PKI, "rp-verify.cert.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const AUD = ready ? x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"))) : "";
 const PID_VCT = "urn:eudi:pid:1";
@@ -220,7 +222,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     pidCa = await selfSigned("Test PID CA", true);
     pidIssuer = await issuedBy("Test PID signer", pidCa);
     walletProvider = await selfSigned("Test wallet provider", false);
-    const r = await loadTrustSourceFromDir(DIST);
+    const r = await loadTrustSourceFromDir(DIST, DEV_DIST);
     ownRoot = [pemToDer(r.rootCertPem!)];
   });
 
@@ -238,7 +240,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     /** PID iptal hizmeti (…/PID/Revocation) sertifikaları — iptal listesi imzacısı (ADR-0036 K5 D) */
     revocationCerts?: Uint8Array[];
   }) {
-    const { trust } = await loadTrustSourceFromDir(DIST);
+    const { trust } = await loadTrustSourceFromDir(DIST, DEV_DIST);
     const store = (trust as unknown as { store: TrustStore }).store;
     const ptr = ExternalListPointer.parse({
       list_id: "test-pid",
@@ -669,7 +671,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış TS 119 612 (XML) güven l
 </TrustServiceStatusList>`;
 
   async function withTl(xml: string, pinned: KeyCert) {
-    const { trust } = await loadTrustSourceFromDir(DIST);
+    const { trust } = await loadTrustSourceFromDir(DIST, DEV_DIST);
     const store = (trust as unknown as { store: TrustStore }).store;
     const ptr = ExternalListPointer.parse({
       list_id: "test-tl",

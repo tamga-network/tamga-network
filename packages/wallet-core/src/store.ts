@@ -2,11 +2,13 @@
  * Cüzdan deposu — SPEC-WALLET-0001 §3 (yerel depo), §4 (batch kopyaları, WL5 yapışkan kopya), §7 (manifest; anahtar yok — WL2).
  * Depo soyut: uygulama JSON'u nereye yazacağını seçer (expo-file-system); anahtarlar KeyProvider'da (ayrı).
  */
-import { verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
+import { computeSchemaId, verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
+import { assertReceiveTrust } from "./receive-trust.js";
 import type { KeyStorage, PublicJwk } from "./keys.js";
 import type { RedeemOutput } from "./oid4vci.js";
 import type { WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
+import { stableJson } from "./stable-json.js";
 import type { TrustSource } from "@tamga-network/trust/core";
 import { disclosurePolicyFromMetadata, type StoredDisclosurePolicy } from "./disclosure-policy.js";
 
@@ -239,20 +241,35 @@ export interface ReceiveOptions {
   catalogueHash?: (vct: string) => string | string[] | undefined;
   now?: number;
   /**
-   * Güven denetimi (verilirse uygulanır; imzası doğrulanmış güven kaynağı — `fetchTrustSource`): belgenin `iss`'i teklifin
-   * `credential_issuer`'ıyla aynı olmalı ve sertifikadan türetilen kurum (issuer_id) güven listesinde belgenin `iat`'ında belge
-   * verebilir olmalı (C1). Aksi hâlde belge alınmaz — başka kurumun sertifikasıyla imzalanmış ya da listede olmayan kurumun
-   * belgesi cüzdana "kurum belgesi" olarak girmez.
+   * ZORUNLU güven denetimi (ADR-0056 MR1; güvenlik incelemesi 2026-11-18): imzası doğrulanmış güven kaynağı (`fetchTrustSource`).
+   * Belgenin `iss`'i teklifin `credential_issuer`'ıyla aynı olmalı, sertifikadan türetilen kurum (issuer_id) güven listesinde
+   * belgenin `iat`'ında belge verebilir olmalı (C1) ve bu türü vermeye yetkili olmalı (C2). Aksi hâlde belge alınmaz — başka
+   * kurumun sertifikasıyla imzalanmış, listede olmayan ya da türe yetkisi olmayan kurumun belgesi cüzdana "kurum belgesi" olarak
+   * girmez. `"none"`: güven denetimini bilerek atlar (yalnız test ve geliştirme); verilmemesi hatadır.
    */
-  trust?: TrustSource;
+  trust: TrustSource | "none";
 }
-/** Alınan kopyaları doğrular (her kopya kendi anahtarına bağlı mı — PR6) ve tek belge kaydı olarak ekler. Hatalı kopya seti reddedilir. */
+/** Kopyadan kopyaya değişmesi olağan olan SD-JWT alanları (ARF ISSU_11a karşılaştırmasına girmez): cihaz anahtarı, iptal girişi, verme anı. */
+const PER_COPY_CLAIMS = new Set(["cnf", "status", "iat", "_sd", "_sd_alg"]);
+const comparableClaims = (claims: Record<string, unknown>) =>
+  stableJson(Object.fromEntries(Object.entries(claims).filter(([k]) => !PER_COPY_CLAIMS.has(k))));
+
+/**
+ * Alınan kopyaları doğrular (her kopya kendi anahtarına bağlı mı — PR6) ve tek belge kaydı olarak ekler. Hatalı kopya seti reddedilir.
+ * Toplu kopya tutarlılığı (AB ARF ISSU_11a/11b; 0.8.9): bütün kopyalar aynı tür ve kurum, aynı kurum imza sertifikası, aynı teknik
+ * geçerlilik (`nbf`/`exp`) ve aynı alan değerlerini taşımalı; mdoc kopyalarında aynı çözülmüş öğe değerleri ve aynı `validFrom` /
+ * `validUntil`. Kopyaya özgü olanlar (cihaz anahtarı, iptal sırası, verme anı, tuzlar, imzalar) karşılaştırılmaz. Tutarsızlıkta
+ * hata fırlatılır ve hiçbir şey eklenmez; çağıran o paketin bütün anahtarlarını siler ve kişiye bildirir (ISSU_11b).
+ */
 export function receiveCredentials(
   state: WalletState,
   out: RedeemOutput,
-  opt: ReceiveOptions = {},
+  opt: ReceiveOptions,
 ): { state: WalletState; credential: StoredCredential; verified: LocalVerifyOk } {
+  assertReceiveTrust(opt);
+  const trust = opt.trust === "none" ? null : opt.trust;
   let first: LocalVerifyOk | null = null;
+  let firstMdoc: ReturnType<typeof verifyReceivedMdoc> | null = null;
   const copies: StoredCopy[] = [];
   for (const c of out.copies) {
     const v = verifyIssuedSdJwt(c.combined, {
@@ -264,17 +281,34 @@ export function receiveCredentials(
     if (!v.ok) throw new Error(`copy rejected (${v.failedStep}): ${v.reason}`);
     if (first && (first.vct !== v.vct || first.issuerId !== v.issuerId))
       throw new Error("copies are not of the same type/issuer");
-    if (opt.trust) {
+    // ARF ISSU_11a: kopyalar birbiriyle tutarlı (iletide alan değeri yok)
+    if (first) {
+      if (first.leafFingerprint !== v.leafFingerprint)
+        throw new Error("copies are not consistent: issuer signing certificate differs (ISSU_11a)");
+      if (first.nbf !== v.nbf || first.exp !== v.exp)
+        throw new Error("copies are not consistent: validity differs (ISSU_11a)");
+      if (comparableClaims(first.claims) !== comparableClaims(v.claims))
+        throw new Error("copies are not consistent: field values differ (ISSU_11a)");
+    }
+    if (trust) {
       if (v.iss !== out.credentialIssuer)
         throw new Error("credential iss does not match the offer's credential_issuer");
-      const c1 = opt.trust.isCredentialAcceptable(v.issuerId, v.iat);
+      const c1 = trust.isCredentialAcceptable(v.issuerId, v.iat);
       if (c1 !== "YES")
         throw new Error(
           c1 === "UNKNOWN"
             ? "the trusted list could not be checked; try again later"
-            : opt.trust.isIssuerSuspended?.(v.issuerId) === "YES"
+            : trust.isIssuerSuspended?.(v.issuerId) === "YES"
               ? "the issuer is suspended in the trusted list (C1, ADR-0088)"
               : "the issuer is not in the trusted list (C1)",
+        );
+      // C2 (AP8): kurum bu türü belgenin `iat`'ında vermeye yetkili olmalı (doğrulayıcının C2'siyle aynı soru)
+      const c2 = trust.isCredentialSchemaAcceptable(v.issuerId, computeSchemaId(v.vct), v.iat);
+      if (c2 !== "YES")
+        throw new Error(
+          c2 === "UNKNOWN"
+            ? "the trusted list could not be checked; try again later"
+            : "the issuer is not authorised for this credential type in the trusted list (C2)",
         );
     }
     first ??= v;
@@ -283,7 +317,18 @@ export function receiveCredentials(
     // kopyasının `nbf`'inden sonra olan (tutarsız) mdoc yine reddedilir
     const mdocAt =
       v.notYetValid && v.nbf !== undefined ? Math.max(opt.now ?? Math.floor(Date.now() / 1000), v.nbf) : opt.now;
-    if (c.mdoc) verifyReceivedMdoc(c.mdoc, { sdjwt: v, cnf: c.cnf, now: mdocAt });
+    if (c.mdoc) {
+      const m = verifyReceivedMdoc(c.mdoc, { sdjwt: v, cnf: c.cnf, now: mdocAt });
+      // ARF ISSU_11a: mdoc kopyaları da birbiriyle aynı (MD1 yalnız SD-JWT'de karşılığı olan öğeleri denetler)
+      if (firstMdoc) {
+        if (
+          firstMdoc.validity.validFrom !== m.validity.validFrom ||
+          firstMdoc.validity.validUntil !== m.validity.validUntil
+        )
+          throw new Error("copies are not consistent: mdoc validity differs (ISSU_11a)");
+        if (firstMdoc.values !== m.values) throw new Error("copies are not consistent: mdoc values differ (ISSU_11a)");
+      } else firstMdoc = m;
+    }
     copies.push({
       keyRef: c.keyRef,
       cnf: c.cnf,

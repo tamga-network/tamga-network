@@ -4,6 +4,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
+import { createPrivateKey, randomBytes } from "node:crypto";
+import { issueMdoc } from "@tamga-network/mdoc";
 import { resolve } from "node:path";
 import { compactVerify, importJWK, type JWK } from "jose";
 import { issueSdJwtVc, makeDisclosure, pemIssuerSigner, verifySdJwtVc } from "@tamga-network/sd-jwt";
@@ -28,6 +30,7 @@ import {
   markCopyUsed,
   MemoryWalletStore,
   computeIssuerId,
+  computeSchemaId,
   assertIssuerAuthorized,
   type DirectoryEntry,
   type ReceiveOptions,
@@ -147,6 +150,75 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     });
   }
 
+  it("toplu kopya tutarlılığı (ARF ISSU_11a/11b, 0.8.9): değer, geçerlilik ya da mdoc kopyası farklıysa paket reddedilir", async () => {
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const now = Math.floor(Date.now() / 1000);
+    const signer = await pemIssuerSigner(keyPem, leafPem);
+    const BASE = { family_name: "Yılmaz", given_name: "Ayşe", is_graduate: true, eqf_level: 6, grade: "3.4" };
+    const issueSd = async (cnf: JWK, o: { claims?: Record<string, unknown>; exp?: number; idx?: number } = {}) =>
+      (
+        await issueSdJwtVc({
+          signer,
+          iss: ISS,
+          vct: VCT,
+          vctIntegrity: INTEG,
+          iat: now,
+          ...(o.exp !== undefined ? { exp: o.exp } : {}),
+          cnfJwk: cnf,
+          status: { status_list: { idx: o.idx ?? 7, uri: "https://status.tamga.network/abc" } },
+          claims: o.claims ?? BASE,
+          sdPolicy: { grade: "always" },
+        })
+      ).combined;
+    // mdoc kopyası aynı kurum anahtarı ve sertifikasıyla; `extra` SD-JWT'de yok (MD1 onu denetlemez)
+    const issuerSk = new Uint8Array(Buffer.from(createPrivateKey(keyPem).export({ format: "jwk" }).d!, "base64url"));
+    const point = (j: JWK) => new Uint8Array([4, ...Buffer.from(j.x!, "base64url"), ...Buffer.from(j.y!, "base64url")]);
+    const issueM = (cnf: JWK, o: { extra?: string; until?: number } = {}) =>
+      b64u(
+        issueMdoc({
+          docType: VCT,
+          namespaces: { [VCT]: { family_name: "Yılmaz", extra: o.extra ?? "a" } },
+          deviceKeyRaw: point(cnf),
+          issuerSk,
+          x5chain: [pemToDer(leafPem)],
+          signed: now,
+          validFrom: now,
+          validUntil: o.until ?? now + 3600,
+          randomBytes: (n) => new Uint8Array(randomBytes(n)),
+        }).issuerSigned,
+      );
+    const meta = {
+      credential_issuer: ISS,
+      credential_endpoint: ISS + "/credential",
+      credential_configurations_supported: { [VCT]: { format: "dc+sd-jwt" } },
+    };
+    let n = 0;
+    const copy = async (o: { claims?: Record<string, unknown>; exp?: number; extra?: string; until?: number } = {}) => {
+      const ref = `t.${n++}`;
+      const cnf = await keys.generate(ref);
+      return { combined: await issueSd(cnf as JWK, { ...o, idx: n }), keyRef: ref, cnf, mdoc: issueM(cnf as JWK, o) };
+    };
+    const receive = async (copies: Array<Awaited<ReturnType<typeof copy>>>) =>
+      receiveCredentials(
+        newState("x"),
+        { credentialIssuer: ISS, vct: VCT, issuedAt: now, copies, metadata: meta },
+        { now, trust: "none" },
+      );
+    // tutarlı paket (iptal sırası ve cihaz anahtarı kopyaya özgü) kabul edilir
+    expect((await receive([await copy(), await copy(), await copy()])).credential.copies).toHaveLength(3);
+    // alan değeri farklı
+    await expect(receive([await copy(), await copy({ claims: { ...BASE, grade: "3.5" } })])).rejects.toThrow(
+      /field values differ/,
+    );
+    // teknik geçerlilik farklı
+    await expect(receive([await copy({ exp: now + 7200 }), await copy({ exp: now + 7201 })])).rejects.toThrow(
+      /validity differs/,
+    );
+    // mdoc: SD-JWT'de karşılığı olmayan öğe farklı / geçerlilik bitişi farklı
+    await expect(receive([await copy(), await copy({ extra: "b" })])).rejects.toThrow(/mdoc values differ/);
+    await expect(receive([await copy(), await copy({ until: now + 7200 })])).rejects.toThrow(/mdoc validity differs/);
+  });
+
   it("A1–A5 geçer; issuer_id çekirdekle aynı; cnf eşleşmezse RED; sunum referans doğrulayıcıda ACCEPTED", async () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     const now = Math.floor(Date.now() / 1000);
@@ -236,7 +308,7 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     };
     const store = new MemoryWalletStore();
     let state = newState("inst-1");
-    const r = receiveCredentials(state, out, { now });
+    const r = receiveCredentials(state, out, { now, trust: "none" });
     state = r.state;
     await store.save(state);
     expect(r.credential.typeName).toBe("Diploma");
@@ -249,13 +321,15 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     expect(selectCopy(cred, "rp-b")!.keyRef).not.toBe(c1.keyRef); // yeni verifier → yeni kopya
     // kopyalardan biri başka anahtara bağlıysa set reddedilir
     const wrong = { ...out, copies: [{ ...copies[0], cnf: copies[1].cnf }] };
-    expect(() => receiveCredentials(newState("x"), wrong, { now })).toThrow(/A3/);
-    // isteğe bağlı güven denetimi: iss = teklifin credential_issuer'ı ve kurum listede (C1)
+    expect(() => receiveCredentials(newState("x"), wrong, { now, trust: "none" })).toThrow(/A3/);
+    // güven denetimi: iss = teklifin credential_issuer'ı, kurum listede (C1) ve türe yetkili (C2)
     const id = r.credential.issuerId;
-    const trust = (ans: "YES" | "NO" | "UNKNOWN") =>
-      ({ isCredentialAcceptable: (x: string) => (x === id ? ans : "NO") }) as unknown as NonNullable<
-        ReceiveOptions["trust"]
-      >;
+    const trust = (ans: "YES" | "NO" | "UNKNOWN", c2: "YES" | "NO" | "UNKNOWN" = "YES") =>
+      ({
+        isCredentialAcceptable: (x: string) => (x === id ? ans : "NO"),
+        isCredentialSchemaAcceptable: (x: string, schemaId: string) =>
+          x === id && schemaId === computeSchemaId(VCT) ? c2 : "NO",
+      }) as unknown as Exclude<ReceiveOptions["trust"], "none">;
     expect(receiveCredentials(newState("x"), out, { now, trust: trust("YES") }).credential.issuerId).toBe(id);
     expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("NO") })).toThrow(/trusted list/);
     expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("UNKNOWN") })).toThrow(/later/);
@@ -263,6 +337,14 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     expect(() => receiveCredentials(newState("x"), otherIss, { now, trust: trust("YES") })).toThrow(
       /credential_issuer/,
     );
+    // C6-K1 (güvenlik incelemesi 2026-11-18): C2 — listede olup bu türe yetkisi olmayan kurumun belgesi alınmaz
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("YES", "NO") })).toThrow(/C2/);
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("YES", "UNKNOWN") })).toThrow(/later/);
+    // C6-K1: güven kaynağı verilmezse (JavaScript çağıran dahil) sessiz kabul yok — yalnız açık "none" atlar
+    const untyped = receiveCredentials as unknown as (s: unknown, o: unknown, opt?: unknown) => unknown;
+    expect(() => untyped(newState("x"), out, { now })).toThrow(/trust source missing/);
+    expect(() => untyped(newState("x"), out)).toThrow(/trust source missing/);
+    expect(() => untyped(newState("x"), out, { now, trust: {} })).toThrow(/trust source missing/);
   });
 
   it("seçici açıklanamaz ad disclosure olarak gelirse yerel doğrulama A5 RED (status, iss, __proto__)", async () => {

@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-16
+last_updated: 2026-11-19
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -98,20 +98,29 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 | `family_name` | Soyadı | mətn (1–150) | `Yılmaz` |
 | `given_name` | Adı | mətn (1–150) | `Ayşe` |
 | `birthdate` | Doğum tarixi | tarix (YYYY-MM-DD) | `1990-04-12` |
-| `nationalities` | Vətəndaşlıqlar; məlum deyilsə `QU`, vətəndaşlığı olmayan şəxs üçün `QS` | ISO 3166-1 alpha-2 massivi (ən azı bir element) | `["TR"]` |
+| `nationalities` | Vətəndaşlıqlar; yoxlanılan sənəddən oxunur (aşağıdakı qeyd) | ISO 3166-1 alpha-2 massivi (ən azı bir element) | `["TR"]` |
 | `personal_administrative_number` | Milli şəxsiyyət nömrəsi; yalnız bu növdə | mətn (5–32) | `12345678901` |
 | `document_type` | Yoxlanılan sənədin növü | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `ID_CARD` |
 | `document_number_hash` | Sənəd nömrəsinin açarlı heşi (HMAC-SHA256; açar yalnız şəxsiyyət xidmətindədir); nömrənin özü yoxdur və heşdən bərpa edilə bilməz | `sha256-…` | `sha256-q1…` |
 | `issuing_country` | Aİ PID mənasında rəqəmsal sənədi verən provayderin ölkəsi; hazırda dəyər skan edilən şəxsiyyət vəsiqəsini verən ölkədir (§4.6) | ISO 3166-1 alpha-2 | `TR` |
 | `document_chip_verified` | Çip yolu tam keçdimi: çipin passiv autentifikasiyası, surət yoxlaması və canlı üzün çipdəki fotoşəkillə uyğunluğu birlikdə (fakt; səviyyə deyil; ADR-0083) | boolean | `true` |
 | `verification_method` | Kimliyin yoxlanılması üsulu; `review-demo` yalnız tətbiq mağazasının yoxlaması üçün verilən sınaq sənədində | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
+| `issuing_authority` | Sənədi verən orqan: müvəqqəti operatorun adı; hər nüsxədə (ADR-0091) | mətn (1–150) | `Tamga Network (provisional)` |
+| `date_of_expiry` | İnzibati etibarlılığın sonu: şəxsiyyət qeydinin bitməsi, hər nüsxədə; nüsxənin texniki `exp`-indən ayrı (§6.1, [[ADR-0089]] K2) | tarix (YYYY-MM-DD) | `2028-10-10` |
+
+> **Şəxsiyyət xidmətinin bugünkü davranışı (2026-11-19, audit turu).** Vətəndaşlıq yoxlanılan sənəddən oxunur. Şəxsiyyəti
+> yoxlayan provayder vətəndaşlığı verməzsə, yalnız şəxsiyyət vəsiqəsində və pasportda sənədi verən ölkə vətəndaşlıq sayılır
+> (nəticə çıxarma: bu sənədlər vətəndaşa verilir); yaşayış icazəsində və ya ölkə oxunmadıqda sənəd verilmir, müraciət əl ilə
+> yoxlamaya düşür. Şəxsiyyət xidməti bu gün `QU` (naməlum vətəndaşlıq) və ya `QS` (vətəndaşlığı olmayan) yazmır; bu dəyərlər Aİ
+> PID kodlaşdırmasında müəyyən edilib və sxemin formasına uyğundur, lakin Tamga şəxsiyyət sənədində bu gün görünmür.
+> `issuing_authority` və `date_of_expiry`-ni şəxsiyyət xidməti hər nüsxəyə yazır; növ sxemi (JSON Schema `required`) bu iki sahəni
+> məcburi saxlamır.
 
 **ZK nüsxəsi (`ShortLivedIdentityAttestation`)**
 
 | Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
 |---|---|---|---|
-| `age_over_18` | 18 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element | boolean | `true` |
-| `age_over_15` | 15 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element ([[ADR-0064]]) | boolean | `true` |
+| `age_over_18` | 18 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element; ZK sxeminin yeganə məcburi elementi | boolean | `true` |
 
 **Psevdonim toxumu (`PseudonymSeed`)**
 
@@ -141,13 +150,16 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 |---|---|---|---|---|
 | Şəxsiyyət sənədi | `age_over_18` | Doğum tarixindən törədilir; yaşın yoxlanılmasında yalnız bu sahə açılır. Aİ PID toplusunda yoxdur; ISO/IEC 18013-5 adı ilə Tamga sahəsidir ([[ADR-0045]] K3) | boolean | `true` |
 | Şəxsiyyət sənədi | `age_over_15` | Doğum tarixindən eyni qayda ilə törədilir; ISO/IEC 18013-5 `age_over_NN` nümunəsi. Şəxsiyyət sənədinin yaş həddləri qapalı çoxluqdur (15, 18); yeni hədd yalnız ADR ilə əlavə edilir ([[ADR-0064]] K2) | boolean | `true` |
+| ZK nüsxəsi | `age_over_15` | 15 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element ([[ADR-0064]]). Şəxsiyyət xidməti onu yalnız əsas şəxsiyyət sənədi bu sahəni daşıyırsa yazır (sahə əlavə edilməzdən əvvəl verilmiş sənədin nüsxəsində yoxdur); ZK sxemi onu məcburi saxlamır (§7.2) | boolean | `true` |
 | Sürücülük vəsiqəsi məlumatı | `birth_date` | Kartda varsa doğum tarixi (ISO/IEC 18013-5 mDL adı) | tarix | `1990-04-12` |
 | Sürücülük vəsiqəsi məlumatı | `licence_issue_date` | Kartın verilmə tarixi (varsa) | tarix | `2024-06-01` |
 | Sürücülük vəsiqəsi məlumatı | `age_over_18` | Törədilmiş | boolean | `true` |
 
 ## 2.4 Şərti atributlar
 
-Yoxdur.
+| Növ | Məlumat identifikatoru | Şərt və tərif | Məlumat növü | Nümunə dəyər |
+|---|---|---|---|---|
+| Şəxsiyyət sənədi | `place_of_birth` | Doğum yeri (Aİ PID strukturu); yalnız yoxlanılan sənəd doğum yerini daşıyırsa yazılır — sənəddəki mətn `locality` kimi; sənəd daşımırsa sahə yoxdur ([[ADR-0091]]) | obyekt `{country?, region?, locality?}` (ən azı biri; mətn ≤ 150) | `{"locality": "MADRID, MADRID"}` |
 
 ## 2.5 Məcburi metaməlumatlar
 
@@ -159,7 +171,7 @@ Yoxdur.
 | `iat` | Verildiyi an; mdoc-da `validityInfo.signed` | NumericDate | `1791763200` |
 | `exp` | Etibarlılığın sonu; mdoc-da `validityInfo.validUntil` (§6.1) | NumericDate | `1854835200` |
 | `cnf` | Rəqəmsal cüzdanın cihaz açarı (holder bağlantısı); mdoc-da `deviceKeyInfo` | JWK | — |
-| `status` | Ləğv siyahısına istinad `status_list {idx, uri}`; ZK nüsxəsində və psevdonim toxumunda yoxdur (§6.2) | obyekt | `{"status_list":{"idx":48213,"uri":"https://status.tamga.network/7f3a9c21"}}` |
+| `status` | Ləğv siyahısına istinad `status_list {idx, uri}`; ZK nüsxəsində və psevdonim toxumunda yoxdur (§6.2) | obyekt | `{"status_list":{"idx":48213,"uri":"https://id.tamga.network/status/7f3a9c21"}}` |
 
 Sənədi verənin kimliyi (Əlavə V b) imza başlığındadır: `x5c` (yarpaq + aralıq sertifikat, kök istisna olmaqla).
 
@@ -205,6 +217,9 @@ sertifikatıdır.
 | `document_type` | `document_type` | tstr | `tamga.id.1` |
 | `document_number_hash` | `document_number_hash` | tstr | `tamga.id.1` |
 | `issuing_country` | `issuing_country` | tstr | `tamga.id.1` |
+| `place_of_birth` | `place_of_birth` | `map {? country, ? region, ? locality}` | `tamga.id.1` |
+| `issuing_authority` | `issuing_authority` | tstr | `tamga.id.1` |
+| `date_of_expiry` | `expiry_date` | full-date | `tamga.id.1` |
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
@@ -219,7 +234,7 @@ Ad və kodlaşdırma Aİ PID Cədvəl 6-ya əsaslanır ([[ADR-0045]] K2); ad cə
 docType: "urn:tamga:id:IdentityAttestation:1"
 nameSpaces: { "tamga.id.1": [ { elementIdentifier: "age_over_18", elementValue: true } ] }
 MSO.validityInfo: { signed: 2026-10-11T08:00:00Z, validFrom: 2026-10-11T08:00:00Z, validUntil: 2028-10-10T08:00:00Z }
-MSO.status: { status_list: { idx: 48213, uri: "https://status.tamga.network/7f3a9c21" } }
+MSO.status: { status_list: { idx: 48213, uri: "https://id.tamga.network/status/7f3a9c21" } }
 ```
 
 ## 3.2 SD-JWT VC
@@ -246,6 +261,9 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
 |---|---|---|---|---|
 | `personal_administrative_number` | `personal_administrative_number` | string | Aİ PID adı | MUST |
 | `issuing_country` | `issuing_country` | string (alpha-2) | Aİ PID adı (§4.6) | MUST |
+| `place_of_birth` | `place_of_birth` | JSON obyekti | Aİ PID adı; şərti — yalnız sənəddə varsa (§2.4, ADR-0091) | MUST |
+| `issuing_authority` | `issuing_authority` | string | Aİ PID metaməlumatı (ADR-0091) | MUST |
+| `date_of_expiry` | `date_of_expiry` | string, YYYY-MM-DD | Aİ PID adı; inzibati bitmə tarixi ([[ADR-0089]] K2) | MUST |
 | `document_type` | `document_type` | string (çoxluq) | Tamga-ya məxsus | MUST |
 | `document_number_hash` | `document_number_hash` | string `sha256-…` | Tamga-ya məxsus | MUST |
 | `document_chip_verified` | `document_chip_verified` | boolean | Tamga-ya məxsus | MUST |
@@ -284,7 +302,7 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
   "iat": 1791763200,
   "exp": 1854835200,
   "cnf": { "jwk": { "kty": "EC", "crv": "P-256", "x": "…", "y": "…" } },
-  "status": { "status_list": { "idx": 48213, "uri": "https://status.tamga.network/7f3a9c21" } },
+  "status": { "status_list": { "idx": 48213, "uri": "https://id.tamga.network/status/7f3a9c21" } },
   "family_name": "Yılmaz",
   "given_name": "Ayşe",
   "birthdate": "1990-04-12",
@@ -296,7 +314,9 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
   "document_chip_verified": false,
   "verification_method": "remote-document-liveness-face",
   "age_over_18": true,
-  "age_over_15": true
+  "age_over_15": true,
+  "issuing_authority": "Tamga Network (provisional)",
+  "date_of_expiry": "2028-10-10"
 }
 ```
 
@@ -406,8 +426,8 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
 | `age_over_18` | `age_over_18` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `age_over_15` | `age_over_15` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | eyni | qarşılığı yoxdur (Tamga-ya xasdır) | qarşılığı yoxdur |
-| qarşılığı yoxdur | qarşılığı yoxdur | `place_of_birth` (doğum yeri: ölkə, region, yaşayış məntəqəsi; məcburi) | `place_of_birth` |
-| qarşılığı yoxdur (sənədi verən qurum `iss` və `x5c` sertifikatından bilinir) | qarşılığı yoxdur | `issuing_authority` (məcburi metaməlumat) | `issuing_authority` |
+| `place_of_birth` (yalnız yoxlanılan sənəd daşıyırsa; ADR-0091) | `place_of_birth` | `place_of_birth` (doğum yeri: ölkə, region, yaşayış məntəqəsi; məcburi) | `place_of_birth` |
+| `issuing_authority` (`Tamga Network (provisional)`; ADR-0091) | `issuing_authority` | `issuing_authority` (məcburi metaməlumat) | `issuing_authority` |
 | `date_of_expiry` (inzibati bitmə tarixi; nüsxənin texniki `exp`-indən ayrı) | `expiry_date` | `date_of_expiry` (ixtiyari) | `expiry_date` |
 | qarşılığı yoxdur | qarşılığı yoxdur | `date_of_issuance` (ixtiyari) | `issuance_date` |
 
@@ -418,10 +438,11 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
 > Aİ PID-də dəyər PID-i verən dövlətin ölkəsidir; Tamga-da sənədi verən şəxsiyyət xidməti (Tamga) olduğundan dəyər şəxsiyyət
 > vəsiqəsini və ya pasportu verən dövləti göstərir.
 
-> **Qarşılığı olmayan PID sahələri (2026-11-16).** `place_of_birth` və `issuing_authority` Aİ PID-də məcburidir; Tamga şəxsiyyət
-> sənədində bu gün yoxdur. Doğum yerinin əlavə edilməsi şəxsiyyəti yoxlayan provayderin bu məlumatı etibarlı şəkildə verib-vermədiyindən
-> asılı ayrıca qərardır; `issuing_authority` dövlətin PID provayderi gəldikdə onun adı ilə doldurulur (§4.7). Buna görə yoxlayan
-> tərəf Tamga şəxsiyyət sənədini Aİ PID-in yerinə qoya bilməz. İnzibati bitmə tarixi `date_of_expiry` (mdoc `expiry_date`)
+> **Aİ PID-in məcburi sahələri (2026-11-16; audit turunda yeniləndi, 2026-11-19).** [[ADR-0091]]-dən bəri şəxsiyyət xidməti
+> `issuing_authority`-ni hər nüsxəyə müvəqqəti operatorun adı ilə (`Tamga Network (provisional)`) yazır; dövlətin PID provayderi
+> gəldikdə onun adı istifadə olunur (§4.7). `place_of_birth` şərtidir: yalnız yoxlanılan sənəd doğum yerini daşıyırsa yazılır
+> (§2.4). Aİ PID-də məcburi olan doğum yeri Tamga şəxsiyyət sənədində həmişə olmadığı və sənəd PID olmadığı üçün yoxlayan tərəf
+> Tamga şəxsiyyət sənədini Aİ PID-in yerinə qoya bilməz. İnzibati bitmə tarixi hər nüsxədə `date_of_expiry` (mdoc `expiry_date`)
 > kimi yazılır və nüsxənin texniki `exp`-indən ayrıdır ([[ADR-0089]] K2); `date_of_issuance` yazılmır (§6.1).
 
 ## 4.7 Ötürmə — dövlət PID provayderi
@@ -496,8 +517,9 @@ nüsxənin `exp`-i texniki etibarlılıqdır və daha qısa ola bilər ([[ADR-00
 | Psevdonim toxumu | Ləğv siyahısı yoxdur; təqdim olunmur | — |
 | Sürücülük vəsiqəsi məlumatı | **Bəli, məcburi** | Token Status List |
 
-- **Ləğv siyahısının ünvanı (ARB_24a):** hər sənəddə `status.status_list.uri`; şəxsiyyət xidmətinin siyahıları `https://status.tamga.network/`
-  altındadır. Ünvan qeyri-şəffafdır, qurumu, ili və ya qrupu kodlaşdırmır (RB-AP-18).
+- **Ləğv siyahısının ünvanı (ARB_24a):** hər sənəddə `status.status_list.uri`; şəxsiyyət xidmətinin siyahıları xidmətin öz
+  ünvanında, `https://id.tamga.network/status/` altındadır. Siyahı identifikatoru qeyri-şəffafdır; qurumu, ili və ya qrupu
+  kodlaşdırmır (RB-AP-18).
 - **Dərc:** sabit intervalla (bu gün 2 dəqiqə), dəyişiklik olmasa belə; siyahı 6 saat etibarlıdır; interval xaricində dərc yoxdur (RB-AP-17,
   [[SPEC-CRED-0003]] §5). Ləğv bir neçə dəqiqəyə qüvvəyə minir (RB-GEN-10).
 - **Dəyərlər:** `bits = 1` — etibarlı və ya ləğv edilmiş. Şəxsiyyət xidmətinin növlərində **dayandırma yoxdur**, ləğv daimidir (Aİ PID qaydası;
@@ -529,6 +551,7 @@ nüsxənin `exp`-i texniki etibarlılıqdır və daha qısa ola bilər ([[ADR-00
 | Kvalifikasiyalı olmayan EAA göstəricisi (ARB_12) | **Qərar (2026-10-12, [[ADR-0047]] K6):** Aİ şablonu `category` üçün `eaa:eu:non-qualified` dəyərini təklif edir; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 isə kvalifikasiyalı olmayan EAA-da `category` olmamasını tələb edir. Tamga ETSI-ni izləyir; şablonun dəyəri istifadə olunmur |
 | Etibar lövbərinin yeri sənəddə (ARB_21) | **Qərar (2026-10-12, [[ADR-0047]] K7):** sənədə yer sahəsi əlavə edilmir; yer §5-dəki siyahılardır. Sənəddəki yer sənədi verən qurumun öz bəyanatı olardı; yoxlayan tərəf lövbəri yalnız özünün seçdiyi, imzası sabitlənmiş siyahıdan götürür |
 | `nbf` (ETSI TS 119 472-1 texniki etibarlılığın başlanğıcı) | Sənədi verən qurum onu verilmə anında yazır (§2.6); başlanğıcı çatmamış sənəd rəqəmsal cüzdanda saxlanılır, təqdim edilmir |
+| ZK nüsxəsində `age_over_15` | **Məlum fərq (2026-11-19):** §2.2–2.3 və şəxsiyyət sənədi `age_over_15`-i daşıyır, lakin ZK sxemi yalnız `age_over_18`-i məcburi saxlayır; şəxsiyyət xidməti `age_over_15`-i ZK nüsxəsinə yalnız əsas sənəd onu daşıyırsa yazır. Yoxlayan tərəf ZK nüsxəsində `age_over_15`-in olacağına güvənməməlidir; sxemin sərtləşdirilməsi ayrıca qərardır |
 | Attestation Revocation List | Tamga-nın sənədi verən qurumları Status List dərc edir (Aİ VCR_11-ə görə biri kifayətdir); yoxlayan tərəf və rəqəmsal cüzdan nüvəsi identifikator siyahısını da yoxlayır (paketlər 0.5.0; [[FW-POL-0001]] §8) |
 
 ---
@@ -542,3 +565,9 @@ Aİ Attestation Rulebook şablonu və PID / mDL rulebook-ları (Aİ attestation 
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-16).
+
+**Audit turu qeydi (2026-11-19; versiya 1.0 qalır).** Mətn şəxsiyyət xidmətinin bugünkü davranışına uyğunlaşdırıldı, davranış
+dəyişmədi: `date_of_expiry` məcburi atributlara, mdoc və SD-JWT VC cədvəllərinə əlavə edildi; `place_of_birth` şərti atributlara
+köçürüldü (§2.4) və `issuing_authority` cədvəllərə daxil edildi ([[ADR-0091]]); vətəndaşlığın sənəddən oxunduğu və `QU` / `QS`-in
+bu gün yazılmadığı yazıldı (§2.2); ZK nüsxəsində `age_over_15`-in məcburi olmadığı yazıldı (§2.3, §7.2); ləğv siyahısının ünvanı
+`https://id.tamga.network/status/` (§2.5, §3, §6.2); §4.6-dakı PID sahələri qeydi [[ADR-0091]]-ə görə yeniləndi.

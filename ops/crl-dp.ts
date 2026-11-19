@@ -10,6 +10,28 @@ import { CRLDistributionPointsExtension } from "@peculiar/x509";
 /** `--crl-uri` / ayar biçimi: `http://crl.<alan>/<makam>.crl` (alan adının kökünde). */
 export const CRL_URI_RE = /^http:\/\/crl\.[a-z0-9.-]+\/([a-z0-9][a-z0-9-]*)\.crl$/;
 
+/** PKI klasörünün ağı (`pki.json` `profile`) → CRL alan adı; geliştirme PKI'sı ya da bilinmeyen profil için kısıt yok (undefined). */
+export function crlHostForProfile(profile: unknown): string | undefined {
+  if (profile === "production") return "crl.tamga.network";
+  if (profile === "sandbox") return "crl.sandbox.tamga.network";
+  return undefined;
+}
+
+/**
+ * `pki-issue --crl-uri` denetimi (ADR-0090): biçim `http://crl.<ağ>/<makam>.crl`, yol veren makamın adı ve — PKI klasörünün ağı
+ * biliniyorsa (`pki.json` `profile`) — alan adı o ağın CRL alan adı (gerçek ağın sertifikası sandbox CRL'ine ya da tersine
+ * gösteremez). Sorun yoksa null.
+ */
+export function crlUriProblem(crlUri: string, caName: string, profile?: unknown): string | null {
+  const m = CRL_URI_RE.exec(crlUri);
+  if (!m) return "--crl-uri: http://crl.<ağ>/<makam>.crl biçiminde olmalı (ADR-0090; https eşi otomatik eklenir)";
+  if (m[1] !== caName) return `--crl-uri: verenin (${caName}) CRL'i olmalı (/${caName}.crl)`;
+  const host = crlHostForProfile(profile);
+  if (host && new URL(crlUri).host !== host)
+    return `--crl-uri: bu PKI (${String(profile)}) için CRL alan adı ${host} olmalı (http://${host}/${caName}.crl)`;
+  return null;
+}
+
 /** Güven listesi kökünden CRL alan adı (`trust.` öneki `crl.` olur; yoksa başa `crl.` eklenir). */
 export function crlHostOf(trustBase: string): string {
   const h = new URL(trustBase).hostname;

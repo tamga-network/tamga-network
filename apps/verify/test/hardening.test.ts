@@ -18,6 +18,8 @@ import {
 import { pemRpSigner } from "@tamga-network/verifier";
 import { annexCReaderAuth, buildVerifyApp } from "../src/app.js";
 import { TokenBucketLimiter } from "../src/rate-limit.js";
+import { installErrorHandler } from "../src/errors.js";
+import Fastify from "fastify";
 import { PresentationStore, SHOW_TTL_MS, sameKey } from "../src/state.js";
 import type { VerifyConfig } from "../src/config.js";
 
@@ -322,5 +324,56 @@ describe("Ek C okuyucu imzası x5chain (0.6.0)", () => {
     // ara sertifikasız (yaprak doğrudan kökten) imzacıda yalnız yaprak
     const only = annexCReaderAuth({ leafDer: signer.leafDer }, keyPem)!;
     expect(only.x5chain).toHaveLength(1);
+  });
+});
+
+describe.skipIf(!ready)("C5-4 / C4-2 (güvenlik incelemesi 2026-11-18): beklenmeyen hata iletisi dışarı çıkmaz", () => {
+  it("gövdesiz POST /presentations: 500 genel ileti (iç hata metni yok); bilerek verilen 4xx iletisini korur", async () => {
+    const app = await buildVerifyApp(cfg(), {});
+    const err = console.error;
+    const logged: string[] = [];
+    console.error = (...a: unknown[]) => void logged.push(a.join(" "));
+    try {
+      const r = await app.inject({ method: "POST", url: "/presentations" });
+      expect(r.statusCode).toBe(500);
+      expect(r.json()).toEqual({ statusCode: 500, error: "Internal Server Error", message: "internal error" });
+      expect(r.body).not.toMatch(/policy_id|undefined|Cannot read/);
+      expect(logged.join("\n")).not.toMatch(/policy_id|Cannot read/); // günlükte yalnız rota ve hata türü
+      const bad = await app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { "content-type": "application/json" },
+        payload: "{not json",
+      });
+      expect(bad.statusCode).toBe(400); // Fastify'ın bilerek verdiği hata kodu korunur
+    } finally {
+      console.error = err;
+      await app.close();
+    }
+  });
+});
+
+describe("ortak hata yanıtı (denetim turu D)", () => {
+  it("5xx hatanın iletisi `statusCode` taşısa da yanıta girmez; 4xx iletisi kalır", async () => {
+    const app = Fastify({ logger: false });
+    installErrorHandler(app, "test");
+    app.get("/up", async () => {
+      throw Object.assign(new Error("db host 10.1.2.3 refused"), { statusCode: 503 });
+    });
+    app.get("/bad", async () => {
+      throw Object.assign(new Error("body must be an object"), { statusCode: 400 });
+    });
+    const err = console.error;
+    console.error = () => {};
+    try {
+      const up = await app.inject({ method: "GET", url: "/up" });
+      expect(up.statusCode).toBe(503);
+      expect(up.json()).toEqual({ statusCode: 503, error: "Service Unavailable", message: "internal error" });
+      expect(up.body).not.toContain("10.1.2.3");
+    } finally {
+      console.error = err;
+    }
+    const bad = await app.inject({ method: "GET", url: "/bad" });
+    expect(bad.json()).toMatchObject({ statusCode: 400, message: "body must be an object" });
   });
 });

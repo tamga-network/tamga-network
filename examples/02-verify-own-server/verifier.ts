@@ -54,8 +54,10 @@ export interface OwnVerifierConfig {
   rootFingerprints: string[];
   /** Your registration: pemRpSigner(KEY_PEM, CERT_PEM) — client_id is x509_hash of your access certificate (HAIP 1.0). */
   signer: RpSigner;
-  /** Your public base URL; the wallet fetches (GET or POST) /vp/req/:id and posts to /vp/response here. */
+  /** Your public base URL (https); the wallet fetches (GET or POST) /vp/req/:id and posts to /vp/response here. */
   publicBase: string;
+  /** Local development only: accept an http `publicBase` on localhost or a private network address. */
+  allowLocalDevHost?: boolean;
   /**
    * The registered use (`scope_id` of your trust-list record) this verifier asks for, e.g. "job-application-1". Its
    * registration certificate (`<trustBase>/wrprc/…`) goes into every request (`verifier_info`). "none" only for wallets and
@@ -144,6 +146,7 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
       dcql: dcqlFromPolicy(policy),
       responseUri: `${cfg.publicBase}/vp/response`,
       registrationCert: await registrationCert(),
+      allowLocalDevHost: cfg.allowLocalDevHost === true,
     };
     // No shared request object (the default since 0.8): each fetch of request_uri gets its own branch (BranchSet.fetch below)
     const req = await createPresentationRequest({ ...content, requestUriBase: `${cfg.publicBase}/vp/req` });

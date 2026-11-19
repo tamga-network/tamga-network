@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -170,7 +170,7 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
 | `nonce` | ≥ 128 bits of entropy, single use; a new one on every fetch of the `request_uri` ([[ADR-0067]]) |
 | `state` | ≥ 128 random bits, secret; a new one on every fetch of the `request_uri` — not in the QR code, nor in the `request_uri` or `response_uri` paths ([[ADR-0067]]) |
 | `request_uri` fetch | Every fetch (GET, or POST with `request_uri_method=post`, OpenID4VP 1.0 §5.10) opens a new **request branch**: a newly signed request object with the same content; fresh `state`, `nonce` and ephemeral encryption key (HAIP §5). With POST, `wallet_nonce` is echoed in the object. No fixed branch limit and no 429 for a legitimate fetch; memory is bounded (an old unanswered branch is evicted past a soft limit, shared branch budget; [[ADR-0067]] amendment 2026-10-29); rate limit per client address |
-| `request_uri_method` | The verifier may put `request_uri_method=post` in the link (the reference verifier does); the `request_uri` address serves both GET and POST. In that case the wallet core makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), sends a fresh `wallet_nonce` (128 bits, base64url) in the body and rejects the request if the request object does not carry the same `wallet_nonce` (§5.10.1); no POST to an http address; with `get` or no parameter, GET (RFC 9101). An unknown value is rejected in the link |
+| `request_uri_method` | The verifier may put `request_uri_method=post` in the link (the reference verifier does); the `request_uri` address serves both GET and POST. In that case the wallet core makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), sends a fresh `wallet_nonce` (128 bits, base64url) in the body and rejects the request if the request object does not carry the same `wallet_nonce` (§5.10.1); no POST to an http address — the only exception is local development: when the caller asks for it explicitly (`allowLocalDevHost`), an http POST is made only to a local development address (localhost, `.localhost` / `.test` / `.local`, private IPv4 ranges); with `get` or no parameter, GET (RFC 9101). An unknown value is rejected in the link |
 | Request signature | **Mandatory** — an unsigned request is rejected |
 | `client_metadata.jwks` | Response encryption key; **mandatory** |
 | `verifier_info` | Optional ([[ADR-0026]]): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — the registration certificate of the use (ETSI TS 119 475 / 119 472-2). If present, the wallet verifies the registrar signature (LOTL `roles.registrar`), the validity period and that `sub` equals the `organizationIdentifier` in the access certificate; if they do not match, no data is sent (WRC4). A field not in the certificate counts as over-asking (§6). |
@@ -265,7 +265,10 @@ A verifier can offer choices such as "a diploma **or** a student certificate". T
 every extra choice is complexity the user has to understand on the consent screen.
 
 **Rule:** at most **3** credentials and at most **2** `credential_sets` entries in one request. More than that exceeds the
-user's ability to give informed consent.
+user's ability to give informed consent. The **wallet** enforces the limit: it rejects a request over the limit when it verifies
+the signed request object. A pseudonym query counts too, because it is an entry in the DCQL `credentials` array. The reference
+verifier (package and hosted verifier) does not check the limit when it builds a request; a policy over the limit is rejected by
+the wallet (2026-11-19).
 
 **Wallet behaviour** (OpenID4VP 1.0 §6.4; reference: `@tamga-network/wallet-core` `selectDcql`):
 
@@ -310,7 +313,9 @@ identity number are not disclosed. `docType` = the vct URN.
 ## 4.6 `trusted_authorities` — how the wallet evaluates it
 
 A verifier can state, for a credential in the query, which trust sources it accepts with `trusted_authorities` (OpenID4VP 1.0
-§6.1.1); the credential must meet at least one entry. The Tamga verifier uses `aki` ([[t:HAIP]] §5). The wallet evaluates each
+§6.1.1); the credential must meet at least one entry. The Tamga verifier may use `aki` ([[t:HAIP]] §5): if the policy gives
+`trusted_authorities`, they go into the query as they are (`@tamga-network/verifier` `akiTrustedAuthority` builds the value from
+the root certificates); if not, no entry is written — the reference verifier does not add one by itself today (2026-11-19). The wallet evaluates each
 entry with one of three outcomes (packages 0.5.2):
 
 | Type | What the wallet does |
@@ -386,7 +391,7 @@ RFC 7638 SHA-256 thumbprint of the verifier key the response is encrypted to (PV
 |---|---|
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` or `A256GCM` ([[t:HAIP]] §5) — the verifier declares both in `encrypted_response_enc_values_supported` and accepts both; the wallet picks `A256GCM` among the declared values, and the OpenID4VP default `A128GCM` if nothing is declared |
-| Recipient key | From the request's `jwks`, `use: "enc"` |
+| Recipient key | From the request's `jwks`: `kty: "EC"`, `crv: "P-256"`; `use: "enc"` or no `use` member at all (RFC 7517 §4.2: `use` is optional; 2026-11-19). A key with any other `use` value is not selected |
 
 ## 5.4 The response endpoint's answer (2026-10-27)
 
@@ -409,13 +414,17 @@ on ACCEPTED they also return `pass_grant` and `pass` (a Tamga extension).
 |---|---|
 | Verifier registered, all claims within scope | Normal consent screen |
 | Verifier registered, **some claims outside scope** | **Over-asking warning** — out-of-scope fields are marked separately; the user can still approve |
-| Verifier **unregistered** | "This verifier is not registered with Tamga" warning; the presentation is not blocked but the warning is prominent |
+| Verifier **unregistered** (no registration certificate, or an invalid one) | **Rejected** without asking the person (§7.5, [[ADR-0056]] K10) |
 
 **Change note 2026-11-04 — mdoc scope.** For an mdoc registration the scope is compared as a **namespace + element pair**: if the
 registration certificate allows `[namespace, element]`, the same element name in another namespace is out of scope; a
 single-element path without a namespace (`[element]`) grants nothing for an mdoc registration. For SD-JWT VC the path stays `[name]`.
 
 ## 6.2 Why it is not blocked
+
+**Change note 2026-11-19.** This section applies only to scope overrun by a **registered** verifier. Since [[ADR-0056]] K10
+(2026-10-19) a request without a registration certificate does not pass with a warning; it is rejected without asking the
+person (§7.5). The "unregistered verifier" examples below describe the design before that decision.
 
 The wallet is the user's **agent**, not their gatekeeper. A user may knowingly want to present a credential to an
 unregistered verifier — a researcher, a foreign institution, a test.
@@ -456,6 +465,11 @@ the origin supplied by the browser for the `aud` binding.
 even for a signed request (OpenID4VP 1.0 Annex A.4), not the client identifier. `verifyPresentation` derives it when `origin` is
 given and `aud` is not; when `aud` is given and differs, the presentation is rejected at A1 with an explicit message (a
 misconfiguration does not show up as a puzzling "aud mismatch" at A6).
+
+**Several origins (2026-11-19).** When the request carries several `expected_origins`, the verifier binds the response to the
+page origin given by the caller (the `origin` option of `decryptPresentationResponse` / `openPresentationResponse`); an origin
+that is not in the request's signed `expected_origins` list does not open the response. Without an origin the first one is used
+(unchanged behaviour for a single-origin request).
 
 ## 7.2 Relationship with the registry record
 
@@ -531,10 +545,15 @@ another transaction.
 - Request: each item is a base64url JSON object; `type` and non-empty `credential_ids` are required, each id is the `id` of a
   `dc+sd-jwt` query (holder binding cannot be disabled), and `transaction_data_hashes_alg`, if given, contains `sha-256` (OpenID4VP 1.0
   §5.1, Annex B.3.3). The verifier builds items with `transactionDataItem`.
-- Wallet: a single unrecognised type rejects the request with `invalid_transaction_data` (the field is not ignored; §5, §8.5).
+- Wallet: a single unrecognised type rejects the request (the field is not ignored; §5, §8.5). The rejection **stays in the
+  wallet**: the error code `invalid_transaction_data` is a local wallet error and is not sent to the verifier — the request is
+  rejected while it is being verified, so no response goes to the verifier. The only error response the wallet sends to a verifier
+  is `access_denied`, when the person declines the request (§10, PV5; 2026-11-19).
   Recognised types are the wallet's list; the network defines none and the default list is empty. Transaction data not shown to the
   person is not signed: the approval is recorded with the items shown (`confirmTransactionData`). Each item binds to the first suitable
-  selected SD-JWT VC presentation (§5.1). At most 10 items, 8 KB per item; a repeated item is rejected.
+  selected SD-JWT VC presentation (§5.1). At most 10 items, 8 KB per item; a repeated item is rejected. Per-item limits: `type` is a non-empty string of at most
+  256 characters, `credential_ids` holds at most 3 ids (a request carries at most 3 credentials, §4.4). The wallet enforces these
+  limits; the verifier's `transactionDataItem` helper requires only `type` and a non-empty `credential_ids` (2026-11-19).
 - KB-JWT: `transaction_data_hashes` = SHA-256 digests (base64url) of the strings as received (no base64url decoding); if the request
   gave `transaction_data_hashes_alg`, `transaction_data_hashes_alg: "sha-256"` (then mandatory).
 - Verification (A6): with `VerifyInput.transactionData` a KB-JWT is required and the digests must match exactly; without it the KB-JWT
@@ -663,6 +682,13 @@ verifier could map which credentials the user holds by sending queries.
 | **PV14** | An intermediary verifier ([[ADR-0017]] K7) may send a request on behalf of an RP only when the relationship is written in both records: the RP lists the intermediary in `uses_intermediaries` and the intermediary lists the RP in `served_relying_parties`; on a one-sided claim the wallet refuses the request. |
 | **PV15** | Every fetch of the `request_uri` is a separate request branch with a fresh `state` (≥ 128 bits, secret), a fresh `nonce` and a fresh ephemeral encryption key; a wallet error response closes only its own branch, and the presentation becomes REJECTED only if it has had a single fetch ([[ADR-0067]] RQ1–RQ6). |
 
+**Implementation note (2026-11-19; audit round).** The wallet enforces PV9 (§4.4): a signed request over the limit is rejected,
+and a pseudonym query counts; the reference verifier does not check the limit when it builds a request. The only exception to PV15
+is the deprecated `initialRequestObject: true` option of `@tamga-network/verifier` `createPresentationRequest` (for 0.7.x
+compatibility only): the single cross-device request object it creates with the presentation gives everyone who fetches it the
+same `state`, `nonce` and encryption key, and a branchless response is opened with that object's key. The default (`false`) and
+the hosted verifier do not create this object; the option is removed one release later.
+
 ---
 
 # Security and privacy notes
@@ -685,7 +711,7 @@ verifier — it would need the private key of the certificate.
 
 1. ~~Strictness of the over-asking warning~~ — **CLOSED** ([[SPEC-WALLET-0001]] §5.2, WL8): three levels, three visual
    weights. On scope overrun, a separate block + a button delayed by 3 s; for an unregistered verifier, a screen that
-   interrupts the flow. Against warning fatigue: **no** warning at all in the normal flow. The visual design awaits user
+   interrupts the flow (since 2026-10-19 an unregistered request is rejected — §7.5). Against warning fatigue: **no** warning at all in the normal flow. The visual design awaits user
    testing.
 2. The `credential_sets` limit (PV9: 3/2) is an estimate; it should be calibrated with user testing.
 3. [[SPEC-BC-0001]] §14.3 continues: should RP scopes be bound to a set of `schemaId`s? The resolution in §2.3 now makes this
@@ -693,8 +719,10 @@ verifier — it would need the private key of the certificate.
 4. [[ARCH-0005]] §4.2 M3: binding the minimum SDK version to the RP record. Reconsidered while writing this document; **still
    deferred** — binding version management to the registry creates a new coupling, and the `checks_skipped` mechanism (M1)
    looks sufficient in practice.
-5. Should the signed request object be mandatory in the DC API flow? §7.2 recommends it; making it mandatory could make some
-   browser integrations harder.
+5. ~~Should the signed request object be mandatory in the DC API flow?~~ — **CLOSED** (2026-11-19): yes. PV6 requires a
+   signed request in every flow; on the DC API the wallet accepts only signed OpenID4VP (`openid4vp-v1-signed`) and the
+   reader-signed ISO/IEC 18013-7 Annex C request and rejects unsigned protocols; a request without a registration certificate
+   is rejected as well (§7.5, [[ADR-0056]] K10).
 
 ---
 
@@ -710,6 +738,18 @@ verifier — it would need the private key of the certificate.
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-19, second; audit round — the version stays 1.0).** In the audit round the specification text was
+aligned with the code, with no change in behaviour: the local development http exception for `request_uri_method=post` (§3); the
+PV9 limit is enforced by the wallet and the pseudonym query counts (§4.4, implementation note under the invariants); the verifier
+may use `aki` and does not add it by itself (§4.6); the response encryption key may have no `use` member (§5.3); the
+transaction data rejection stays in the wallet, and the per-item limits (§8); the deprecated `initialRequestObject` exception to
+PV15 (implementation note under the invariants).
+
+**Version note (2026-11-19; audit round — the version stays 1.0).** Audit round: the "unregistered
+verifier passes with a warning" wording in §6.1–6.2 now matches §7.5 and [[ADR-0056]] K10 (an unregistered request is rejected);
+§7.1 gains a note on several origins (the response is bound to the page origin given by the caller); Open issue 5 is closed (a
+signed request is mandatory on the DC API, PV6).
 
 **Version note (2026-11-15; approved by project management, EU alignment review 2026-11-15).** §3 gains the
 `request_uri_method` row: the wallet core supports the OpenID4VP 1.0 §5.10 POST fetch and the `wallet_nonce` check

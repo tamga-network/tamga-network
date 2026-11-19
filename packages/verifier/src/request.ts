@@ -205,6 +205,45 @@ export interface RequestContent {
    * olarak verilir.
    */
   transactionData?: string[];
+  /**
+   * Yerel geliştirme (0.8.9): `responseUri`, `requestUriBase` ve DC API `expectedOrigins` https olmalı (OpenID4VP 1.0 errata —
+   * güvensiz şema yok); açıkken yalnız localhost / özel ağ / `.test` `.local` `.localhost` adresine http. Gerçek ağda vermeyin.
+   */
+  allowLocalDevHost?: boolean;
+}
+
+const isLocalDevHost = (host: string) => {
+  if (host === "localhost" || /\.(localhost|test|local)$/.test(host)) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(host);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+};
+/** Web adresi https mi (ya da izinli yerel http)? Değilse hata — imzalı istek nesnesine güvensiz adres girmez. */
+function assertSecureAddress(what: string, value: string, allowLocalDevHost: boolean | undefined): void {
+  let u: URL;
+  try {
+    u = new URL(value);
+  } catch {
+    throw new Error(`${what} is not a valid address`);
+  }
+  if (u.username || u.password) throw new Error(`${what} must not carry user information`);
+  if (u.protocol === "https:") return;
+  if (u.protocol === "http:" && allowLocalDevHost === true && isLocalDevHost(u.hostname.toLowerCase())) return;
+  throw new Error(`${what} must be an https address`);
+}
+/**
+ * `expected_origins` öğesi (OpenID4VP 1.0 Ek A.2; errata): web kökeni `https://host[:port]` (yol yok); http yalnız izinli yerel
+ * geliştirmede; web dışında yalnız Android uygulama kökeni (`android:apk-key-hash:…`). Başka şema reddedilir.
+ */
+function assertExpectedOrigin(origin: string, allowLocalDevHost: boolean | undefined): void {
+  if (typeof origin !== "string" || !origin || /\s/.test(origin))
+    throw new Error("expected origin is empty or malformed");
+  if (/^android:apk-key-hash:[A-Za-z0-9_-]+$/.test(origin)) return;
+  if (!/^https?:/i.test(origin)) throw new Error("expected origin must be an https origin or an Android app origin");
+  assertSecureAddress("expected origin", origin, allowLocalDevHost);
+  const u = new URL(origin);
+  if (u.origin !== origin) throw new Error("expected origin must be a bare origin (scheme://host[:port])");
 }
 
 /** ES256 / `oauth-authz-req+jwt` istek nesnesi (JAR) — çekim dalları, DC API nesnesi ve (eski) ilk istek ortak. */
@@ -274,6 +313,7 @@ export async function createRequestBranch(
     branchId?: string;
   },
 ): Promise<RequestBranch> {
+  assertSecureAddress("responseUri", c.responseUri, c.allowLocalDevHost);
   const now = c.now ?? Math.floor(Date.now() / 1000);
   const branchId = c.branchId ?? randomBytes(6).toString("base64url");
   if (!/^[A-Za-z0-9_-]{1,32}$/.test(branchId)) throw new Error("branchId must be base64url (1–32 characters)");
@@ -310,6 +350,8 @@ export interface PresentationRequestParams {
   dcql: DcqlQuery;
   responseUri: string;
   requestUriBase: string;
+  /** 0.8.9: bkz. `RequestContent.allowLocalDevHost` (gerçek ağda vermeyin). */
+  allowLocalDevHost?: boolean;
   ttlSec?: number;
   now?: number;
   /** ADR-0017 K7: aracı doğrulayıcı bir RP adına istiyorsa asıl RP'nin client_id'si (cüzdan onu gösterir). */
@@ -359,6 +401,10 @@ export function createPresentationRequest(
 export async function createPresentationRequest(
   p: PresentationRequestParams,
 ): Promise<PresentationRequest | PresentationSession> {
+  // 0.8.9 (OpenID4VP 1.0 errata): imzalı istekteki adresler ve kökenler güvenli şemada
+  assertSecureAddress("responseUri", p.responseUri, p.allowLocalDevHost);
+  assertSecureAddress("requestUriBase", p.requestUriBase, p.allowLocalDevHost);
+  for (const o of p.dcApi?.expectedOrigins ?? []) assertExpectedOrigin(o, p.allowLocalDevHost);
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const presentationId = "prs_" + randomBytes(9).toString("base64url");
   const nonce = randomBytes(24).toString("base64url"); // ≥128 bit, tek kullanımlık (PV10)
@@ -465,13 +511,15 @@ function checkResponseBody(raw: Record<string, unknown>): DecryptedResponse {
  * 0.6.0: sunumun yanıtını YOLUNA göre açar. Yol `kid`'den seçilir ama belirleyen anahtardır: cihazlar arası yanıt yalnız
  * cihazlar arası anahtarla, DC API yanıtı yalnız DC API anahtarıyla açılır — bir yolun anahtarıyla şifrelenmiş yanıt öteki
  * yolun kurallarıyla (mdoc SessionTranscript: `responseUri` ya da `origin`) doğrulanamaz. Dönen `binding`, `verifyPresentation`'a
- * olduğu gibi verilir (`responseUri` | `origin` + `encJwkThumbprint`).
+ * olduğu gibi verilir (`responseUri` | `origin` + `encJwkThumbprint`). DC API yolunda bağlanan köken: `opts.origin` (sayfanın
+ * kökeni; isteğin `expected_origins`'inden biri olmalı) ya da verilmezse ilk köken (`openPresentationResponse`).
  */
 export async function decryptPresentationResponse<B extends BranchKeys = RequestBranch>(
   jwe: string,
   req: ResponseKeys,
   responseUri: string,
   branches?: (branchId: string) => B | undefined,
+  opts?: ResponseOpenOptions,
 ): Promise<{
   response: DecryptedResponse;
   path: ResponsePath;
@@ -479,10 +527,19 @@ export async function decryptPresentationResponse<B extends BranchKeys = Request
   /** ADR-0067: yanıtın geldiği çekim dalı (cihazlar arası yolda `kid` dalı adlandırdıysa). */
   branch?: B;
 }> {
-  const opened = await openPresentationResponse(jwe, req, responseUri, branches);
+  const opened = await openPresentationResponse(jwe, req, responseUri, branches, opts);
   if (opened.kind === "error") throw new Error("the wallet sent an error response, not a presentation");
   const { kind: _kind, ...rest } = opened;
   return rest;
+}
+
+/** Yanıt açma seçenekleri. */
+export interface ResponseOpenOptions {
+  /**
+   * DC API yolunda yanıtı gönderen sayfanın kökeni (tarayıcının bildirdiği; denetim turu D1-3). İsteğin `expected_origins`'inden
+   * biri olmalı, değilse hata. Verilmezse ilk köken bağlanır (tek kökenli istekte aynı sonuç). Cihazlar arası yolda kullanılmaz.
+   */
+  origin?: string;
 }
 
 /** Bir dalın yanıtı açmak için gerekenler (`RequestBranch` ve `BranchSet`'in sıkıştırılmış `Branch`'i ikisi de uyar). */
@@ -509,6 +566,7 @@ export async function openPresentationResponse<B extends BranchKeys = RequestBra
   req: ResponseKeys,
   responseUri: string,
   branches?: (branchId: string) => B | undefined,
+  opts?: ResponseOpenOptions,
 ): Promise<
   ({ kind: "response"; response: DecryptedResponse } | { kind: "error"; error: string; state?: string }) & {
     path: ResponsePath;
@@ -526,7 +584,11 @@ export async function openPresentationResponse<B extends BranchKeys = RequestBra
     if (!req.dcApi) throw new Error("this presentation has no Digital Credentials API request");
     key = req.dcApi.encPrivateKey;
     path = "dc_api";
-    binding = { origin: req.dcApi.expectedOrigins[0], encJwkThumbprint: req.dcApi.encJwkThumbprint };
+    // D1-3: köken çağırandan (sayfanın kökeni) — isteğin imzalı `expected_origins`'inde olmalı; verilmezse ilk köken (varsayılan)
+    const origin = opts?.origin ?? req.dcApi.expectedOrigins[0];
+    if (!req.dcApi.expectedOrigins.includes(origin))
+      throw new Error("the page origin is not one of the request's expected_origins");
+    binding = { origin, encJwkThumbprint: req.dcApi.encJwkThumbprint };
   } else if (kid?.branchId !== undefined) {
     branch = branches?.(kid.branchId);
     if (!branch || branch.branchId !== kid.branchId) throw new Error("unknown request branch");

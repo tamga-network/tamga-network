@@ -112,6 +112,7 @@ describe.skipIf(!ready)("examples", () => {
       rootFingerprints: pins(),
       signer,
       publicBase: PUB,
+      allowLocalDevHost: true,
       registrationScope: "job-application-1",
       fetch: counted,
       fetchStatus: async (u) => (u === STATUS_URI ? statusTok : null),
@@ -130,6 +131,7 @@ describe.skipIf(!ready)("examples", () => {
       rootFingerprints: pins(),
       signer,
       publicBase: PUB,
+      allowLocalDevHost: true,
       registrationScope: "campus-access-1",
       fetch: withWrprc,
       anchorMaxAgeMs: YEAR,
@@ -186,7 +188,7 @@ describe.skipIf(!ready)("examples", () => {
           credential_configurations_supported: { [VCT]: { format: "dc+sd-jwt" } },
         },
       },
-      { now },
+      { now, trust: "none" },
     ).state;
 
     // your server's two routes, as the wallet sees them
@@ -206,13 +208,13 @@ describe.skipIf(!ready)("examples", () => {
     };
 
     const { qrPayload } = await v.start();
-    const uri = parseVpUri(qrPayload);
-    const reqJwt = await fetchRequestObject(uri.requestUri, http);
+    const uri = parseVpUri(qrPayload, LAN);
+    const reqJwt = await fetchRequestObject(uri.requestUri, http, LAN);
     const reqClaims = JSON.parse(Buffer.from(reqJwt.split(".")[1], "base64url").toString("utf8"));
     expect(reqClaims.verifier_info).toEqual([{ format: "registration_cert", data: WRPRC }]);
     const req = verifyRequestObject(reqJwt, uri.clientId, LAN);
     // someone who photographed the QR fetches it too: own branch (other state), and their forged "declined" closes only that
-    const atkJwt = await fetchRequestObject(uri.requestUri, http);
+    const atkJwt = await fetchRequestObject(uri.requestUri, http, LAN);
     const atkState = JSON.parse(Buffer.from(atkJwt.split(".")[1], "base64url").toString("utf8")).state as string;
     expect(atkState).not.toBe(req.state);
     expect(v.handleDecline(atkState)).toEqual({ presentationRejected: false });
@@ -310,8 +312,11 @@ describe.skipIf(!ready)("examples", () => {
     expect(s).toMatchObject({ registered: true, status: "ACTIVE", authorized: true, category: "EDUCATION" });
     expect((await institutionStatus(TRUST, pins(), "yok", VCT, { fetch: trustFetch })).registered).toBe(false);
     expect(
-      (await institutionStatus(TRUST, pins(), "example-university", "urn:tamga:tkt:EventTicket:1", { fetch: trustFetch }))
-        .authorized,
+      (
+        await institutionStatus(TRUST, pins(), "example-university", "urn:tamga:tkt:EventTicket:1", {
+          fetch: trustFetch,
+        })
+      ).authorized,
     ).toBe(false);
   });
 });

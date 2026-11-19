@@ -37,7 +37,7 @@ Proje yönetiminin isteği (2026-09-27): belgeler AB'deki gibi ayrılsın — ge
 | **Tamga ARF** | `arf.tamga.network` (VitePress, `tamga-network/arf`) | düzenleyici, kurum, denetçi | ana belge (FW-ARF-0001) + Ek A Trust Framework + Ek B katılımcı kuralları + Ek C attestation rulebook'ları |
 
 Her kapı diğer ikisine görünür bağlantı verir. Çerçeve belgelerinin **tek kamu yeri** `arf.tamga.network`'tür;
-`docs.tamga.network` onları yeniden yayınlamaz, `[[FW-*]]` atıflarını ARF sitesine bağlar.
+`docs.tamga.network` onları yeniden yayınlamaz, `FW-*` atıflarını ARF sitesine bağlar.
 
 ## K2 — Ad ve alan adı
 

@@ -19,7 +19,12 @@ import type { KeyProvider } from "./keys.js";
 import { chooseEnc, encryptJwe, type EncJwk, type JweEnc } from "./jwe.js";
 import { certFingerprintHex, p256PointFromCertDer, presentSdJwt } from "./sdjwt.js";
 import { WalletError, type Http, readJson } from "./http.js";
-import { parseTransactionData, transactionDataHash, type TransactionDataItem } from "./transaction-data.js";
+import {
+  parseTransactionData,
+  transactionDataFor,
+  transactionDataHash,
+  type TransactionDataItem,
+} from "./transaction-data.js";
 import type { StoredCredential } from "./store.js";
 import { certAuthorityKeyId, certSanDnsNames, certSubjectKeyId } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
@@ -116,14 +121,21 @@ export interface VpRequest {
 
 /** OpenID4VP 1.0 §5: `request_uri_method` değerleri (büyük/küçük harf duyarlı). Yoksa GET (RFC 9101). */
 export type RequestUriMethod = "get" | "post";
-/** QR: openid4vp://?client_id=…&request_uri=…[&request_uri_method=post]  (veya doğrudan request_uri URL'i) */
-export function parseVpUri(input: string): {
+/**
+ * QR: openid4vp://?client_id=…&request_uri=…[&request_uri_method=post]  (veya doğrudan request_uri URL'i). `request_uri` https
+ * olmalı (0.8.9; OpenID4VP 1.0 errata — güvensiz şema yok); `allowLocalDevHost` açıkken yalnız yerel / özel ağ adresine http.
+ */
+export function parseVpUri(
+  input: string,
+  opts: { allowLocalDevHost?: boolean } = {},
+): {
   clientId?: string;
   requestUri: string;
   requestUriMethod?: RequestUriMethod;
 } {
   const s = input.trim();
-  if (s.startsWith("http://") || s.startsWith("https://")) return { requestUri: s };
+  if (s.startsWith("http://") || s.startsWith("https://"))
+    return { requestUri: httpsRequestUri(s, opts.allowLocalDevHost) };
   const q = s.indexOf("?");
   if (q < 0) throw new WalletError("invalid_offer", "presentation request link not recognised");
   const params: Record<string, string> = {};
@@ -136,9 +148,25 @@ export function parseVpUri(input: string): {
   const m = params.request_uri_method;
   if (m !== undefined && m !== "get" && m !== "post")
     throw new WalletError("invalid_offer", `unknown request_uri_method: ${m} (get or post)`);
-  return { clientId: params.client_id, requestUri: params.request_uri, ...(m ? { requestUriMethod: m } : {}) };
+  return {
+    clientId: params.client_id,
+    requestUri: httpsRequestUri(params.request_uri, opts.allowLocalDevHost),
+    ...(m ? { requestUriMethod: m } : {}),
+  };
 }
-export async function fetchRequestObject(requestUri: string, http: Http): Promise<string> {
+/** `request_uri` https (ya da `allowLocalDevHost` ile yerel http) değilse ret. */
+function httpsRequestUri(u: string, allowLocalDevHost?: boolean): string {
+  if (!isAllowedWebAddress(u, allowLocalDevHost === true))
+    throw new WalletError("invalid_offer", "request_uri must be an https address");
+  return u;
+}
+/** İstek nesnesini GET ile çeker (RFC 9101). `requestUri` https olmalı (0.8.9); yerel geliştirme `allowLocalDevHost`. */
+export async function fetchRequestObject(
+  requestUri: string,
+  http: Http,
+  opts: { allowLocalDevHost?: boolean } = {},
+): Promise<string> {
+  httpsRequestUri(requestUri, opts.allowLocalDevHost);
   const r = await http(requestUri, { headers: { accept: "application/oauth-authz-req+jwt" } });
   if (r.status !== 200) throw new WalletError("issuer_error", `request object could not be fetched (${r.status})`);
   return (await r.text()).trim();
@@ -154,7 +182,7 @@ export interface FetchRequestOptions {
   walletNonce?: string;
   /** §5.10 `wallet_metadata` (§10): cüzdanın desteklediği biçimler / algoritmalar — isteğe bağlı. */
   walletMetadata?: Record<string, unknown>;
-  /** Yerel geliştirme: POST için https zorunluluğundan yalnız localhost / özel ağ adresi muaf (S11 ile aynı kapı). */
+  /** Yerel geliştirme: https zorunluluğundan (GET ve POST, 0.8.9) yalnız localhost / özel ağ adresi muaf (S11 ile aynı kapı). */
   allowLocalDevHost?: boolean;
 }
 
@@ -169,7 +197,7 @@ export async function fetchRequestObjectFor(
   http: Http,
   opts: FetchRequestOptions = {},
 ): Promise<{ jwt: string; walletNonce?: string }> {
-  if (uri.requestUriMethod !== "post") return { jwt: await fetchRequestObject(uri.requestUri, http) };
+  if (uri.requestUriMethod !== "post") return { jwt: await fetchRequestObject(uri.requestUri, http, opts) };
   let u: URL;
   try {
     u = new URL(uri.requestUri);
@@ -317,6 +345,10 @@ export function verifyRequestObject(
   // adına ait olmalı — kayıtlı bir sertifikayla imzalanmış istek verileri başka bir sunucuya yönlendiremez. Yerel geliştirme
   // (localhost / özel ağ IP'si) istisnası yalnız çağıran açıkça isterse (`allowLocalDevHost`; S11).
   if (!dcApi) {
+    // Güvenlik incelemesi 2026-11-18: yanıt adresi https olmalı (şifreli olsa da sunum açık kanaldan gitmez); http yalnız açıkça
+    // istenen yerel geliştirme adresine
+    if (!isAllowedWebAddress(p.response_uri, opts.allowLocalDevHost === true))
+      throw new WalletError("unsupported", "response_uri must use https");
     let host: string;
     try {
       host = new URL(String(p.response_uri)).hostname.toLowerCase();
@@ -999,11 +1031,12 @@ export type ApprovedRequest = { readonly [approvedBrand]: true };
 type ApprovalBinding = Pick<
   VpRequest,
   "clientId" | "nonce" | "state" | "responseUri" | "origin" | "leafFingerprint" | "onBehalfOf"
-> & { encKey: string };
+> & { encKey: string; td: string };
 const approvals = new WeakMap<object, ApprovalBinding>();
 /** ADR-0091 EA4: onaya bağlı, kişiye gösterilip onaylanan işlem verisi öğelerinin özeti (`confirmTransactionData`). */
 const tdConfirmed = new WeakMap<object, string>();
-const tdDigest = (items: readonly TransactionDataItem[]) => items.map((t) => transactionDataHash(t.raw)).join(".");
+const tdDigest = (items: readonly TransactionDataItem[] | undefined) =>
+  (items ?? []).map((t) => transactionDataHash(t.raw)).join(".");
 
 /**
  * ADR-0091 EA4: kişi isteğin işlem verisini ekranda GÖRDÜ ve onayladı — çağıran, gösterdiği öğelerle (isteğin `transactionData`'sı)
@@ -1026,6 +1059,9 @@ const bindingOf = (req: VpRequest): ApprovalBinding => ({
   encKey: req.encJwk
     ? `${req.encJwk.kty}|${req.encJwk.crv}|${req.encJwk.x}|${req.encJwk.y}|${req.encJwk.kid ?? ""}`
     : "",
+  // ADR-0091: isteğin işlem verisi de onaya bağlıdır — `checkRp`'den sonra istek nesnesinde değiştirilen ya da silinen işlem
+  // verisiyle onay geçmez (onay kapısı yalnız değişebilir istek nesnesine bakmasın)
+  td: tdDigest(req.transactionData),
 });
 function approvedFor(approval: unknown, req: VpRequest): boolean {
   const b = approval && typeof approval === "object" ? approvals.get(approval) : undefined;
@@ -1200,23 +1236,17 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
   const shown = tdConfirmed.get(p.approval as object);
   if (td?.length && shown !== tdDigest(td))
     throw new WalletError("invalid_transaction_data", "transaction data was not shown to and confirmed by the user");
-  // OpenID4VP 1.0 §5.1: birden çok `credential_ids` varsa yalnız BİR belge kullanılır — her öğe seçilen ilk uygun SD-JWT VC
-  // sunumuna bağlanır (Ek B.3.3); bağlanamayan öğe varsa imzalanmaz
-  const tdBinding = new Map<string, TransactionDataItem[]>();
-  for (const t of td ?? []) {
-    const m = p.matches.find(
-      (x) =>
-        t.credentialIds.includes(x.match.queryId) &&
-        x.match.format !== MDOC_FORMAT &&
-        x.match.format !== MDOC_ZK_FORMAT,
+  // OpenID4VP 1.0 §5.1: birden çok `credential_ids` varsa yalnız BİR belge kullanılır — her öğe, `credential_ids` sırasında
+  // seçilen ilk SD-JWT VC sunumuna bağlanır (Ek B.3.3; seçimin sırasına bağlı değil). Doğrulayıcı tarafı OpenID4VP 1.0
+  // §5.1'e göre bu öğeyi o sunumun KB-JWT'sinde arar; bağlanamayan öğe varsa imzalanmaz
+  const sdJwtIds = p.matches
+    .filter((x) => x.match.format !== MDOC_FORMAT && x.match.format !== MDOC_ZK_FORMAT)
+    .map((x) => x.match.queryId);
+  if (td?.some((t) => !t.credentialIds.some((id) => sdJwtIds.includes(id))))
+    throw new WalletError(
+      "invalid_transaction_data",
+      "transaction data is not bound to a selected SD-JWT VC presentation",
     );
-    if (!m)
-      throw new WalletError(
-        "invalid_transaction_data",
-        "transaction data is not bound to a selected SD-JWT VC presentation",
-      );
-    tdBinding.set(m.match.queryId, [...(tdBinding.get(m.match.queryId) ?? []), t]);
-  }
   approvals.delete(p.approval as object); // tek kullanımlık (AU5 / #440): aynı onayla ikinci yanıt yok
   tdConfirmed.delete(p.approval as object);
   if (p.request.annexC) return respondAnnexC(p, p.request.annexC);
@@ -1247,6 +1277,7 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
       ];
       continue;
     }
+    const bound = transactionDataFor(td, m.match.queryId, sdJwtIds);
     const pres = await presentSdJwt({
       combined: m.combined,
       discloseClaims: m.disclose,
@@ -1257,11 +1288,11 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
       aud: p.request.origin ? `origin:${p.request.origin}` : p.request.clientId,
       nonce: p.request.nonce,
       iat: p.now,
-      ...(tdBinding.get(m.match.queryId)?.length
+      ...(bound.length
         ? {
             transactionData: {
-              values: tdBinding.get(m.match.queryId)!.map((t) => t.raw),
-              hashesAlg: tdBinding.get(m.match.queryId)!.some((t) => t.hashesAlgRequested),
+              values: bound.map((t) => t.raw),
+              hashesAlg: bound.some((t) => t.hashesAlgRequested),
             },
           }
         : {}),

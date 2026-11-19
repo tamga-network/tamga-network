@@ -4,7 +4,7 @@ title: "Yoxlama xətti və API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-19
 summary: >
   Yoxlamanın kanonik alqoritmini və issuer/verifier servislərinin HTTP səthini müəyyən edir. Əsas töhfə ADDIM KODLARI REYESTRİdir: A1…E4, dörd spesifikasiyaya paylanmış yoxlama addımlarının vahid normativ siyahısı. Bu kodlar `failed_step` sahəsində maşınla oxunan formada ötürülür, beləliklə "yoxlama uğursuz oldu" əvəzinə "C2-də dayandı — issuer bu sxem üçün səlahiyyətli deyil" demək mümkündür. İkinci qayda: HTTP status kodu yoxlama nəticəsini KODLAŞDIRMIR — rədd edilmiş credential uğurlu API çağırışıdır; 4xx yalnız nəqliyyat/sorğu xətasıdır. Üçüncüsü: nəticə üçqiymətlidir və INDETERMINATE ayrıca səbəb sahəsi daşıyır.
 translation_of: SPEC-API-0001
@@ -47,22 +47,29 @@ səthini müəyyən edir.
 # 1. Addım Kodları Reyestri (Normativ)
 
 Yoxlama beş qatda aparılır. Bu cədvəl **kanonikdir**; [[ARCH-0003]] §4.1
-onun xülasə görünüşüdür.
+onun xülasə görünüşüdür. Beş qatdan əvvəl bir ilkin addım (`T0`, §1.0), yerləşdirilmiş yoxlayıcıda isə əlavə olaraq təxəllüs
+addımı (`P1`, §1.F) var (2026-11-19).
+
+## 1.0 — İlkin addım: etibar mənbəyinin təzəliyi və siyasətin forması
+
+| Kod | Addım |
+|---|---|
+| `T0` | Rəqəmsal sənədə baxılmazdan əvvəl işləyir. Siyasətin təzəlik hədləri (`max_trust_age_sec`, `max_status_token_age_sec`; verilibsə `max_clock_skew_sec` ≤ 600 və `max_anchor_lag_sec`) çatışmırsa və ya etibarsızdırsa, etibar bloku (`require_recognition`, tanınma tələb olunursa iki hərfli `state_code`, `min_issuer_assurance`, `allowed_categories`) və ya aralıq məhdudiyyətləri zədəlidirsə, etibar mənbəyi sağlam deyilsə (siyahı köhnədir və ya oxunmur — [[ARCH-0003]]/CMP4) və ya yaşı siyasətin `max_trust_age_sec`-ini aşırsa, nəticə **həmişə** `INDETERMINATE`/`INDEXER_STALE`-dir; `T0` heç vaxt `REJECTED` vermir |
 
 ## 1.A — Format qatı → [[SPEC-CRED-0002]] §8
 
 | Kod | Addım |
 |---|---|
-| `A1` | Birləşmiş sətri `~` ilə böl; KB-JWT varmı. A1 çağıranın konfiqurasiya xətalarını da daşıyır (2026-11-04): məs. Digital Credentials API yolunda verilən `aud` səhifə mənşəyindən törədiləndən fərqlənir və ya `origin` ilə `aud` = `client_id` birlikdə verilib — aydın mesajla REJECTED |
+| `A1` | Birləşmiş sətri `~` ilə böl; KB-JWT varmı. A1 çağıranın konfiqurasiya xətalarını da daşıyır (2026-11-04): məs. `policyCredentialId` siyasətdəki rəqəmsal sənəd deyilsə, sənədə baxılmadan, A addımlarından əvvəl REJECTED (2026-11-19); Digital Credentials API yolunda verilən `aud` səhifə mənşəyindən törədiləndən fərqlənir və ya `origin` ilə `aud` = `client_id` birlikdə verilib — aydın mesajla REJECTED |
 | `A2` | Başlıq: `alg=ES256`, `typ=dc+sd-jwt`, `x5c` varmı |
-| `A3` | `x5c` zənciri + JWT imzası: yarpaq verilən etibar lövbərlərindən birinə bağlanır (Tamga kök CA-sı və ya təzəliyi keçməmiş xarici siyahının lövbəri). Aralıq sertifikatlar CA olmalı (`basicConstraints cA=true`), **KeyUsage genişlənməsini daşımalı və içində `keyCertSign` olmalı** (genişlənməsi olmayan aralıq sertifikat RƏDD) və `pathLenConstraint`-i aşmamalıdır; `iat` 300 saniyədən çox irəli tarixlidirsə RƏDD. Kök CA-nın statusu bu addımda deyil, **`C1`**-də yoxlanılır: qurumun bağlı olduğu kök sənədin `iat` anında `ACTIVE` və ya `ROLLING_OVER` olmalı və heç vaxt `REVOKED` olmamalıdır ([[SPEC-ID-0002]] §3; sonradan istifadədən çıxarılan kök əvvəl verilmiş sənədi etibarsız etmir; ləğv edilmiş kökün sənədi `C1` kodu ilə rədd edilir). Tək sertifikatlı `x5c`-də yarpağın özü lövbər ola bilər (xarici siyahıdakı xidmət sertifikatı, [[ADR-0036]]); `issuerId` yenə yarpaqdan törədilir və `C1` onu siyahıda axtarır. Çağıran zəncir yoxlamasını bilərəkdən söndürübsə (`rootCertsDer: "none"`, yalnız SD-JWT VC) A3 `checks_performed`-də deyil, `checks_skipped`-də görünür. **mdoc:** `x5chain` yarpağı ya siyahıdakı lövbərin (kök CA və ya xarici siyahıdakı xidmət sertifikatı) özüdür, ya da birbaşa onunla imzalanıb — aralıq sertifikat qəbul edilmir (ISO/IEC 18013-5 Əlavə B: sənəd imzalayanın sertifikatı birbaşa IACA tərəfindən verilir, yol uzunluğu 0; Aİ PID/EAA mdoc profilləri də bu zəncirdən istifadə edir) |
+| `A3` | `x5c` zənciri + JWT imzası: yarpaq verilən etibar lövbərlərindən birinə bağlanır (Tamga kök CA-sı və ya təzəliyi keçməmiş xarici siyahının lövbəri). Aralıq sertifikatlar CA olmalı (`basicConstraints cA=true`), **KeyUsage genişlənməsini daşımalı və içində `keyCertSign` olmalı** (genişlənməsi olmayan aralıq sertifikat RƏDD) və `pathLenConstraint`-i aşmamalıdır; `iat` 300 saniyədən çox irəli tarixlidirsə RƏDD. Kök CA-nın statusu bu addımda deyil, **`C1`**-də yoxlanılır: qurumun bağlı olduğu kök sənədin `iat` anında `ACTIVE` və ya `ROLLING_OVER` olmalı və heç vaxt `REVOKED` olmamalıdır ([[SPEC-ID-0002]] §3; sonradan istifadədən çıxarılan kök əvvəl verilmiş sənədi etibarsız etmir; ləğv edilmiş kökün sənədi `C1` kodu ilə rədd edilir). Tək sertifikatlı `x5c`-də yarpağın özü lövbər ola bilər (xarici siyahıdakı xidmət sertifikatı, [[ADR-0036]]); `issuerId` yenə yarpaqdan törədilir və `C1` onu siyahıda axtarır. Çağıran zəncir yoxlamasını bilərəkdən söndürübsə (`rootCertsDer: "none"`, yalnız SD-JWT VC) A3 `checks_performed`-də deyil, `checks_skipped`-də görünür. **mdoc:** `x5chain` yarpağı ya siyahıdakı lövbərin (kök CA və ya xarici siyahıdakı xidmət sertifikatı) özüdür, ya da birbaşa onunla imzalanıb — aralıq sertifikat qəbul edilmir (ISO/IEC 18013-5 Əlavə B: sənəd imzalayanın sertifikatı birbaşa IACA tərəfindən verilir, yol uzunluğu 0; Aİ PID/EAA mdoc profilləri də bu zəncirdən istifadə edir) **mdoc `validityInfo.signed`** (imza anı; C1/C2 bu ana görə soruşulur, SD-JWT `iat`-ın qarşılığı) saat tolerantlığından irəlidədirsə RƏDD EDİLİR; `validFrom` də irəlidədirsə sənəd hələ etibarlı deyil və nəticə `A7`-dir (2026-11-19). |
 | `A3b` | **`issuerId`, `x5c` yarpaq sertifikatının barmaq izindən törədilir** — `iss` claim-indən DEYİL (§1.2). `iss` uyğunluq yoxlaması etibar qeydini tələb etdiyi üçün B addımlarından sonra, `C1`-dən əvvəl işləyir və bu kodla bildirilir |
 | `A3c` | Yarpaq sertifikat CRL/OCSP-də ləğv edilibmi ([[SPEC-ID-0002]]) |
 | `A3d` | `cnf` claim-i **mövcuddurmu** — yoxdursa RƏDD (Tamga-da KB istisnasız məcburidir) |
 | `A4` | `_sd_alg == "sha-256"` |
 | `A5` | Hər disclosure: **əvvəl hash, sonra dekodlaşdır**; digest `_sd`-də uyğun gəlirmi |
 | `A6` | KB-JWT: imza, `aud`, `nonce`, `iat`, `sd_hash` |
-| `A7` | `exp` keçibmi və ya `nbf` hələ çatmayıbmı |
+| `A7` | `exp` keçibmi və ya `nbf` hələ çatmayıbmı mdoc: `validFrom` < `signed` olarsa RƏDD EDİLİR (ISO/IEC 18013-5 `validFrom` ≥ `signed`; 2026-11-19). |
 | `A8` | Təkrarlanan digest / açıq claim ilə toqquşma yoxdurmu |
 
 **`Z1` — zero-knowledge proof (`mso_mdoc_zk`, [[ADR-0032]]):** dövrə imzalı siyahıdadır və fayl heşi uyğun gəlir (ZK2); açıqlanan
@@ -75,8 +82,8 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 | Kod | Addım |
 |---|---|
 | `B1` | `vct` və `vct#integrity` oxu |
-| `B2` | `schemaId = keccak256(vct)`; qeydiyyatdadırmı və `REVOKED` deyilmi |
-| `B3` | Type Metadata əldə et (keş → URL → registry) |
+| `B2` | `schemaId = keccak256(vct)`; qeydiyyatdadırmı və `REVOKED` deyilmi. Növ Tamga kataloqunda yoxdursa, yalnız sənədin zənciri bu növə zəmanət verən xarici siyahıya bağlıdırsa qəbul edilir ([[ADR-0036]] FD2); növə zəmanət verə biləcək xarici siyahı həmin an istifadə edilə bilmirsə (yüklənməyib və ya müddəti bitib) və ya bağlanan xarici siyahı köhnədirsə, nəticə RED deyil, `INDETERMINATE`/`INDEXER_STALE`-dir (FD3; 2026-11-19) |
+| `B3` | Type Metadata əldə et. İstinad tətbiqində növ tərifləri paketə daxil edilib (`@tamga-network/schemas`, kataloqla eyni məzmun): yoxlama zamanı URL-dən və ya reyestrdən heç nə çəkilmir; tərif paketdə yoxdursa `INDETERMINATE`/`SCHEMA_UNREACHABLE`. Bütövlük bağı yenə `B4`-dədir (2026-11-19) |
 | `B4` | Bütövlük: hash `== vct#integrity` **və** `== contentHash` (zəncir) |
 | `B5` | `extends` zənciri; hər addımda `extends#integrity` |
 | `B6` | JSON Schema 2020-12 uyğunluğu (`schema_uri` Tamga əlavəsidir, [[SPEC-SCHEMA-0001]] §2.1) |
@@ -94,10 +101,10 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 
 | Kod | Addım |
 |---|---|
-| `D1` | `status.status_list` oxu (`idx`, `uri`). ZK təqdimatında (`mso_mdoc_zk`) indeks gəlmir: sübutun bağlandığı növ qısaömürlü ZK nüsxəsidirsə (`urn:tamga:id:ShortLivedIdentityAttestation:1`, növ qaydası ≤ 24 saat, ləğv siyahısı yoxdur — [[ADR-0044]] K5) D addımları tətbiq edilmir və `status.value = NOT_APPLICABLE` (əsaslandırma: qısa ömür); işarəsiz ZK təqdimatı aşağıdakı qaydaya tabedir. ZK olmayan sənəddə `status` yoxdursa: növün sxemində `uses_status_list: true` olarsa RƏDD (ləğv yoxlaması səssizcə buraxılmır — [[ADR-0056]] K13), əks halda `NOT_APPLICABLE` |
+| `D1` | `status.status_list` oxu (`idx`, `uri`). ZK təqdimatında (`mso_mdoc_zk`) indeks gəlmir: sübutun bağlandığı növ qısaömürlü ZK nüsxəsidirsə (`urn:tamga:id:ShortLivedIdentityAttestation:1`, növ qaydası ≤ 24 saat, ləğv siyahısı yoxdur — [[ADR-0044]] K5) D addımları tətbiq edilmir və `status.value = NOT_APPLICABLE` (əsaslandırma: qısa ömür); işarəsiz ZK təqdimatı aşağıdakı qaydaya tabedir. ZK olmayan sənəddə `status` yoxdursa: növün sxemində `uses_status_list: true` olarsa RƏDD (ləğv yoxlaması səssizcə buraxılmır — [[ADR-0056]] K13), əks halda `NOT_APPLICABLE` Oxuna bilməyən `status` girişi (obyekt deyil; `status_list` yoxdur və ya obyekt deyil; `idx` mənfi olmayan tam ədəd deyil; `uri` boşdur) ləğv yoxlamasından yan keçmir: SD-JWT VC və mdoc-da `REJECTED`, `status entry malformed` (2026-11-19). |
 | `D2` | Status List Token-i **qabaqcadan yükləmə keşindən** götür |
 | `D3` | Token imzası; `sub == uri`; `iss` eyni etibar zəncirində. İmzalayan imza yoxlamasından əvvəl qurumun etibar siyahısındakı ACTIVE ləğv açarlarına bağlanır (`expectedSignerFingerprints` — [[ADR-0056]] K6); qeydiyyatda açar yoxdursa `INDETERMINATE`. Ləğv açarı yalnız etibarlılıq pəncərəsindədirsə (`valid_from`…`valid_to`, verilibsə) imzalayan sayılır. İmzalayan **qeydiyyatlı**, lakin pəncərəsindən kənar (və ya `RETIRED`) ləğv açarıdırsa — açar yenilənib, keşdə köhnə siyahı qalıb — nəticə RƏDD deyil, `INDETERMINATE`/`STATUS_STALE`-dir; qeydiyyatda olmayan (və ya `REVOKED` / `SUSPENDED`) imzalayan `REJECTED` qalır. Keşdəki gövdə token kimi oxuna bilmirsə (məs. serverin xəta səhifəsi) nəticə RƏDD deyil, `INDETERMINATE`/`STATUS_UNREACHABLE`-dır |
-| `D4` | Təzəlik: `exp` keçməyib, tokenin yaşı (`şimdi − iat`) siyasətin `max_status_token_age_sec` həddi daxilindədir |
+| `D4` | Təzəlik: `exp` keçməyib, tokenin yaşı (`şimdi − iat`) siyasətin `max_status_token_age_sec` həddi daxilindədir Sıxılmış siyahının açılmış ölçüsü `bits` ilə hesablanan yuxarı həddi aşarsa siyahı oxuna bilmir: `INDETERMINATE` (`D4`); D3-dəki `iat` saat tolerantlığı siyasətin `max_clock_skew_sec`-idir (2026-11-19). |
 | `D5` | Lövbər: tokenin heşi (`contentHash`) siyahının lövbər jurnalındakı son sətri ilə uyğun gəlirmi. Token versiya sahəsi daşımır; geri qaytarma zamana görə aşkarlanır. Uyğun gəlməyən token lövbərdən **köhnədirsə**: keş lövbərdən əvvəl (və ya saat tolerantlığı daxilində) yüklənibsə `INDETERMINATE`/`STATUS_STALE`, açıq şəkildə sonra yüklənibsə `REJECTED`. Uyğun gəlməyən token lövbərdən **yenidirsə**, bu, adi dərc ardıcıllığıdır (əvvəl CDN, sonra lövbər — [[SPEC-CRED-0003]] §5.2) və D5 `checks_skipped`-də görünür; pay məhduddur: token məlum son lövbərdən `max_anchor_lag_sec` (+ saat tolerantlığı) qədərdən daha yenidirsə, lövbəri gecikib → `INDETERMINATE`/`STATUS_STALE`. Siyahı lövbər jurnalında heç yoxdursa, eyni pay sənədin `iat`-ından sayılır: yeni verilmiş sənəddə D5 buraxılır, pay dolubsa `INDETERMINATE`/`STATUS_STALE`. Xarici siyahıdakı qurumun ləğv siyahısı üçün lövbər jurnalı yoxdur, D5 buraxılır ([[ADR-0036]]). `max_anchor_lag_sec` siyasətin təzəlik sahəsidir (§4.4): standart 3600 san (lövbər jurnalının saatlıq ritmi); Tamga Verify 600 san istifadə edir |
 | `D6` | `bits=2` ilə `idx` oxu; `0x00` xaricində → RƏDD |
 
@@ -109,6 +116,12 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 | `E2` | Tələb olunan bütün claim-lər açıqlanıbmı |
 | `E3` | RP scope aşılmayıbmı ([[SPEC-PROTO-0002]] §6). RP qeydi məcburi girişdir: verilməməsi RƏDD, `null` (qeydiyyatsız RP) RƏDD; `"none"` addımı bilərəkdən buraxır və E3 `checks_skipped`-də görünür ([[ADR-0056]] K4). Əhatə yoxlamasına seçici açıqlanan bütün sahələr və qurumun açıq saxladığı sahələrdən siyasətin istədikləri daxildir; hər ikisi `disclosed_claims`-də görünür |
 | `E4` | Audit qeydi yazıldı — yalnız audit qeydi yeri (`audit`) verilibsə və qeyd yazılıbsa `checks_performed`-də; əks halda `checks_skipped`-də ([[ADR-0056]] K11). Audit yazıcısı xəta verərsə, yoxlama nəticəsi yenə qaytarılır və E4 `checks_skipped`-də görünür |
+
+## 1.F — Təxəllüs → [[ADR-0031]] (yalnız yerləşdirilmiş yoxlayıcı)
+
+| Kod | Addım |
+|---|---|
+| `P1` | Sayt üzrə təxəllüs təqdimatı (ayrıca `vp_token` girişi) yoxlanılır: imza, hədəf (`aud`), `nonce` və cüzdan vahidi bağı. `P1`-i paket (`verifyPresentation`) deyil, yerləşdirilmiş yoxlayıcı (Tamga Verify) bildirir. Yalnız təxəllüs tələb edən siyasətdə təxəllüs təqdimatın yeganə sahiblik sübutudur və təqdimat istehlak edilməzdən əvvəl yoxlanılır: keçməyən təxəllüs cəhddir (`400`, təqdimat açıq qalır), keçən təxəllüsün nəticəsi `checks_performed: ["P1", "E4"]`-dür. Sənəd + təxəllüs siyasətində sənəd qəbul edildikdən sonra təxəllüs keçməzsə, nəticə `failed_step: "P1"` ilə `REJECTED` (və ya `INDETERMINATE`) olur. `P1` addım siyahısından kənardadır: təxəllüs tələb etməyən siyasətdə `checks_skipped`-də görünmür (2026-11-19) |
 
 **Bəli/xeyr sahəsinin oxunuşu:** `isYes(çıktı, alan)` yalnız nəticə `ACCEPTED` olduqda və açıqlanan dəyər məhz `true` olduqda `true`
 qaytarır (məs. `age_over_18`, adi və ya ZK təqdimatında); rədd, yoxlanıla bilmədi, dəyərin olmaması və ya `"true"`/`1` kimi başqa dəyərlər `false`-dir
@@ -164,7 +177,7 @@ Addımlar **ardıcıl** icra olunur. İlk uğursuzluqda dayanılır və həmin k
 **İstisna:** `E4` hər halda işləyir — rədd edilmiş yoxlama da qeydə alınır (audit qeydi yeri olan yoxlayan tərəfdə; əks halda E4
 buraxılmış kimi bildirilir — [[ADR-0056]] K11).
 
-**Kodların bildirilməsi (tətbiq qeydi, 2026-11-11).** İstinad tətbiqi bəzi addımları qonşu kodla bildirir: `cnf` çatışmazlığı (`A3d`) `A3`, təkrarlanan heş və toqquşma (`A8`) SD-JWT VC-də `A5` kimi qayıdır; mdoc və ZK-də `A8` sənəd növünün (docType) siyasətdə olmamasıdır. `A2` (Tamga növündə köhnə `typ`) və `A4` (Tamga növündə `_sd_alg` yoxdur) növün kataloqda olub-olmadığı bilinəndə, yəni `B2`-dən sonra; `A3b` (`iss` uyğunluğu) etibar qeydi oxunanda, yəni `B6`-dan sonra yoxlanılır — birdən çox qüsuru olan sənəddə qayıdan kod sıradakı ilk kod olmaya bilər. Gözlənilməz istisnada `failed_step` həmin qatın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc-un A-ardıcıllığı: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. Yoxlamaların özü tam aparılır: uğurlu yoxlamada `A3d` və `A8` `checks_performed`-də görünür; uğursuzluğun dəqiq səbəbi `failed_reason` sahəsindədir. Bu bildirmə layihə rəhbərliyinin təsdiqi ilə (2026-11-12) istinad tətbiqinin məcburi davranışıdır; kodların qeydlərdəki oxunuşu dəyişməsin deyə (AP1) dəyişdirilmir ([[ADR-0056]] tətbiq qeydi).
+**Kodların bildirilməsi (tətbiq qeydi, 2026-11-11).** İstinad tətbiqi bəzi addımları qonşu kodla bildirir: `cnf` çatışmazlığı (`A3d`) `A3`, təkrarlanan heş və toqquşma (`A8`) SD-JWT VC-də `A5` kimi qayıdır; mdoc və ZK-də `A8` sənəd növünün (docType) siyasətdə olmamasıdır. `A2` (Tamga növündə köhnə `typ`) və `A4` (Tamga növündə `_sd_alg` yoxdur) növün kataloqda olub-olmadığı bilinəndə, yəni `B2`-dən sonra; `A3b` (`iss` uyğunluğu) etibar qeydi oxunanda, yəni `B6`-dan sonra yoxlanılır — birdən çox qüsuru olan sənəddə qayıdan kod sıradakı ilk kod olmaya bilər. Gözlənilməz istisnada `failed_step` həmin qatın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc-un A-ardıcıllığı: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. SD-JWT VC-nin A-sırası: A1 · A2 · A3 (`cnf` çatışmazlığı daxil) · A4 · A5 (təkrarlanan heş daxil) · A6 · A7; `policyCredentialId` yoxlaması (A1) bunlardan əvvəl aparılır (2026-11-19). Zəncir verilən köklərin heç birinə bağlanmırsa (`A3`) və ya növ kataloqda yoxdursa və lövbər xarici quruma həll edilmirsə (`B2`), RED verməzdən əvvəl tələb olunan növə zəmanət verə biləcək xarici siyahının həmin an istifadə edilə bilib-bilmədiyinə baxılır: istifadə edilə bilmirsə nəticə `INDETERMINATE`-dir (§2.3). Yoxlamaların özü tam aparılır: uğurlu yoxlamada `A3d` və `A8` `checks_performed`-də görünür; uğursuzluğun dəqiq səbəbi `failed_reason` sahəsindədir. Bu bildirmə layihə rəhbərliyinin təsdiqi ilə (2026-11-12) istinad tətbiqinin məcburi davranışıdır; kodların qeydlərdəki oxunuşu dəyişməsin deyə (AP1) dəyişdirilmir ([[ADR-0056]] tətbiq qeydi).
 
 ## 1.4 Kodların sabitliyi
 
@@ -203,31 +216,33 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
 
 ```json
 {
-  "verification_id": "vrf_01J8XKQ2M4",
+  "verification_id": "vrf_tl1f9cq8k2m7x4p0a3d5",
   "outcome": "ACCEPTED",
   "failed_step": null,
+  "failed_reason": null,
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
   "sdk_version": "@tamga-network/verifier@0.8.8",
-  "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
+  "checks_performed": ["T0",
+                       "A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",
                        "D1","D2","D3","D4","D5","D6",
                        "E1","E2","E3","E4"],
-  "checks_skipped": ["A3c","B5"],
+  "checks_skipped": ["A3c","B5","Z1"],
 
   "issuer": {
     "issuer_id": "0x7f3a…",
     "state_code": "TR",
     "category": "EDUCATION",
     "assurance": "I2",
-    "class": "EAA"
+    "class": "EAA",
+    "legal_name": "Nümunə Universiteti"
   },
   "schema": {
     "schema_id": "0x9c21…",
     "vct": "urn:tamga:edu:DiplomaCredential:1",
-    "version": "1.0.0",
     "status": "ACTIVE"
   },
   "disclosed_claims": ["is_graduate","qualification_title","eqf_level",
@@ -239,15 +254,15 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
     "token_age_sec": 1830
   },
   "freshness": {
-    "indexer_last_block": 918273,
-    "indexer_age_sec": 4,
-    "chain_read_mode": "INDEXER"
+    "trust_source": "list",
+    "trust_version": 412,
+    "trust_age_sec": 95
   },
-  "evaluated_at": "2026-09-09T09:12:44Z"
+  "evaluated_at": "2026-11-19T09:12:44.000Z"
 }
 ```
 
-**Nümunədəki `checks_skipped` (tətbiq qeydi, 2026-11-12).** Nümunə, istinad tətbiqinin (`@tamga-network/verifier`) audit qeydi yeri verilmiş SD-JWT VC təqdimatında qaytardığı nəticədir. İstinad tətbiqi bu gün iki addımı aparmır və hər təqdimatda `checks_skipped`-də bildirir: `A3c` (yarpaq sertifikatın CRL/OCSP sorğusu) və `B5` (`extends` zənciri). `E4` audit qeydi yazıldığı üçün `checks_performed`-dədir; audit qeydi yeri verilməyibsə, o da `checks_skipped`-də görünür (§1.E, `E4`).
+**Nümunədəki `checks_skipped` (tətbiq qeydi, 2026-11-12).** Nümunə, istinad tətbiqinin (`@tamga-network/verifier`) audit qeydi yeri verilmiş SD-JWT VC təqdimatında qaytardığı nəticədir. İstinad tətbiqi bu gün iki addımı aparmır və hər təqdimatda `checks_skipped`-də bildirir: `A3c` (yarpaq sertifikatın CRL/OCSP sorğusu) və `B5` (`extends` zənciri). Təqdimatın formatında olmayan addımlar da `checks_skipped`-ə düşür: ZK olmayan hər təqdimatda `Z1` (2026-11-19); `P1` addım siyahısından kənardadır və heç vaxt `checks_skipped`-də görünmür (§1.F). Nəticə obyektində `failed_reason` həmişə var (qəbulda `null`); `freshness` etibar mənbəyinin növünü, versiyasını və yaşını daşıyır (`trust_source`, `trust_version`, `trust_age_sec`); `schema`-da versiya sahəsi yoxdur; `issuer.legal_name` etibar siyahısındakı qeyddən gəlir. Sahələrin sırası məna daşımır. `E4` audit qeydi yazıldığı üçün `checks_performed`-dədir; audit qeydi yeri verilməyibsə, o da `checks_skipped`-də görünür (§1.E, `E4`).
 
 | Sahə | Mənası |
 |---|---|
@@ -314,11 +329,17 @@ və ya hər hansı API cavabında **olmur** ([[ARCH-0004]] §5.3).
 | `200` | Yoxlama işlədi — `outcome` nə olursa olsun |
 | `400` | Sorğunun gövdəsi zədəlidir, parametr çatışmır |
 | `401` / `403` | API autentifikasiyası / səlahiyyət |
-| `404` | Naməlum `verification_id` |
-| `409` | Idempotency konflikti |
+| `404` | Naməlum təqdimat və ya başqa yoxlayan tərəfin təqdimatı (mövcudluğu açıqlanmır) |
+| `410` | Açıqlanan dəyərlər artıq oxunub və ya müddəti bitib (`/claims`, `claims_gone`; dəyərlər bir dəfə və nəticədən sonra ən çox 5 dəqiqə oxunur — §4.3; 2026-11-19) |
+| `409` | Idempotency konflikti (planlaşdırılır — §6.2) |
 | `429` | Sürət limiti |
 | `500` | Servis xətası |
-| `503` | Asılılıq əlçatan deyil **və** nəticə yaradıla bilmədi |
+| `503` | Asılılıq əlçatan deyil **və** nəticə yaradıla bilmədi. Etibar siyahısı köhnə və ya oxunmaz olduqda istinad yoxlayıcısı təqdimat açma sorğusuna (RP bəyanı olsa da, olmasa da) `400`/`401` deyil, `503` + `Retry-After` qaytarır (2026-11-19) |
+
+**İstehlak edilmiş təqdimata gələn cavab (2026-11-19).** Təqdimat sahiblik sübutuna çatan cavabla bir dəfə istehlak edildikdən
+sonra eyni təqdimata gələn hər cüzdan cavabı (`/vp/response`, `/vp/dc-mdoc/{id}`) `400 invalid_request` (`nonce already used
+(PV10)`) alır; bu, nəqliyyat xətasıdır, ikinci yoxlama nəticəsi deyil və saxlanılan nəticəni dəyişmir. Bağlanmış və ya müddəti
+bitmiş təqdimatın sorğu obyektinin çəkilişi `404` alır.
 
 Bunları qarışdırmaq geniş yayılmış səhvdir və iki problem yaradır: (1) müştərilər şəbəkə xətasını
 etibarsız rəqəmsal sənəddən ayıra bilmir, (2) monitorinq sistemləri rədd edilmiş rəqəmsal sənədləri
@@ -328,31 +349,45 @@ etibarsız rəqəmsal sənəddən ayıra bilmir, (2) monitorinq sistemləri rəd
 
 # 4. Yoxlayan tərəf servisinin API-si
 
-Baza: `https://verifier.<kurum>/api/v1`
+Baza (yerləşdirilmiş yoxlayıcı, Tamga Verify): `https://verify.tamga.network` (real şəbəkə), `https://verify.sandbox.tamga.network`
+(sandbox). Uc nöqtələri kökün altındadır; yolda versiya prefiksi (`/api/v1`) yoxdur (2026-11-19). Autentifikasiya: təqdimatı açan
+və nəticəni oxuyan yoxlayan tərəf `Authorization: Bearer <RP bəyanı>` göndərir — etibar siyahısında qeydiyyatda olan giriş
+sertifikatının açarı ilə imzalanmış qısamüddətli JWS (`typ: tamga-rp+jwt`, ES256, birdəfəlik `jti`; §6.4). Brauzer yalnız status
+tokenindən (`X-Tamga-Status-Token` və ya `?st=`) istifadə edir və yalnız statusu görür.
+
+Bu bölmə axının əsasını izah edir. Bütün uc nöqtələrinin (QR şəkli, siyasət siyahısı, ISO/IEC 18013-7 Əlavə C cavab ucu, səhifə
+dəsti), sorğu və cavab sahələrinin və xəta kodlarının tam tərifi OpenAPI arayışındadır: [Tamga Verify API](/api/verify).
 
 ## 4.1 Təqdimat sorğusunu başlatmaq
 
 ```http
 POST /presentations
+Authorization: Bearer <RP bəyanı>
+Accept: application/json
 Content-Type: application/json
 Idempotency-Key: 3f9a1c...
 
 {
-  "policy_id": "job-application-degree",
-  "purpose": { "tr-TR": "İş başvurusu değerlendirmesi" },
-  "response_mode": "direct_post.jwt",
-  "ttl_sec": 300
+  "policy_id": "job-application-degree"
 }
 ```
 
 ```json
 {
-  "presentation_id": "prs_01J8XK",
-  "request_uri": "https://verifier.ornek.com/vp/req/01J8XK",
-  "qr_payload": "openid4vp://?client_id=x509_hash%3AUvo3…&request_uri=…",
-  "expires_at": "2026-09-09T09:17:44Z"
+  "presentation_id": "prs_Q2x0dVJmNkp3",
+  "request_uri": "https://verify.tamga.network/vp/req/prs_Q2x0dVJmNkp3",
+  "qr_payload": "openid4vp://?client_id=x509_hash%3AUvo3…&request_uri=…&request_uri_method=post",
+  "expires_at": "2026-11-19T09:17:44.000Z",
+  "status_token": "9VdB0qXr7mYk2LwPq1sZ3A"
 }
 ```
+
+Sorğu gövdəsində yalnız iki sahə oxunur: `policy_id` (məcburi) və ixtiyari `dc_api_origin` (brauzerin Digital Credentials API-si
+üçün səhifə mənşəyi; verilərsə cavabda `dc_api_request` / `dc_api_requests` da gəlir). Başqa sahələr nəzərə alınmır: istifadə
+məqsədi siyasətdən və qeydiyyat sertifikatından gəlir ([[SPEC-PROTO-0002]] §3), cavab rejimi yoldan müəyyən edilir
+(cihazlararası `direct_post.jwt`, brauzerdə `dc_api.jwt`), təqdimatın ömrü sabit 300 saniyədir (2026-11-19).
+`Accept: application/json` göndərilməzsə yoxlayıcı JSON əvəzinə öz gözləmə səhifəsinə yönləndirir. `status_token` yalnız
+brauzerə verilir.
 
 `policy_id` əvvəlcədən müəyyən edilmiş siyasətə istinad edir (§4.4). DCQL sorğusu
 sorğunun gövdəsində **əl ilə yazılmır** — siyasətdən yaradılır. Beləliklə, həddindən artıq tələb
@@ -407,11 +442,12 @@ obyektindən ayrılır və bu uc nöqtəsinə giriş ayrıca avtorizasiya olunur
   "trust": {
     "min_issuer_assurance": "I2",
     "allowed_categories": ["EDUCATION"],
-    "require_recognition": true
+    "require_recognition": true,
+    "state_code": "TR"
   },
   "freshness": {
     "max_status_token_age_sec": 21600,
-    "max_indexer_age_sec": 60
+    "max_trust_age_sec": 86400
   }
 }
 ```
@@ -426,12 +462,18 @@ qidalandırır. Vahid mənbə.
 həddi aşan siyasəti **rədd edir** — həddindən artıq tələb təqdimat anında deyil, siyasət
 müəyyən edilərkən bloklanır.
 
+**Yerləşdirilmiş yoxlayıcıda (tətbiq qeydi, 2026-11-19).** Tamga Verify-da siyasətlər servisin konfiqurasiyasıdır (siyahısı
+`GET /policies`); siyasəti qeydə alan uc nöqtəsi yoxdur. Buna görə AP6 **təqdimat açılarkən** yoxlanılır: siyasət təqdimatı açan
+yoxlayan tərəfin etibar siyahısındakı əhatəsini aşırsa, `POST /presentations` `400 policy_exceeds_scope` qaytarır (`detail` aşan
+sahələri sadalayır) və sorğu obyekti heç yaradılmır — həddi aşan tələb cüzdana çatmır.
+
 ---
 
 # 5. Sənədi verən servisin API-si
 
-Baza: `https://issuer.<kurum>/api/v1`. OID4VCI uc nöqtələri ayrıdır
-([[SPEC-PROTO-0001]]); buradakılar **operator və inteqrasiya** səthidir.
+Baza: `https://issuer.tamga.network/{slug}/api/v1` (qurum üzrə yol). OID4VCI uc nöqtələri ayrıdır
+([[SPEC-PROTO-0001]]); buradakılar **operator və inteqrasiya** səthidir. Tətbiq edilmiş uc nöqtələrinin tam tərifi OpenAPI
+arayışındadır: [Sənədi verən API](/api/issuer) (2026-11-19).
 
 ## 5.1 Rəqəmsal sənəd təklifi yaratmaq (credential offer)
 
@@ -527,7 +569,19 @@ lövbərinin ayrışdığı deməkdir ([[ARCH-0004]] §5.1 siqnalı).
 
 # 6. Ümumi qaydalar
 
-## 6.1 Xəta formatı — RFC 9457
+## 6.1 Xəta formatı
+
+**Bugünkü istinad servisləri (2026-11-19).** İki servis iki format istifadə edir:
+
+- **Sənədi verən API** (`/{slug}/api/v1`): RFC 9457 problem təfərrüatının ən kiçik forması, `application/problem+json`:
+  `{ "type": "about:blank", "title": "<qısa mesaj>", "status": <kod> }`. `detail`, `instance` və `tamga_code` bu gün yaradılmır.
+- **Yoxlayıcı (Tamga Verify):** OAuth formatı `{ "error": "<kod>", "error_description": "<ixtiyari mesaj>" }`; əhatə aşıldıqda
+  əlavə olaraq `detail` (aşan hissələrin siyahısı, `policy_exceeds_scope`). Gövdənin təhlil xətası kimi çərçivə xətaları və
+  gözlənilməz xətalar `{ "statusCode": <kod>, "error": "<HTTP səbəb ifadəsi>", "message": "<mesaj>" }` formasındadır; 5xx-də mesaj
+  həmişə `internal error`-dur (daxili təfərrüat cavaba düşmür).
+
+Aşağıdakı nümunə RFC 9457-nin tam formasını və planlaşdırılan `tamga_code` genişlənməsini göstərir; bu gün sənədi verən yalnız
+`type`, `title` və `status` sahələrini yaradır.
 
 ```json
 {
@@ -546,15 +600,16 @@ qeydindədir ([[SPEC-PROTO-0001]]/PR8-in servisdəki qarşılığı).
 
 ## 6.2 Təkrar çağırış təhlükəsizliyi (idempotency)
 
-Yan təsirli hər `POST` (`/offers`, `/revocations`, `/presentations`)
-`Idempotency-Key` başlığını **qəbul edir**. Eyni açarla təkrar çağırış eyni
-cavabı qaytarır; fərqli gövdə ilə eyni açar `409` yaradır.
-
-Saxlama müddəti: **24 saat**.
+**Planlaşdırılır — hələ tətbiq edilməyib (2026-11-19).** İstinad servisləri (yoxlayıcı `apps/verify`, sənədi verən) bu gün
+`Idempotency-Key` başlığını emal etmir; başlıq nəzərə alınmır və `409` yaradılmır. Təkrar çağırış yeni təqdimat və ya əməliyyat
+açır. Hədəf davranış: yan təsirli hər `POST` (`/offers`, `/revocations`, `/presentations`) başlığı qəbul edir; eyni açarla
+təkrar çağırış eyni cavabı qaytarır, fərqli gövdə ilə eyni açar `409` yaradır; saxlama müddəti 24 saat. §4.1 və §5.1
+nümunələrindəki başlıq bu hədəfi göstərir.
 
 ## 6.3 Versiyalaşdırma
 
-Yol əsaslı: `/api/v1`. Uyğunluğu pozan dəyişiklik `/v2` açır; `/v1` ən azı **12 ay**
+Sənədi verən API yol əsaslıdır: `/{slug}/api/v1`. Yerləşdirilmiş yoxlayıcının yolunda versiya prefiksi yoxdur (§4); versiyanı
+OpenAPI sənədi daşıyır (2026-11-19). Uyğunluğu pozan dəyişiklik `/v2` açır; `/v1` ən azı **12 ay**
 paralel işləyir ([[ARCH-0005]] §5.3 ilə eyni siyasət).
 
 ## 6.4 Autentifikasiya (şəxsiyyətin yoxlanılması)
@@ -563,7 +618,7 @@ paralel işləyir ([[ARCH-0005]] §5.3 ilə eyni siyasət).
 |---|---|
 | Operator paneli → sənədi verən API | OIDC + rol əsaslı səlahiyyət |
 | OBS → sənədi verən API | mTLS və ya müştəri etimadnaməsi |
-| Yoxlayan tərəf tətbiqi → yoxlayan tərəf API-si | API açarı və ya mTLS |
+| Yoxlayan tərəf tətbiqi → yoxlayan tərəf API-si | RP bəyanı: `Authorization: Bearer <tamga-rp+jwt>` — etibar siyahısındakı giriş sertifikatının açarı ilə imzalanmış, ən çox 60 saniyəlik, `jti`-si birdəfəlik JWS; paylaşılan gizli açar yoxdur (`createRpAssertion()`). Brauzer statusu yalnız status tokeni ilə (`X-Tamga-Status-Token` və ya `?st=`) oxuyur (2026-11-19) |
 | Giriş terminalı → yoxlayıcı `/terminal/verify` | Terminal açarı: terminal qrupuna bağlı, operatorun verdiyi daşıyıcı açar (`Authorization: Bearer`); açarsız sorğu 401 alır, token oxunmur (ADR-0065). |
 | Qurum Konsolu → yoxlayıcı `/terminal/keys` (qurum adından) | Quruma məhdudlaşdırılmış token: `x-tamga-institution` + `x-institution-token` = base64url(HMAC-SHA256(inzibatçı tokeni, `tamga-terminal-keys/v1:` + qurum)); qurum yalnız imzalı siyahıda (`terminal_groups[].institution_id`) özünə bağlı qrupların açarlarını alır, görür və ləğv edir ([[ADR-0069]] TG1–TG3). |
 | OID4VCI / OID4VP uc nöqtələri | Protokolun öz mexanizmi |
@@ -600,9 +655,11 @@ Nümunə saytın təqdimat başlatma ucu (`/sample-site/start`, yalnız sandbox)
 
 # Təhlükəsizlik və məxfilik qeydləri
 
-**Nəticə obyekti audit artefaktıdır.** Uzun müddət saxlanılır
-([[ARCH-0004]] §5.4: 12 ay). AP3 və AP4 birlikdə bu müddətin izləmə
-səthinə çevrilməsinin qarşısını alır.
+**Nəticə obyekti audit artefaktıdır.** AP3 və AP4 birlikdə saxlanılan qeydin izləmə səthinə çevrilməsinin qarşısını alır.
+İstinad yoxlayıcısı (`apps/verify`) audit qeydini bu gün **yalnız yaddaşda** saxlayır: son 1000 hadisə, proses yenidən
+başlayanda silinir; davamlı saxlama və [[ARCH-0004]] §5.4-dəki 12 aylıq müddət **planlaşdırılan** davranışdır, bu gün zəmanət
+deyil (2026-11-19). `/claims` oxunuşu da dəyər daşımayan hadisə kimi qeydə düşür (`claims.read`: yoxlama identifikatoru,
+siyasət, verilibmi).
 
 **`/claims` uc nöqtəsi ayrıca avtorizasiya olunur.** Yoxlama nəticəsini görmək ilə
 açıqlanan dəyərləri oxumaq fərqli səlahiyyətlərdir. İnsan resursları üzrə köməkçi "namizəd
@@ -647,6 +704,22 @@ xaricə açılmamalıdır.
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-19, ikinci; audit turu — versiya 1.0 qalır).** Audit turunda spesifikasiya mətni istinad tətbiqinə və
+OpenAPI sənədinə uyğunlaşdırıldı, davranış dəyişmədi: ilkin addım `T0` (§1.0) və təxəllüs addımı `P1` (§1.F) reyestrə daxil
+edildi; A-sırası, `policyCredentialId` yoxlaması və xarici siyahı istifadə edilə bilmədikdə `B2`-nin `INDETERMINATE`-i yazıldı
+(§1.A, §1.B, §1.3); `B3`-də növ təriflərinin paketə daxil olduğu yazıldı; nümunə nəticə real çıxış formasına gətirildi (§2.2);
+`410` və istehlak edilmiş təqdimata gələn cavabın `400`-ü əlavə edildi (§3); yoxlayıcının bazası, autentifikasiyası, oxunan sorğu
+sahələri və OpenAPI arayışı düzəldildi (§4, §4.1); AP6-nın yerləşdirilmiş yoxlayıcıda təqdimat açılarkən yoxlandığı yazıldı
+(§4.4); xəta formatı, versiyalama və autentifikasiya cədvəli bugünkü servislərə görə yazıldı (§6.1, §6.3, §6.4).
+
+**Versiya qeydi (2026-11-19; audit turu — versiya 1.0 qalır).** Protokol audit turu: oxuna bilməyən
+`status` girişi `D1`-də RƏDD EDİLİR (§1.D); mdoc-da gələcək tarixli `signed` `A3`-də, `validFrom` < `signed` `A7`-də RƏDD
+EDİLİR (§1.A; ZK təqdimatında `signed` gizli olduğundan bu yoxlama tətbiq edilmir — ZK yolunda zaman yoxlaması sübut anı və
+sertifikatdır); `REVOKED` tip `B2`-də RƏDD EDİLİR; status siyahısının ölçüsü `bits` ilə məhdudlaşır və aşma `D4`
+INDETERMINATE-dir (§1.D); etibar siyahısı köhnə olduqda `503` (§3); siyasət nümunəsi T0-dan keçəcək şəkildə düzəldildi (§4.4);
+`Idempotency-Key` planlaşdırılan kimi işarələndi (§6.2); audit qeydinin saxlanması bugünkü yaddaşdaxili davranışla yazıldı
+(Təhlükəsizlik qeydləri).
 
 **Versiya qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə — davranış dəyişmədi).** Sənəd–kod yoxlamasından qalan üç
 uyğunsuzluq sənəd tərəfində bağlandı və qərar sənədlərinə bağlandı: ZK təqdimatında `C1`/`C2`-nin sübut anına görə soruşulması

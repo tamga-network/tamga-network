@@ -208,7 +208,24 @@ export async function resolveOffer(
   const r = await http(parsed.offerUri!);
   if (r.status === 404) throw new WalletError("offer_not_found", "This offer has been used or has expired (PR3).");
   if (r.status !== 200) throw new WalletError("issuer_error", `offer could not be fetched (${r.status})`);
-  return checkOffer(await readJson(r, "issuer"));
+  const offer = checkOffer(await readJson(r, "issuer"));
+  // Güvenlik incelemesi 2026-11-18: adresle çekilen teklifin `credential_issuer`'ı da https olmalı (gömülü teklifteki kuralla
+  // aynı). http yalnız teklif adresi de http ise — bu yalnız `parseOffer`'ın açık yerel geliştirme izniyle mümkündür — ve
+  // yalnız yerel geliştirme adresine.
+  if (!isAllowedWebAddress(offer.credential_issuer, !String(parsed.offerUri).startsWith("https://")))
+    throw new WalletError("invalid_offer", "credential_issuer must use https");
+  return offer;
+}
+/**
+ * Güvenlik incelemesi 2026-11-18: kurumun nonce ve belge uçları https olmalı (kopyalar ve erişim belirteci açık kanaldan gitmez).
+ * http yalnız kurumun kendisi http ise (yerel geliştirme) ve yalnız yerel geliştirme adresine — belirteç ucundaki kuralla aynı.
+ */
+function checkIssuerEndpoints(issuer: string, md: IssuerMetadata): void {
+  const localDev = !issuer.startsWith("https://");
+  if (!isAllowedWebAddress(md.credential_endpoint, localDev))
+    throw new WalletError("issuer_error", "credential_endpoint must use https");
+  if (md.nonce_endpoint !== undefined && !isAllowedWebAddress(md.nonce_endpoint, localDev))
+    throw new WalletError("issuer_error", "nonce_endpoint must use https");
 }
 /** RFC 8414 yol kuralı: https://issuer.tamga.network/bilgi → https://issuer.tamga.network/.well-known/openid-credential-issuer/bilgi */
 export function issuerMetadataUrl(credentialIssuer: string): string {
@@ -220,7 +237,8 @@ export const SIGNED_METADATA_TYP = "openidvci-issuer-metadata+jwt";
 /**
  * Metadata. `signerFingerprints` verilirse (kurumun güven listesindeki belge imza sertifikası parmak izleri) imzalı metadata
  * istenir (OpenID4VCI §12.2.3, ISSU_32): imza, `typ`, imzacının listede olması, `sub` = issuer ve süre denetlenir; imzalı yanıt
- * doğrulanamazsa metadata KULLANILMAZ. Kurum imzalı metadata sunmuyorsa (JSON döner) imzasız metadata ile devam edilir.
+ * doğrulanamazsa metadata KULLANILMAZ. İmzalı metadata istenip imzasız yanıt (JSON) gelirse de KULLANILMAZ (güvenlik incelemesi
+ * 2026-11-18: sessiz düşüş, imzacı denetimini atlatırdı); imzalı metadata sunmayan kurum için `signerFingerprints` verilmez.
  */
 export async function fetchIssuerMetadata(
   credentialIssuer: string,
@@ -256,6 +274,11 @@ export async function fetchIssuerMetadata(
       throw new WalletError("issuer_error", "signed issuer metadata: expired or not yet valid");
     md = p;
   } else {
+    if (signed)
+      throw new WalletError(
+        "issuer_error",
+        "signed issuer metadata was requested but the issuer sent unsigned metadata",
+      );
     try {
       md = JSON.parse(body) as IssuerMetadata;
     } catch {
@@ -270,6 +293,7 @@ export async function fetchIssuerMetadata(
       "issuer_error",
       "issuer metadata incomplete (credential_endpoint / credential_configurations_supported)",
     );
+  checkIssuerEndpoints(credentialIssuer, md);
   return md;
 }
 /** Kopya sayısı: istenen (varsayılan 10) ile issuer'ın batch_size'ının küçüğü; en az 1. */
@@ -487,6 +511,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
   // nonce: yalnız nonce ucundan (OpenID4VCI 1.0 Final §7; token yanıtı c_nonce taşımaz). Tamga profilinde uç zorunlu
   // (SPEC-PROTO-0001 §2.1)
   if (!md.nonce_endpoint) throw new WalletError("issuer_error", "issuer metadata has no nonce_endpoint");
+  checkIssuerEndpoints(issuer, md); // metadata çağırandan gelmiş olabilir
   const nonceEndpoint = md.nonce_endpoint;
   const fetchNonce = async () => {
     const nr = await p.http(nonceEndpoint, { method: "POST" });

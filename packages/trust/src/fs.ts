@@ -6,18 +6,17 @@ import type { ListVersionMemory } from "./loader.js";
 import { ListTrustSource } from "./trust-source.js";
 
 /**
- * Dizin yükleyicisinin çapa günlüğü tazelik varsayılanı: 365 gün (çekirdek yükleyicinin varsayılanı 2 saattir — saatlik kadans).
- * Neden: bu yol geliştirme ve testte, saatlik heartbeat'in çalışmadığı yerel `dist/` klasörüyle de kullanılır; 2 saatlik sınır
- * orada her şeyi "bilinmiyor" yapardı. Varsayılanla çapa günlüğünün durması tazeliği BOZMAZ — tazelik yalnız listelerin
- * `next_update`'inden gelir. Saatlik heartbeat'in çalıştığı ortamda (üretim servisi) `anchorMaxAgeMs: 2 * 3600_000` verin
- * (SPEC-TRUST-0001 §6 uygulama notu).
+ * Dizin yükleyicisinin çapa günlüğü tazelik varsayılanı: 2 saat — çekirdek yükleyiciyle aynı (saatlik kadans; güvenlik incelemesi
+ * 2026-11-18). Önceki 365 günlük varsayılan, değeri vermeyi unutan üretim servisinde çapa günlüğü dursa da kaynağı taze sayardı.
+ * Saatlik heartbeat'in çalışmadığı yerel geliştirme ve test `dist/` klasöründe daha geniş sınırı AÇIKÇA verin (ör.
+ * `anchorMaxAgeMs: 365 * 86400_000`); o zaman çapa günlüğünün durması tazeliği bozmaz, tazelik listelerin `next_update`'inden gelir.
  */
-const DIR_ANCHOR_MAX_AGE_MS = 365 * 86400_000;
+const DIR_ANCHOR_MAX_AGE_MS = 2 * 3600_000;
 
 export interface DistLoadOptions {
   /**
-   * Çapa günlüğünün son satırı bundan eskiyse kaynak bayat sayılır. Verilmezse 365 gün (yukarıdaki not); saatlik heartbeat'li
-   * üretim ortamında 2 saat verin.
+   * Çapa günlüğünün son satırı bundan eskiyse kaynak bayat sayılır. Verilmezse 2 saat (yukarıdaki not); heartbeat'siz yerel
+   * geliştirme ve testte daha geniş değeri açıkça verin. Sonlu ve pozitif olmalı (değilse `RangeError`).
    */
   anchorMaxAgeMs?: number;
   /** ADR-0038: beklenen ağ (varsayılan "production"). */

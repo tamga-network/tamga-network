@@ -176,17 +176,22 @@ export async function verifyMdocFormat(
     // neden kendi sabit iletilerimizden biridir; iki noktadan sonraki ayrıntı (varsa kütüphane iletisi) nedene girmez (AP3)
     const shown = /^[^:]*/.exec(r)?.[0].trim() || "invalid";
     // imzalı ama okunamayan iptal girişi: D1 (status oku) RED — iptal denetimi atlanmaz (0.5.2)
+    // D1-2: ileri tarihli imza anı A3 (SD-JWT `iat` ile aynı adım); `validFrom` < `signed` geçerlilik penceresi kusuru A7
     const step: Step = /^status entry malformed/.test(r)
       ? "D1"
-      : /digest/.test(r)
-        ? "A5"
-        : /expired|not yet valid/.test(r)
+      : /^validityInfo\.signed is in the future/.test(r)
+        ? "A3"
+        : /^validityInfo\.validFrom is before signed/.test(r)
           ? "A7"
-          : /docType/.test(r)
-            ? "A8"
-            : /deviceKey/.test(r)
-              ? "A3"
-              : "A4";
+          : /digest/.test(r)
+            ? "A5"
+            : /expired|not yet valid/.test(r)
+              ? "A7"
+              : /docType/.test(r)
+                ? "A8"
+                : /deviceKey/.test(r)
+                  ? "A3"
+                  : "A4";
     return fail(step, `mdoc: ${shown}`);
   }
   // Sertifika, belgenin imzalandığı anda (validityInfo.signed) geçerli olmalı — SD-JWT A3 ile aynı kural (D-BC-3)
@@ -206,9 +211,14 @@ export async function verifyMdocFormat(
     return fail("A6", "device signature invalid (holder binding / SessionTranscript)");
   // açıklanan alanlar — tek namespace (Tamga profili); öğe adları mdoc tanımlayıcısıdır (AB PID kodlaması, ADR-0045: SD-JWT'deki
   // `birthdate` burada `birth_date`), `full-date`/`tdate` etiketleri dizgiye çevrilir
+  // Gösterilemeyen öğe değeri (ör. metin olmayan harita anahtarı) belgenin kalıcı içerik kusurudur: RED (AP2 — DOĞRULANAMADI değil)
   const claims: Record<string, unknown> = {};
-  for (const els of Object.values(v.claims ?? {}))
-    for (const [k, val] of Object.entries(els)) claims[k] = plainElementValue(val);
+  try {
+    for (const els of Object.values(v.claims ?? {}))
+      for (const [k, val] of Object.entries(els)) claims[k] = plainElementValue(val);
+  } catch {
+    return fail("A5", "element value not representable");
+  }
   return {
     ok: true,
     format: "mso_mdoc",

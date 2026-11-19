@@ -99,18 +99,23 @@ export class StatusBitstring {
   encodeLst(): string {
     return b64u(this.compressed());
   }
-  /** Açılmış liste en çok `MAX_CAPACITY` girdilik olabilir (zlib bombası: sınır aşılırsa açma durur, D6). */
+  /**
+   * Açılmış liste en çok `MAX_CAPACITY` girdilik olabilir; bayt sınırı listenin kendi `bits` değerinden hesaplanır. Sınır aşılırsa
+   * açma durur (zlib bombası) ve hata `D4: … unreadable` olur: boyut aşımı belge hakkında hüküm değildir, doğrulayıcı
+   * DOĞRULANAMADI der (denetim turu D1-8; önce D6 RED ve sınır hep 2 bitten hesaplanıyordu).
+   */
   static fromLst(lst: string, capacity = MIN_CAPACITY, bits: StatusBits = BITS): StatusBitstring {
     return StatusBitstring.fromCompressed(b64uToBytes(lst), capacity, bits);
   }
   static fromCompressed(data: Uint8Array, capacity = MIN_CAPACITY, bits: StatusBits = BITS): StatusBitstring {
-    const maxOutputLength = Math.ceil((MAX_CAPACITY * BITS) / 8);
+    if (!READ_STATUS_BITS.has(bits)) throw new Error("D6: bits not 1, 2, 4 or 8");
+    const maxOutputLength = Math.ceil((MAX_CAPACITY * bits) / 8);
     let bytes: Buffer;
     try {
       bytes = inflateSync(data, { maxOutputLength });
     } catch (e) {
       if ((e as { code?: string }).code === "ERR_BUFFER_TOO_LARGE" || e instanceof RangeError)
-        throw new Error("D6: status list exceeds the maximum size");
+        throw new Error("D4: status list unreadable (exceeds the maximum size)");
       throw new Error(`D6: status list could not be decompressed: ${(e as Error).message}`);
     }
     return new StatusBitstring(capacity, new Uint8Array(bytes), bits);
@@ -235,6 +240,7 @@ export async function verifyStatusListToken(
     throw new Error("D3: status token exp is not a number");
   if (opts.maxAgeSec !== undefined && now - payload.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
   if (typeof payload.exp === "number" && payload.exp < now) throw new Error("D4: status token expired");
+  noLifetimeBound(payload.exp, opts);
   return {
     format: "jwt",
     payload,
@@ -301,6 +307,7 @@ export async function verifyStatusListCwt(
     maxSkewSec: clockSkewOption("maxSkewSec", opts.maxSkewSec, STATUS_IAT_SKEW_SEC),
   });
   if (opts.maxAgeSec !== undefined && now - p.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
+  noLifetimeBound(p.exp, opts);
   return {
     format: "cwt",
     payload: {
@@ -350,8 +357,20 @@ export interface StatusTokenVerifyOptions {
   expectedSignerFingerprints: readonly string[] | ((fingerprintHex: string) => boolean);
   /** `iat` için saat kayması payı (sn; varsayılan `STATUS_IAT_SKEW_SEC`, en çok `MAX_CLOCK_SKEW_SEC`) */
   maxSkewSec?: number;
-  /** verilirse `now − iat` bu süreyi aşan token bayattır (D4) */
+  /**
+   * verilirse `now − iat` bu süreyi aşan token bayattır (D4). Token `exp` taşımıyorsa ZORUNLU (güvenlik incelemesi 2026-11-18):
+   * ikisi de yoksa D4.
+   */
   maxAgeSec?: number;
+}
+
+/**
+ * Güvenlik incelemesi 2026-11-18: ne `exp` ne de azami yaş (`maxAgeSec`) varsa belirteç sonsuza dek "taze" sayılırdı — eski bir
+ * "geçerli" görüntüsü tekrar oynatılabilirdi. Bu durumda tazelik kanıtlanamaz: D4 (doğrulayıcıda DOĞRULANAMADI).
+ */
+function noLifetimeBound(exp: unknown, opts: StatusTokenVerifyOptions): void {
+  if (exp === undefined && opts.maxAgeSec === undefined)
+    throw new Error("D4: status token has no exp and no maximum age was given");
 }
 
 function signerExpected(expected: StatusTokenVerifyOptions["expectedSignerFingerprints"], fp: string): boolean {
