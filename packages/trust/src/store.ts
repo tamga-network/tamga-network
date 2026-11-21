@@ -178,6 +178,19 @@ export class TrustStore {
   external_anchors = new Map<string, ExternalEntity>(); // sertifika parmak izi → pid/eaa/access_ca hizmeti
   external_wallet_keys = new Map<string, ExternalEntity>(); // sertifika parmak izi → dış cüzdan sağlayıcısı
   recognition = new Map<string, Set<string>>(); // state → recognized states
+  /**
+   * ADR-0093 UL2: isteğe bağlı (yükleyicinin `requiredStates`'i dışındaki) ülke listeleri — ülke → `next_update`. Bu listeler genel
+   * tazeliğe katılmaz; sorgu anında süresi geçmişse yalnız o ülkenin kurumlarına dair sorular UNKNOWN döner.
+   */
+  optional_national_deadlines = new Map<string, Date>();
+  /** ADR-0093 UL2: LOTL'da ACTIVE ama yüklenemeyen (verilmemiş, doğrulanamamış, geri sarılmış) isteğe bağlı ülke listeleri. */
+  unavailable_states = new Set<string>();
+  /** ADR-0093 (listeler arası yalıtım): kök CA, doğrulayıcı istemci kimliği ve şema → kaydı getiren liste ("lotl" ya da ülke). */
+  private ca_owner = new Map<string, string>();
+  private rp_client_owner = new Map<string, string>();
+  private schema_owner = new Map<string, string>();
+  /** ADR-0093 UL1: kurum imza sertifikasının (parmak izi) kayıtlı olduğu ülke — aynı sertifika ikinci bir listede olamaz */
+  private issuer_fp_owner = new Map<string, string>();
   private freshness: Freshness | null = null;
 
   /**
@@ -210,7 +223,10 @@ export class TrustStore {
   applyLotl(lotl: Lotl, raw: string, now: Date = new Date()) {
     this.lotl = lotl;
     this.lotlRaw = raw;
-    for (const s of lotl.schemas) this.schemas.set(s.schema_id, s);
+    for (const s of lotl.schemas) {
+      this.schemas.set(s.schema_id, s);
+      this.schema_owner.set(s.schema_id, "lotl");
+    }
     for (const wp of lotl.wallet_providers)
       if (wp.status === "ACTIVE")
         for (const fp of activeFps(wp.wua_signing_keys, now)) this.wallet_provider_keys.add(fp);
@@ -219,12 +235,40 @@ export class TrustStore {
     for (const n of lotl.national_lists)
       if (n.recognition) this.recognition.set(n.state_code, new Set(n.recognition.recognizes));
   }
+  /**
+   * ADR-0093 (listeler arası yalıtım): bir ülke listesi başka bir listenin kaydının yerine geçemez — kurum, kök CA, doğrulayıcı
+   * istemci kimliği ya da şema kimliği başka bir listede (şemada LOTL'da) zaten varsa liste UYGULANMAZ (hata). Kimlikler ülke koduyla
+   * türetildiğinden (SPEC-ID-0002) meşru iki liste aynı kimliği taşımaz. Aynı `dns_name` ADR-0075 devriyle birden çok listede
+   * görünebilir; o kural ayrıdır.
+   */
+  private assertIsolated(tl: NationalList) {
+    const cc = tl.state_code;
+    const clash = (kind: string, id: string, owner: string | undefined) => {
+      if (owner !== undefined && owner !== cc)
+        throw new Error(`tl-${cc}: ${kind} ${id} already listed by ${owner} — list not applied (ADR-0093)`);
+    };
+    for (const i of tl.issuers) {
+      clash("issuer", i.issuer_id, this.issuer_states.get(i.issuer_id));
+      // kimlik ülke koduyla türetildiğinden aynı sertifika başka listede başka kimlikle görünür — sertifikanın kendisi denetlenir;
+      // yoksa bir liste başka ülkenin kurumunu "iki ülkede" gösterip belgelerini RED'e düşürebilirdi
+      const fp = i.cert_fingerprint_sha256?.toLowerCase();
+      if (fp) clash("issuer certificate", fp, this.issuer_fp_owner.get(fp));
+    }
+    for (const ca of tl.root_cas) clash("root CA", ca.ca_id, this.ca_owner.get(ca.ca_id));
+    for (const rp of tl.relying_parties) clash("relying party", rp.client_id, this.rp_client_owner.get(rp.client_id));
+    for (const sc of tl.national_schemas) clash("schema", sc.schema_id, this.schema_owner.get(sc.schema_id));
+  }
   applyNationalList(tl: NationalList, raw: string) {
+    this.assertIsolated(tl);
     this.national.set(tl.state_code, { list: tl, raw });
-    for (const ca of tl.root_cas) this.root_cas.set(ca.ca_id, ca);
+    for (const ca of tl.root_cas) {
+      this.root_cas.set(ca.ca_id, ca);
+      this.ca_owner.set(ca.ca_id, tl.state_code);
+    }
     for (const i of tl.issuers) {
       this.issuers.set(i.issuer_id, i);
       this.issuer_states.set(i.issuer_id, tl.state_code);
+      if (i.cert_fingerprint_sha256) this.issuer_fp_owner.set(i.cert_fingerprint_sha256.toLowerCase(), tl.state_code);
       this.issuer_schema_auth.set(i.issuer_id, i.schema_authorizations);
     }
     const seenDns = new Set<string>();
@@ -233,6 +277,7 @@ export class TrustStore {
       if (seenDns.has(rp.dns_name)) this.relying_party_duplicates.add(rp.dns_name);
       seenDns.add(rp.dns_name);
       this.relying_parties.set(rp.client_id, rp);
+      this.rp_client_owner.set(rp.client_id, tl.state_code);
       const records = this.relying_party_records.get(rp.dns_name) ?? new Map<string, RelyingParty>();
       records.set(tl.state_code, rp);
       this.relying_party_records.set(rp.dns_name, records);
@@ -241,7 +286,10 @@ export class TrustStore {
       states.add(tl.state_code);
       this.relying_party_states.set(rp.dns_name, states);
     }
-    for (const s of tl.national_schemas) this.schemas.set(s.schema_id, s);
+    for (const s of tl.national_schemas) {
+      this.schemas.set(s.schema_id, s);
+      this.schema_owner.set(s.schema_id, tl.state_code);
+    }
     if (!this.recognition.has(tl.state_code)) this.recognition.set(tl.state_code, new Set([tl.state_code]));
     else this.recognition.get(tl.state_code)!.add(tl.state_code);
   }
@@ -381,6 +429,15 @@ export class TrustStore {
       this.list_view_anchors.set(r.file, { ...r });
       this.list_view_versions.set(listViewKey(r.file, r.source_file), r.source_version);
     }
+  }
+  /** Ülke şemasının listesi (LOTL şemasıysa ya da bilinmiyorsa undefined) — ADR-0093 UL2 tazelik denetimi için. */
+  /** ADR-0093: doğrulayıcı kaydının (istemci kimliği) geldiği ülke listesi. */
+  relyingPartyOwner(clientId: string): string | undefined {
+    return this.rp_client_owner.get(clientId);
+  }
+  schemaOwnerState(schemaId: string): string | undefined {
+    const o = this.schema_owner.get(schemaId);
+    return o === undefined || o === "lotl" ? undefined : o;
   }
   setFreshness(f: Freshness) {
     this.freshness = f;

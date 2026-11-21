@@ -90,6 +90,7 @@ import {
 } from "@tamga-network/trust";
 
 import { buildLote, contactFromRegistration, jadesHeader, type LoteContact, type LoteInput } from "./lote.js";
+import { buildPidLote, pidLoteHeader, pidSourceProblems, type PidProvidersSource } from "./pid-lote.js";
 import {
   buildTrustedListXml,
   sanitizeTrustedListInput,
@@ -1088,6 +1089,159 @@ async function writeWrprcs(
   writeAtomic(resolve(out, "index.json"), JSON.stringify({ generated_at: iso(now), items: index }, null, 2) + "\n");
 }
 
+/** Kaynaktaki kök CA kayıtları → imzalı liste kayıtları (`ca_id` listenin ülke koduyla; SPEC-ID-0002). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildRootCas(tlSrc: any, cc: string): any[] {
+  return (tlSrc.root_cas as Array<Record<string, unknown>>).map((r: Record<string, unknown>) => {
+    // ADR-0066 TX2 / SPEC-ID-0002 §8.1: kök CA'nın hizmet türü nitelikli (QC) iddiası taşımaz — ETSI `Svctype/CA/PKC`
+    if (/QC|granted|recognisedatnationallevel/i.test(String(r.service_type ?? "")))
+      throw new Error(
+        `root_cas ${String(r.cert)}: service_type ${String(r.service_type)} nitelikli iddia taşır (ADR-0066 TX2)`,
+      );
+    const c = cert(r.cert as string);
+    // hesaplanan alan (`ca_id`) kaynaktan alınmaz: kaynaktaki aynı adlı alan atılır, ezemez (CI3 ile aynı kural; izin listesi ayrıca reddeder)
+    const { cert: _c, ca_id: _id, ...rest } = r;
+    return { ca_id: computeCaId(cc, c.der), ...rest, cert_fingerprint_sha256: c.fp, cert_pem: c.pem.trim() };
+  });
+}
+/** Kaynaktaki kök CA adı → `ca_id` (aynı listenin kökleri). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function caIdMap(tlSrc: any, rootCas: Array<{ ca_id: string }>): Map<string, string> {
+  return new Map<string, string>(tlSrc.root_cas.map((r: { cert: string }, i: number) => [r.cert, rootCas[i].ca_id]));
+}
+/** Kaynaktaki kurum kayıtları → imzalı liste kayıtları (`issuer_id` listenin ülke koduyla; SPEC-ID-0002, ADR-0093 UL1). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildIssuers(sourceIssuers: any[], cc: string, caIdByRef: Map<string, string>): any[] {
+  return sourceIssuers.map((r: Record<string, unknown>) => {
+    const c = cert(r.cert as string);
+    const {
+      cert: _c,
+      status_cert,
+      parent_ca,
+      schema_authorizations,
+      ...rest
+    } = r as Record<string, unknown> & {
+      status_cert?: string;
+      parent_ca: string;
+      schema_authorizations: Array<{ vct: string; [k: string]: unknown }>;
+      delegate_keys?: Array<Record<string, unknown>>;
+    };
+    // S11: iptal listesi ayrı anahtarla imzalanır; doğrulayıcı imzacıyı bu kayıtla eşler (sahte liste HTTPS'e güvenmeden reddedilir)
+    const statusKey = status_cert
+      ? [{ fingerprint_sha256: cert(status_cert).fp, purpose: "status_list", status: "ACTIVE" }]
+      : [];
+    delete (rest as Record<string, unknown>).issuer_id; // hesaplanan alan kaynaktan alınmaz (ezilemez; izin listesi ayrıca reddeder)
+    return {
+      issuer_id: computeIssuerId(cc, c.der),
+      ...rest,
+      ...(statusKey.length ? { delegate_keys: [...((rest.delegate_keys as unknown[]) ?? []), ...statusKey] } : {}),
+      parent_ca_id: caIdByRef.get(parent_ca),
+      cert_fingerprint_sha256: c.fp,
+      // ADR-0024 K2: yetki türü sınıftan
+      entitlements: (rest.entitlements as string[] | undefined) ?? issuerEntitlements(String(rest.class)),
+      schema_authorizations: schema_authorizations.map(({ vct, ...a }) => ({
+        schema_id: computeSchemaId(vct),
+        vct,
+        ...a,
+      })),
+    };
+  });
+}
+
+/**
+ * ADR-0093 K3: kayıt klasöründeki öteki ülke listeleri (`tl-<cc>.source.json`, ana liste dışında). Her biri LOTL'daki kendi ETKİN
+ * yerinin imzacısıyla imzalanır (SPEC-TRUST-0001 TL7); doğrulayıcı kaydı taşımaz (kayıt sertifikaları ve erişim sertifikası işleri
+ * kayıt makamı olan ana listededir). Ana listeyle aynı denetimlerden geçer: bilinmeyen alan (TL11), işletmeci (TL1), kayıt verisi
+ * (ADR-0024). UL3: yalnız sandbox — gerçek ağda bir ülkenin listesi ancak o ülkeyle anlaşmayla açılır. Hiçbir dosya YAZMAZ: bütün
+ * denetimler ana liste imzalanmadan önce biter (yarım yayın yok); listeler ana listeden sonra, LOTL'dan önce yazılır.
+ */
+interface SecondaryList {
+  cc: string;
+  version: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rootCas: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  issuers: any[];
+  caIdByRef: Map<string, string>;
+  /** imzalanıp yazılacak liste ve imzacısı (ana liste yazıldıktan sonra, LOTL'dan önce) */
+  tl: Record<string, unknown>;
+  /** imza anahtarı denetimler sırasında yüklenir: eksik anahtar hiçbir liste yazılmadan yayını durdurur */
+  sign: Awaited<ReturnType<typeof signer>>;
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function prepareSecondaryLists(lotlSrc: any, primaryCc: string, now: Date): Promise<SecondaryList[]> {
+  const out: SecondaryList[] = [];
+  const files = readdirSync(REG)
+    .map((f) => /^tl-([a-z]{2})\.source\.json$/.exec(f))
+    .filter((m): m is RegExpExecArray => !!m && m[1].toUpperCase() !== primaryCc)
+    .sort((a, b) => a[1].localeCompare(b[1]));
+  for (const m of files) {
+    if (ENVIRONMENT !== "sandbox")
+      throw new Error(
+        `ADR-0093 UL3: ${m[0]} — gerçek ağda bir ülkenin listesi ancak o ülkeyle anlaşmayla açılır (önce ADR ve onay kaydı)`,
+      );
+    const tlSrc = readJson(resolve(REG, m[0]));
+    const cc = String(tlSrc.state_code);
+    if (cc !== m[1].toUpperCase()) throw new Error(`${m[0]}: state_code ${cc} dosya adıyla uyuşmuyor`);
+    const slot = (lotlSrc.national_lists as Array<Record<string, unknown>>).find((n) => n.state_code === cc);
+    const signers = (slot?.signing_certs as string[] | undefined) ?? [];
+    if (slot?.status !== "ACTIVE" || !signers.length)
+      throw new Error(`ADR-0093: ${m[0]} var ama LOTL'da ${cc} için imzacılı ETKİN yer yok`);
+    // TL7: her ülke listesinin kendi imzacısı — sertifika parmak iziyle (adla değil) LOTL imzacıları ve öteki bütün yerlerin
+    // (ana liste dahil) imzacılarıyla karşılaştırılır
+    const foreign = new Map<string, string>();
+    for (const o of lotlSrc.national_lists as Array<Record<string, unknown>>)
+      if (o.state_code !== cc)
+        for (const n of (o.signing_certs as string[] | undefined) ?? []) foreign.set(cert(n).fp, String(o.state_code));
+    for (const n of (lotlSrc.anchor_signing_certs as string[]) ?? []) foreign.set(cert(n).fp, "LOTL");
+    for (const n of signers) {
+      const who = foreign.get(cert(n).fp);
+      if (who === "LOTL")
+        throw new Error(`ADR-0093 K3: ${cc} listesi LOTL imzacısıyla imzalanamaz — kendi imzacısı olmalı (TL7)`);
+      if (who)
+        throw new Error(
+          `ADR-0093 K3: ${cc} listesinin imzacısı ${who} yerinin de imzacısı — kendi imzacısı olmalı (TL7)`,
+        );
+    }
+    // UL3: temsili yer devlet katılımı olmadığını işletici alanında yazar
+    const onBehalf = String((tlSrc.operator as { on_behalf_of?: unknown } | undefined)?.on_behalf_of ?? "");
+    if (!/no participation/i.test(onBehalf))
+      throw new Error(
+        `ADR-0093 UL3: ${m[0]} operator.on_behalf_of devlet katılımı olmadığını yazmalı ("no participation …")`,
+      );
+    if ((tlSrc.relying_parties ?? []).length)
+      throw new Error(`ADR-0093 K3: ${m[0]} doğrulayıcı kaydı taşıyamaz — doğrulayıcılar kayıt makamı olan listede`);
+    const fieldProblems = tlSourceFieldProblems(tlSrc);
+    if (fieldProblems.length)
+      throw new Error(`SPEC-TRUST-0001 TL11: ${m[0]} kayıt kaynağında bilinmeyen alan — ${fieldProblems.join("; ")}`);
+    const tl1 = listOperatorProblems([[`tl-${cc.toLowerCase()} operator`, tlSrc.operator]]);
+    if (tl1.length) throw new Error(`SPEC-TRUST-0001 TL1: ${tl1.join("; ")}`);
+    const rootCas = buildRootCas(tlSrc, cc);
+    const caIdByRef = caIdMap(tlSrc, rootCas);
+    const issuers = buildIssuers(tlSrc.issuers, cc, caIdByRef);
+    const reg = checkRegistrations([], issuers);
+    if (reg.errors.length) throw new Error(`ADR-0024: ${m[0]} eksik kayıt verisi — ${reg.errors.join("; ")}`);
+    const prev = await prevPublished(`tl-${cc.toLowerCase()}`, signers);
+    const tl = {
+      list_format_version: tlSrc.list_format_version,
+      list_type: "trusted_list",
+      environment: "sandbox",
+      state_code: cc,
+      version: prev.version + 1,
+      issued_at: iso(now),
+      next_update: iso(plusDays(now, tlSrc.next_update_days)),
+      previous_version_hash: prev.hash,
+      operator: tlSrc.operator,
+      root_cas: rootCas,
+      issuers,
+      relying_parties: [],
+      national_schemas: tlSrc.national_schemas ?? [],
+    };
+    out.push({ cc, version: tl.version, rootCas, issuers, caIdByRef, tl, sign: await signer(signers[0]) });
+  }
+  return out;
+}
+
 async function build() {
   mkdirSync(DIST, { recursive: true });
   const now = new Date();
@@ -1147,54 +1301,9 @@ async function build() {
   // ADR-0075 RO5: `dns_name` kaynakta tek ve liste biçiminde (harf büyüklüğü ve sondaki nokta sayılmadan yinelenemez)
   const rpNames = relyingPartyNameProblems(tlSrc.relying_parties);
   if (rpNames.length) throw new Error(`ADR-0075 RO5: ${rpNames.join("; ")}`);
-  const rootCas = tlSrc.root_cas.map((r: Record<string, unknown>) => {
-    // ADR-0066 TX2 / SPEC-ID-0002 §8.1: kök CA'nın hizmet türü nitelikli (QC) iddiası taşımaz — ETSI `Svctype/CA/PKC`
-    if (/QC|granted|recognisedatnationallevel/i.test(String(r.service_type ?? "")))
-      throw new Error(
-        `root_cas ${String(r.cert)}: service_type ${String(r.service_type)} nitelikli iddia taşır (ADR-0066 TX2)`,
-      );
-    const c = cert(r.cert as string);
-    // hesaplanan alan (`ca_id`) kaynaktan alınmaz: kaynaktaki aynı adlı alan atılır, ezemez (CI3 ile aynı kural; izin listesi ayrıca reddeder)
-    const { cert: _c, ca_id: _id, ...rest } = r;
-    return { ca_id: computeCaId(cc, c.der), ...rest, cert_fingerprint_sha256: c.fp, cert_pem: c.pem.trim() };
-  });
-  const caIdByRef = new Map<string, string>(
-    tlSrc.root_cas.map((r: { cert: string }, i: number) => [r.cert, rootCas[i].ca_id]),
-  );
-  const issuers = sourceIssuers.map((r: Record<string, unknown>) => {
-    const c = cert(r.cert as string);
-    const {
-      cert: _c,
-      status_cert,
-      parent_ca,
-      schema_authorizations,
-      ...rest
-    } = r as Record<string, unknown> & {
-      status_cert?: string;
-      parent_ca: string;
-      schema_authorizations: Array<{ vct: string; [k: string]: unknown }>;
-      delegate_keys?: Array<Record<string, unknown>>;
-    };
-    // S11: iptal listesi ayrı anahtarla imzalanır; doğrulayıcı imzacıyı bu kayıtla eşler (sahte liste HTTPS'e güvenmeden reddedilir)
-    const statusKey = status_cert
-      ? [{ fingerprint_sha256: cert(status_cert).fp, purpose: "status_list", status: "ACTIVE" }]
-      : [];
-    delete (rest as Record<string, unknown>).issuer_id; // hesaplanan alan kaynaktan alınmaz (ezilemez; izin listesi ayrıca reddeder)
-    return {
-      issuer_id: computeIssuerId(cc, c.der),
-      ...rest,
-      ...(statusKey.length ? { delegate_keys: [...((rest.delegate_keys as unknown[]) ?? []), ...statusKey] } : {}),
-      parent_ca_id: caIdByRef.get(parent_ca),
-      cert_fingerprint_sha256: c.fp,
-      // ADR-0024 K2: yetki türü sınıftan
-      entitlements: (rest.entitlements as string[] | undefined) ?? issuerEntitlements(String(rest.class)),
-      schema_authorizations: schema_authorizations.map(({ vct, ...a }) => ({
-        schema_id: computeSchemaId(vct),
-        vct,
-        ...a,
-      })),
-    };
-  });
+  const rootCas = buildRootCas(tlSrc, cc);
+  const caIdByRef = caIdMap(tlSrc, rootCas);
+  const issuers = buildIssuers(sourceIssuers, cc, caIdByRef);
   orgIdByDns.clear();
   const rps = tlSrc.relying_parties.map((r: Record<string, unknown>) => {
     const c = cert(r.access_cert as string);
@@ -1307,12 +1416,43 @@ async function build() {
     relying_parties: rps,
     national_schemas: tlSrc.national_schemas,
   };
+  // ADR-0093: öteki ülke listeleri — denetimler ana liste imzalanmadan ÖNCE (yarım yayın yok); yazım ana listeden sonra, LOTL'dan önce (K6)
+  const secondary = await prepareSecondaryLists(lotlSrc, cc, now);
+  // ADR-0093 UL1: aynı kurum sertifikası iki ülkenin listesinde olamaz (doğrulayıcı onu belirsiz sayıp reddeder)
+  {
+    const seenFp = new Map<string, string>();
+    const all: Array<[string, Array<{ slug: string; cert_fingerprint_sha256: string }>]> = [
+      [cc, issuers],
+      ...secondary.map((x): [string, Array<{ slug: string; cert_fingerprint_sha256: string }>] => [x.cc, x.issuers]),
+    ];
+    for (const [scc, list] of all)
+      for (const i of list) {
+        const other = seenFp.get(i.cert_fingerprint_sha256);
+        if (other && other !== scc)
+          throw new Error(`ADR-0093 UL1: ${i.slug} sertifikası hem ${other} hem ${scc} listesinde`);
+        seenFp.set(i.cert_fingerprint_sha256, scc);
+      }
+  }
+  // her ETKİN ülke yerinin bu yayında listesi olmalı (dosyasız yer her şeyi UNKNOWN yapar — ADR-0093 K6)
+  {
+    const built = new Set([cc, ...secondary.map((x) => x.cc)]);
+    const orphan = (lotlSrc.national_lists as Array<{ state_code: string; status: string }>)
+      .filter((n) => n.status === "ACTIVE" && !built.has(n.state_code))
+      .map((n) => n.state_code);
+    if (orphan.length)
+      throw new Error(`ADR-0093 K6: LOTL'da ETKİN ama kaynağı olmayan ülke listesi: ${orphan.join(", ")}`);
+  }
+  const caIdByState = new Map<string, Map<string, string>>([
+    [cc, caIdByRef],
+    ...secondary.map((x): [string, Map<string, string>] => [x.cc, x.caIdByRef]),
+  ]);
   // ADR-0087 AR3: iptal planı liste imzalanmadan ÖNCE (etkin kayıt iptal edilmiş sertifikayı gösteriyorsa hiçbir şey yayımlanmaz)
   const crlPlan = planAccessCrls(tlSrc.relying_parties, lotlSrc, cc, now);
   const s = await signer();
   writeVersioned(`tl-${cc.toLowerCase()}`, tl, await signJson(s, tl));
   await writeWrprcs(tl, lotlSrc, cc, now);
   if (crlPlan) await writeAccessCrls(crlPlan, now);
+  for (const x of secondary) writeVersioned(`tl-${x.cc.toLowerCase()}`, x.tl, await signJson(x.sign, x.tl));
   // ADR-0036 (yalnız sandbox kaynağında bulunur): kayıt defterinin kendi barındırdığı dış liste kaynakları (ör. OpenID uyum
   // öz-testi için test PID sağlayıcısının imzalı LoTE'si) yayına kopyalanır; `external-fetch` onları yayın adresinden çekip
   // LOTL'daki sabit imzacıya karşı doğrular (kopya doğrulanmadan kullanılmaz)
@@ -1323,6 +1463,7 @@ async function build() {
       if (/^[a-z0-9-]+\.(jws|xml)$/.test(f))
         writeAtomic(resolve(DIST, "external-src", f), readFileSync(resolve(extSrc, f), "utf8"));
   }
+  await writePidProviderLists(lotlSrc, now);
 
   // ---- lotl
   // Şema kayıt zamanı KALICIDIR: önceki yayımlanmış LOTL'dan (imzalı `lotl.jws`, imzası doğrulanmış — imzasız `lotl.json` kopyadan
@@ -1383,7 +1524,10 @@ async function build() {
         Object.entries(roles).map(([k, v]) => {
           if (v.cert) {
             const { cert: cref, ...rv } = v;
-            return [k, { ...rv, ca_id: caIdByRef.get(cref as string) }];
+            // ADR-0093: kök CA kimliği yerin ülkesiyle (aynı kök iki ülkede iki ayrı ca_id)
+            const caId = (caIdByState.get(String(n.state_code)) ?? caIdByRef).get(cref as string);
+            if (!caId) throw new Error(`lotl ${n.state_code} ${k}: ${cref} o ülke listesinin kök CA'ları arasında yok`);
+            return [k, { ...rv, ca_id: caId }];
           }
           // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) parmak iziyle yayınlanır
           if (Array.isArray(v.signing_certs)) {
@@ -1458,11 +1602,13 @@ async function build() {
   const rootFps = {
     note: "LOTL signing certificate fingerprints — the same values are published at tamga.network/trust-anchor and in the Trust Framework.",
     lotl_signing_keys: (lotlSrc.anchor_signing_certs as string[]).map((n) => keyEntry(n)),
-    national_root_cas: rootCas.map((r: { ca_id: string; legal_name: string; cert_fingerprint_sha256: string }) => ({
-      ca_id: r.ca_id,
-      legal_name: r.legal_name,
-      cert_fingerprint_sha256: r.cert_fingerprint_sha256,
-    })),
+    national_root_cas: [rootCas, ...secondary.map((x) => x.rootCas)]
+      .flat()
+      .map((r: { ca_id: string; legal_name: string; cert_fingerprint_sha256: string }) => ({
+        ca_id: r.ca_id,
+        legal_name: r.legal_name,
+        cert_fingerprint_sha256: r.cert_fingerprint_sha256,
+      })),
   };
   writeFileSync(resolve(DIST, "keys", "root-fingerprints.json"), JSON.stringify(rootFps, null, 2) + "\n");
   // Yalnız listenin gerçekten andığı sertifikalar ilan edilir (ADR-0042: gerçek ağda cüzdan sağlayıcı anahtarı yok — RESERVED
@@ -1518,7 +1664,7 @@ async function build() {
     .map((w) => (w.status === "ACTIVE" ? w.provider_id : `${w.provider_id}(${w.status})`))
     .join(",");
   changelog(
-    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}; issuers=${issuers.map((i: { slug: string; status: string }) => (i.status === "ACTIVE" ? i.slug : `${i.slug}(${i.status})`)).join(",")}; wallet_providers=${wps}; schemas=${schemasIndex.length}`,
+    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}${secondary.map((x) => `, tl-${x.cc.toLowerCase()} v${x.version}`).join("")}; issuers=${issuers.map((i: { slug: string; status: string }) => (i.status === "ACTIVE" ? i.slug : `${i.slug}(${i.status})`)).join(",")}; wallet_providers=${wps}; schemas=${schemasIndex.length}`,
   );
   console.log(
     JSON.stringify(
@@ -2249,6 +2395,72 @@ function externalListsFrom(src: unknown[]) {
  * denetler ve dist/external/<list_id>.jws (ETSI TS 119 602 LoTE) ya da .xml (ETSI TS 119 612 TL; özgün imzalı belge) olarak yazar.
  * Hata olursa eski kopya korunur (uyarı); Tamga listeleri etkilenmez.
  */
+/**
+ * ADR-0094 (yalnız sandbox): temsili PID makamlarının sağlayıcı listeleri (`pid-lote.ts`). Kaynak `pid-providers.source.json`
+ * yoksa (gerçek ağ) hiçbir şey yapılmaz; gerçek ağ kaynağında dosya bulunursa yayın durur (PP1). Her liste kendi imzacısıyla
+ * imzalanır; yayın adresine (`external-src/`, `external-fetch`'in çektiği yer) ve yayıncının kendi barındırdığı liste olduğu için
+ * doğrulanmış kopya klasörüne (`external/`, LOTL'daki sabit imzacıya karşı doğrulanarak) yazılır — yayından sonra `external-fetch`
+ * beklemeden yüklenir. Sıra numarası zamandan (geri sarma denetimi; aşağıda).
+ */
+async function writePidProviderLists(lotlSrc: Record<string, unknown>, now: Date) {
+  const file = resolve(REG, "pid-providers.source.json");
+  if (!existsSync(file)) return;
+  if (ENVIRONMENT !== "sandbox")
+    throw new Error("pid-providers.source.json yalnız sandbox kayıt defterinde bulunur (ADR-0094 PP1)");
+  const src = readJson(file) as PidProvidersSource;
+  const problems = pidSourceProblems(src);
+  if (problems.length) throw new RegistryError(problems);
+  const pointers = new Map(
+    ((lotlSrc.external_lists as Array<Record<string, any>> | undefined) ?? []).map((e) => [String(e.list_id), e]), // eslint-disable-line @typescript-eslint/no-explicit-any
+  );
+  mkdirSync(resolve(DIST, "external-src"), { recursive: true });
+  mkdirSync(resolve(DIST, "external"), { recursive: true });
+  for (const p of src.providers) {
+    const ptr = pointers.get(p.list_id);
+    if (!ptr)
+      throw new RegistryError([`pid provider ${p.list_id}: lotl.source.json external_lists içinde işaretçi yok (PP2)`]);
+    const signerCert = cert(p.list_signer);
+    const fps = new Set(
+      (ptr.signing_keys as Array<{ fingerprint_sha256: string; status: string }>)
+        .filter((k) => k.status === "ACTIVE")
+        .map((k) => k.fingerprint_sha256),
+    );
+    if (!fps.has(signerCert.fp))
+      throw new RegistryError([
+        `pid provider ${p.list_id}: işaretçinin imzacı parmak izi ${p.list_signer} ile uyuşmuyor`,
+      ]);
+    if (ptr.territory !== p.territory)
+      throw new RegistryError([`pid provider ${p.list_id}: işaretçinin territory'si ${String(ptr.territory)}`]);
+    const copy = resolve(DIST, "external", `${p.list_id}.jws`);
+    // Sıra numarası geri gidemez: yayın anının saniyesi, en az önceki kopyanın bir fazlası (kopya silinse ya da kurulum yenilense
+    // de okuyucunun geri sarma denetimi — `ext:<list_id>` sürüm belleği — yeni listeyi reddetmez)
+    let sequence = Math.floor(now.getTime() / 1000);
+    if (existsSync(copy)) {
+      try {
+        const prev = parseLote(
+          (await verifyJws(readFileSync(copy, "utf8").trim(), fps, { typ: null })).payload,
+        ).sequence;
+        sequence = Math.max(sequence, prev + 1);
+      } catch {
+        /* eski kopya bu imzacıyla doğrulanmıyor (anahtar yenilendi): zaman yeter */
+      }
+    }
+    const lote = buildPidLote(p, {
+      operatorName: src.operator.name,
+      sequence,
+      issuedAt: now,
+      nextUpdate: new Date(now.getTime() + src.next_update_days * 86_400_000),
+      rootDer: cert(p.root_cert).der,
+      statusDer: cert(p.status_cert).der,
+    });
+    const jws = await signJson(await signer(p.list_signer), lote, pidLoteHeader(signerCert.der, now));
+    // kendi ürettiğimizi de okuyucunun yoluyla doğrula (biçim + imza) — bozuksa yayın durur
+    parseLote((await verifyJws(jws, fps, { typ: null })).payload);
+    writeAtomic(resolve(DIST, "external-src", `${p.list_id}.jws`), jws + "\n");
+    writeAtomic(copy, jws + "\n");
+  }
+}
+
 async function externalFetch() {
   const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
   const lists = externalListsFrom(lotlSrc.external_lists ?? []);

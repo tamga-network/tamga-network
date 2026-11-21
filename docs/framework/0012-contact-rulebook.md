@@ -158,7 +158,7 @@ değildir. Doğrulayıcı kanonik hattı uygular (RB-RP-03); sonuç üç değerl
 
 | Şart | Değer |
 |---|---|
-| Belge veren | Yalnız Tamga Network kimlik servisi (`IDENTITY` · `EAA` · I2) |
+| Belge veren | Yalnız Tamga Network kimlik servisi (`IDENTITY` · `EAA` · I2). Sandbox'ta ayrıca kaynak kurumlar: kurgusal operatör telefon, kurgusal e-posta hizmeti e-posta belgesini kendi kaydından verir (kod yerine kurumun kaydı; [[ADR-0095]]) |
 | Kimlik doğrulama | Gerekmez (T0): belge yalnız sahipliği kanıtlar |
 | Sahiplik kanıtı | Tek kullanımlık 6 haneli kod e-postayla ya da SMS ile gider; doğru kod girilince belge verilir (CT1). Kod 10 dakika geçerli, en çok 5 deneme; akış başına en çok 3, adres başına saatte en çok 5 gönderim; kod yalnız özet olarak bellekte tutulur |
 | Akış | Kimlik belgesiyle aynı: [[t:OpenID4VCI]] yetkilendirme kodu + [[t:PAR]] + PKCE + cüzdan kanıtı (WIA, KA; RB-AP-10) |

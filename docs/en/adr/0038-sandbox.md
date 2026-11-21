@@ -126,3 +126,8 @@ self-registration in K7 changed with [[ADR-0041]] (institution test accounts) (2
 provider in K1/K6 changed with [[ADR-0042]] (2026-10-06): in the sandbox the wallet runs its wallet provider.
 
 **Note (2026-11-04):** the real institution name and the relationship wording in the 2026-10-06 note were removed ("an example university institution"); the decision content is unchanged (project management).
+
+**Note (2026-11-21):** with [[ADR-0093]] the sandbox LOTL opened representative Azerbaijan (`tl-az`) and Kazakhstan (`tl-kz`)
+lists; each is signed by its own test signer, its operator field states that there is no state participation, and the sandbox pages
+show that these institutions are on representative test lists. The sandbox root and the LOTL signer are unchanged (the values
+pinned in wallets stay the same).

@@ -33,6 +33,8 @@ export interface FormatOk {
   /** SD-JWT `_sd_alg` gövdede açıkça var mıydı; yoksa sha-256 varsayıldı — Tamga türünde zorunlu (C2), dış türde isteğe bağlı (B adımı) */
   sdAlgPresent?: boolean;
   issuerId: string;
+  /** ADR-0093 UL1: belge imzacısı (yaprak) sertifikasının SHA-256 parmak izi (onaltılık) — kurum kimliği güven kaynağından bununla çözülür. */
+  leafFingerprint: string;
   vct: string;
   /** SD-JWT `vct#integrity`; mdoc'ta yok → B4 atlanır (tip bütünlüğü docType + C2 şema yetkisiyle). */
   vctIntegrity: string | null;
@@ -223,6 +225,7 @@ export async function verifyMdocFormat(
     ok: true,
     format: "mso_mdoc",
     issuerId,
+    leafFingerprint: certFingerprintSha256Hex(leafDer),
     vct: dr.docType,
     vctIntegrity: null,
     anchorFingerprint,

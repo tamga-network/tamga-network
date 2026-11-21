@@ -34,6 +34,9 @@ const CASES: Array<[string, string]> = [
   ["rp-yolgezer", "car-rental-driving-21"],
   ["rp-gecekonak", "hotel-check-in"],
   ["rp-kampusyuva", "dormitory-application"],
+  // ADR-0094: PID ile seçenek senaryoları (kayıtta ayrı kullanım)
+  ["rp-sikkebank", "bank-account-opening-pid"],
+  ["rp-gecekonak", "hotel-check-in-pid"],
 ];
 const ready =
   CASES.every(([n]) => existsSync(resolve(PKI, `${n}.pkcs8.pem`))) &&

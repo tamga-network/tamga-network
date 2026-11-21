@@ -4,7 +4,7 @@ title: "Yoxlama xətti və API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 summary: >
   Yoxlamanın kanonik alqoritmini və issuer/verifier servislərinin HTTP səthini müəyyən edir. Əsas töhfə ADDIM KODLARI REYESTRİdir: A1…E4, dörd spesifikasiyaya paylanmış yoxlama addımlarının vahid normativ siyahısı. Bu kodlar `failed_step` sahəsində maşınla oxunan formada ötürülür, beləliklə "yoxlama uğursuz oldu" əvəzinə "C2-də dayandı — issuer bu sxem üçün səlahiyyətli deyil" demək mümkündür. İkinci qayda: HTTP status kodu yoxlama nəticəsini KODLAŞDIRMIR — rədd edilmiş credential uğurlu API çağırışıdır; 4xx yalnız nəqliyyat/sorğu xətasıdır. Üçüncüsü: nəticə üçqiymətlidir və INDETERMINATE ayrıca səbəb sahəsi daşıyır.
 translation_of: SPEC-API-0001
@@ -165,6 +165,14 @@ Qayda: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002
 `iss` claim-i yalnız **uzlaşma yoxlaması** üçün istifadə olunur: qeydiyyatdakı
 sənədi verən qurumun `metadataURI`-si ilə uyğun gəlməlidir; uyğun gəlmirsə RƏDD.
 
+**Hansı ölkənin `stateCode`-u (tətbiq qeydi, 2026-11-21, [[ADR-0093]]).** `stateCode` qurumun qeydiyyatda olduğu ölkə
+siyahısının kodudur, siyasətin ölkəsi deyil. Yoxlayıcı yüklənmiş hər ölkə siyahısı üçün identifikatoru hesablayır və həmin siyahıda
+axtarır: tək uyğunluq identifikatordur; bir neçə uyğunluq `A3b` ilə RƏDD-dir; heç bir uyğunluq yoxdursa və yüklənə bilməyən
+(çatışmayan, köhnəlmiş, yoxlanıla bilməyən) ölkə siyahısı varsa nəticə `C1`-də INDETERMINATE-dir, yoxdursa qurum siyahılarda
+deyil (`C1` RƏDD). Zəncir addımında (`A3`) da eyni prinsip keçərlidir: zəncir yüklənmiş köklərin heç birinə bağlanmırsa və
+yüklənə bilməyən ölkə siyahısı varsa nəticə INDETERMINATE-dir. Bir ölkə siyahısı başqa siyahının qurum, kök, etibar edən tərəf və
+ya sxem qeydinin yerini tuta bilməz; belə siyahı yüklənmir.
+
 **`iss` məcburidir (SD-JWT VC).** Tamga kataloqundakı növlərdə `iss` yoxdursa və ya boşdursa, nəticə `A3b` ilə RƏDD-dir; dəyər qurumun etibar siyahısındakı qeydinin `issuer_url` sahəsi ilə tam eyni olmalıdır. mdoc və ZK təqdimatında `iss` sahəsi yoxdur; bağ yalnız sertifikatdan qurulur. Xarici siyahıdakı qurumda ([[ADR-0036]]) qeyddə ünvan olmadığı üçün bu yoxlama tətbiq edilmir.
 
 **Yerli inkişaf bayrağı (`allowLocalIssuerUrls`).** Standart olaraq söndürülüb. Açıq olanda `iss` yerli ünvandırsa — `http://localhost` və ya 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 aralığında IPv4 ünvanı — qeyddəki ünvanla bərabərlik axtarılmır; eyni yumşaltma ləğv tokeninin `iss`-i üçün də keçərlidir. Ümumi IP ünvanı yerli sayılmır. Tamga Verify bu bayrağı yalnız dərc ünvanı `https` olmayanda açır; canlı yoxlayıcıda söndürülüb.
@@ -262,6 +270,8 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
 }
 ```
 
+**`issuer.state_code` (tətbiq qeydi, 2026-11-21).** Qurumun qeydiyyatda olduğu ölkə siyahısının kodudur ([[ADR-0093]] UL1), siyasətin ölkəsi deyil; tanınma (`C3`) siyasətin ölkəsinin bu ölkəni tanıyıb-tanımadığını soruşur. Xarici qurumda (xarici etibar siyahısı, [[ADR-0036]]) xarici siyahının `territory`-sidir (`EU` ola bilər; [[ADR-0094]] K7).
+
 **Nümunədəki `checks_skipped` (tətbiq qeydi, 2026-11-12).** Nümunə, istinad tətbiqinin (`@tamga-network/verifier`) audit qeydi yeri verilmiş SD-JWT VC təqdimatında qaytardığı nəticədir. İstinad tətbiqi bu gün iki addımı aparmır və hər təqdimatda `checks_skipped`-də bildirir: `A3c` (yarpaq sertifikatın CRL/OCSP sorğusu) və `B5` (`extends` zənciri). Təqdimatın formatında olmayan addımlar da `checks_skipped`-ə düşür: ZK olmayan hər təqdimatda `Z1` (2026-11-19); `P1` addım siyahısından kənardadır və heç vaxt `checks_skipped`-də görünmür (§1.F). Nəticə obyektində `failed_reason` həmişə var (qəbulda `null`); `freshness` etibar mənbəyinin növünü, versiyasını və yaşını daşıyır (`trust_source`, `trust_version`, `trust_age_sec`); `schema`-da versiya sahəsi yoxdur; `issuer.legal_name` etibar siyahısındakı qeyddən gəlir. Sahələrin sırası məna daşımır. `E4` audit qeydi yazıldığı üçün `checks_performed`-dədir; audit qeydi yeri verilməyibsə, o da `checks_skipped`-də görünür (§1.E, `E4`).
 
 | Sahə | Mənası |
@@ -297,6 +307,7 @@ Həmçinin aşağıdakı hallar `INDETERMINATE` verir, `REJECTED` vermir:
 
 - **Rədd səbəbi sabit mesajdır (2026-11-11):** `failed_reason` sənəddəki dəyəri (məs. `category`, `typ`, `_sd_alg`), cüzdanın göndərdiyi sərbəst mətni və ya kitabxana istisnasının mesajını daşımır; sahə **adını** daşıya bilər. Sənədlə gələn sertifikat və ya imza oxuna bilmirsə nəticə RƏDD-dir; sertifikatlar oxunduqdan sonrakı gözlənilməz xəta (çağıranın verdiyi lövbər zədəlidir, kitabxana xətası) `INDETERMINATE`-dir.
 - **İstifadə edilə bilməyən xarici siyahı ([[ADR-0036]] FD3):** zəncir verilən köklərin heç birinə bağlanmırsa (`A3`) və ya növ kataloqda yoxdursa və lövbər xarici quruma həll olunmursa (`B2`), istənən növə zamin ola biləcək xarici siyahı həmin an istifadə edilə bilmirsə (yüklənməyib və ya müddəti keçib), nəticə RƏDD deyil, `INDETERMINATE`/`INDEXER_STALE`-dir. Növ `A3`-də siyasətdən oxunur (imzası yoxlanmamış sənəddən deyil).
+- **İstifadə edilə bilməyən ölkə siyahısı ([[ADR-0093]] UL2; tətbiq qeydi 2026-11-21):** ixtiyari ölkə siyahısı (yoxlayıcının öz ölkəsindən başqa) çatışmırsa, köhnəlibsə, geri sarılıbsa və ya yoxlanıla bilmirsə: qurum identifikatoru yüklənmiş siyahılarda tapılmırsa (`C1`), zəncir verilən köklərin heç birinə bağlanmırsa (`A3`) və ya növ qeydiyyatda deyilsə və bu siyahının milli sxemi ola bilərsə (`B2`), nəticə `INDETERMINATE`/`INDEXER_STALE`-dir. Həmin ölkənin qurumuna dair C1–C3 cavabları da bilinmir.
 - **Hostinq edilən yoxlayıcıda cəhd həddi:** sahiblik sübutuna çatmadan `INDETERMINATE` olan cavablar da cəhd sayılır; təqdimat buna görə bağlanarsa nəticəsi `REJECTED` deyil, `INDETERMINATE`-dir və `indeterminate_reason` saxlanılır (AP2). Gözləyən təqdimatın `last_attempt` sahəsi cəhdin `outcome` və `indeterminate_reason` dəyərlərini də daşıyır. Yoxlama xəttinə daxil olmayan nəticələr (şəxsin rəddi, cəhd həddi) də audit qeydinə yazılır və E4 `checks_performed`-də görünür; audit qeydi həmişə qaytarılan nəticə ilə eyni çıxışı daşıyır. Cüzdanın xəta cavabındakı `error` yalnız OpenID4VP-nin müəyyən etdiyi kodlardan biridirsə qeydə düşür; başqa dəyər `wallet error` kimi yazılır.
 
 ## 2.4 `disclosed_claims` — yalnız adlar

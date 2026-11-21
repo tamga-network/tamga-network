@@ -129,3 +129,21 @@ representative test lists on behalf of Azerbaijan and Kazakhstan in the sandbox.
 # Status
 
 **Accepted — 2026-11-21** (project management approval). UL1–UL3 are binding.
+
+**Implementation notes (2026-11-21):**
+- Isolation between lists: the loader checks that every record's identifier is derived from the list's own state code
+  ([[SPEC-ID-0002]]); a list cannot take the place of another list's institution (identifier or signing certificate), root, relying
+  party or schema record (network schemas included) — such a list is not loaded; required lists load first, so the own state's
+  records are always kept. The publisher does not write the same institution certificate into two national lists (UL1), signs each
+  list with its own signer (signers compared by fingerprint), and all checks (loading the signing keys included) finish before any
+  list is written.
+- Relying party registration ([[ADR-0075]]): an optional list may carry relying parties only if its registrar role in the LOTL is
+  active (K3 is enforced by the loader too); relying party, terminal group and institution directory records of an unusable (stale,
+  rolled back) list do not count. The same client identifier cannot appear in two lists, so a cross-state handover uses an access
+  certificate of the new state.
+- Chain step: if the chain anchors to none of the loaded roots while a national list could not be loaded, the result is
+  INDETERMINATE (`A3`); at the schema step, an unregistered type that could be a national schema of an unusable list is INDETERMINATE
+  (`B2`). This is deliberately broad (the same principle as FD3); building the root set from the national lists is follow-up work.
+- The chain indexer's trust source does not yet resolve the institution with its state (the chain is off); it is made equivalent
+  before the chain is switched on.
+- The new Tamga Wallet core comes with the new package release (K6); until then the wallet loads only the TR list.

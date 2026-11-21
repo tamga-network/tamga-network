@@ -72,6 +72,8 @@ export interface VerifyCtx {
   done: Step[];
   skipped: Step[];
   issuerInfo: VerificationResult["issuer"];
+  /** ADR-0093 UL2: kurum yüklü listelerde yok ama şu ülke listeleri kullanılamıyor — Tamga kaydı yoksa sonuç "bilinmiyor". */
+  issuerUnresolved?: string[];
   schemaInfo: VerificationResult["schema"];
   disclosed: string[];
   claims: Record<string, unknown> | null;
@@ -142,12 +144,25 @@ export async function stepA(ctx: VerifyCtx): Promise<StepFail | undefined> {
     if (!a.indeterminate && a.failedStep === "A3" && /does not chain to any of the given roots$/.test(a.reason)) {
       const down = unavailableExternalList(input.trust, pc.vct_values ?? []);
       if (down) return indet("A3", "INDEXER_STALE", `external list ${down} stale or unavailable`);
+      // ADR-0093 UL2: kullanılamayan bir ülke listesinin kökü kök kümesinde olmayabilir — hüküm yok (FD3 ile aynı ilke)
+      const states = input.trust.unavailableStates?.() ?? [];
+      if (states.length) return indet("A3", "INDEXER_STALE", `national list ${states.join(", ")} stale or unavailable`);
     }
     return a.indeterminate ? indet(a.failedStep, a.indeterminate, a.reason) : reject(a.failedStep, a.reason);
   }
   ctx.done.push(...a.aDone);
   ctx.skipped.push(...a.aSkipped);
-  ctx.issuerInfo = { issuer_id: a.issuerId, state_code: input.policy.trust.state_code };
+  // ADR-0093 UL1 (A3b uygulama notu, SPEC-ID-0002): kurum kimliği imza sertifikasından ve kurumun KAYITLI olduğu ülke listesinin
+  // ülke kodundan — yüklü listelerde tam bir eşleşme; iki ülkede → RED; `iss` kaynak değildir. Kaynak çözemiyorsa (eski sürüm)
+  // eski türetme (politikanın ülkesi) kalır.
+  const res = input.trust.resolveIssuerId?.(a.leafFingerprint);
+  let issuerState = input.policy.trust.state_code;
+  if (res?.kind === "found") {
+    a.issuerId = res.issuerId;
+    issuerState = res.stateCode;
+  } else if (res?.kind === "ambiguous") return reject("A3b", "signing certificate listed in several national lists");
+  else if (res?.kind === "none" && res.unavailableStates.length) ctx.issuerUnresolved = res.unavailableStates;
+  ctx.issuerInfo = { issuer_id: a.issuerId, state_code: issuerState };
   ctx.a = a;
   ctx.pc = pc;
   // AP3/AP4: çağırana dönen değerler yalnız İSTENEN alanlardır; `cnf`, `status` (iptal sırası), `iss`, `iat` gibi teknik
@@ -253,6 +268,10 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
       // FD3: tür Tamga kataloğunda yok ve çapa bir dış kuruma çözülemedi — bu türe kefil dış liste kullanılamıyorsa RED değil
       const down = unavailableExternalList(input.trust, [a.vct]);
       if (down) return indet("B2", "INDEXER_STALE", `external list ${down} stale or unavailable`);
+      // ADR-0093 UL2: tür kullanılamayan bir ülke listesinin ulusal şeması olabilir (yüklenmiş ama bayat ya da hiç yüklenememiş)
+      const states = input.trust.unavailableStates?.() ?? [];
+      if (input.trust.schemaUnavailable?.(schemaId) || (!ext && states.length))
+        return indet("B2", "INDEXER_STALE", `national list ${states.join(", ") || "?"} stale or unavailable`);
       return reject("B2", "schema not registered");
     }
     if (ext.tri === "UNKNOWN") return indet("B2", "INDEXER_STALE", `external list ${ext.list_id} stale or unavailable`);
@@ -355,6 +374,12 @@ export function stepC(ctx: VerifyCtx): StepFail | undefined {
   const { input } = ctx;
   const a = ctx.a!;
   if (ctx.ext) return stepCExternal(ctx);
+  if (ctx.issuerUnresolved)
+    return indet(
+      "C1",
+      "INDEXER_STALE",
+      `issuer not in the loaded lists; ${ctx.issuerUnresolved.join(", ")} list unavailable`,
+    );
   const issuerRec = input.trust.issuer(a.issuerId);
   ctx.issuerRec = issuerRec;
   // A3b tutarlılığı (SPEC-API-0001 §1.2): issuerId sertifikadan; `iss` yalnız kayıtlı issuer_url ile tutarlılık için. Kayıt
@@ -419,6 +444,8 @@ function stepCExternal(ctx: VerifyCtx): StepFail | undefined {
   ctx.issuerRec = ext.issuer;
   ctx.issuerInfo = {
     ...ctx.issuerInfo!,
+    // ADR-0094 K7: dış kurumun ülkesi dış listenin `territory`'si (politikanın ülkesi değil; AB listesinde "EU")
+    state_code: ext.territory,
     category: ext.issuer.category,
     assurance: ext.issuer.assurance,
     class: ext.issuer.class,
@@ -952,6 +979,7 @@ async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<Format
     sdJwtTyp: r.typ,
     sdAlgPresent: r.sdAlgPresent,
     issuerId: r.issuerId,
+    leafFingerprint: r.leafFingerprint,
     vct: r.vct,
     vctIntegrity: r.vctIntegrity,
     anchorFingerprint: r.anchorFingerprint,

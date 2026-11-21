@@ -59,6 +59,12 @@ const canon = (v: unknown): unknown =>
 const eqVal = (a: unknown, b: unknown) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
 /**
+ * SD-JWT türünün mdoc karşılığı. Tamga türlerinde docType = vct (D-CRED-5); AB PID'de iki biçimin adı ayrıdır (AB PID kural kitabı:
+ * SD-JWT VC `urn:eudi:pid:1`, mdoc `eu.europa.ec.eudi.pid.1` — ADR-0094 K5).
+ */
+export const mdocDocTypeFor = (vct: string): string => (vct === "urn:eudi:pid:1" ? "eu.europa.ec.eudi.pid.1" : vct);
+
+/**
  * Alınan mdoc'u SD-JWT kopyasıyla çapraz doğrular; tutarsızlıkta hata fırlatır (kopya reddedilir).
  * MD3: aynı issuer sertifikası · issuerAuth imzası · MD2: deviceKey = cnf · MD1: ortak alanlar birebir · status idx aynı.
  * Dönen `validity` (geçerlilik başlangıcı / bitişi, MSO'daki biçimiyle) ve `values` (çözülmüş öğe değerlerinin kararlı JSON'u)
@@ -75,7 +81,7 @@ export function verifyReceivedMdoc(
   const res = verifyIssuerSigned(bytes, {
     issuerPubRaw: p256PointFromCertDer(leaf),
     now: ctx.now === undefined ? undefined : epochSeconds(ctx.now),
-    expectedDocType: ctx.sdjwt.vct,
+    expectedDocType: mdocDocTypeFor(ctx.sdjwt.vct),
     clockSkewSec: MDOC_RECEIVE_SKEW_SEC, // telefonun saati belge verenden birkaç saniye geride olabilir
   });
   if (!res.valid) throw new Error(`mdoc reddedildi: ${res.reason}`);

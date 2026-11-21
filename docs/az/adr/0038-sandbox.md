@@ -119,3 +119,8 @@ hesabları) dəyişdi (2026-10-04). K1/K6-dakı test cüzdan provayderinin şəb
 sandbox-da cüzdan provayderini rəqəmsal cüzdanın özü işlədir.
 
 **Qeyd (2026-11-04):** 2026-10-06 qeydindəki real qurum adı və əlaqə ifadəsi çıxarıldı ("nümunə universitet qurumu"); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).
+
+**Qeyd (2026-11-21):** [[ADR-0093]] ilə sandbox LOTL-unda təmsili Azərbaycan (`tl-az`) və Qazaxıstan (`tl-kz`) siyahıları
+açıldı; hər biri öz test imzaçısı ilə imzalanır, operator sahəsi dövlət iştirakının olmadığını yazır və sandbox səhifələri bu
+qurumların təmsili test siyahılarında olduğunu göstərir. Sandbox kökü və LOTL imzaçısı dəyişmədi (cüzdanlardakı sabit dəyərlər
+eynidir).

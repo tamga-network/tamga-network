@@ -60,8 +60,14 @@
           "operated_by": "Tamga Network Sandbox (TEST)",
           "crl": {
             "issuers": [
-              { "ca": "access-ca-1", "uri": "http://crl.sandbox.tamga.network/access-ca-1.crl" },
-              { "ca": "root-ca", "uri": "http://crl.sandbox.tamga.network/root-ca.crl" }
+              {
+                "ca": "access-ca-1",
+                "uri": "http://crl.sandbox.tamga.network/access-ca-1.crl"
+              },
+              {
+                "ca": "root-ca",
+                "uri": "http://crl.sandbox.tamga.network/root-ca.crl"
+              }
             ]
           }
         },
@@ -73,7 +79,79 @@
       },
       "recognition": {
         "mode": "unilateral",
-        "recognizes": ["TR"]
+        "recognizes": ["TR", "AZ", "KZ"]
+      }
+    },
+    {
+      "state_code": "AZ",
+      "status": "ACTIVE",
+      "membership": "TDT_MEMBER",
+      "list_url": "https://trust.sandbox.tamga.network/tl-az.jws",
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "status": "provisional",
+        "on_behalf_of": "Representative test slot for Azerbaijan — no participation or endorsement by the state of Azerbaijan (ADR-0093, ADR-0038)"
+      },
+      "signing_certs": ["tl-signer-az-1"],
+      "roles": {
+        "registrar": {
+          "status": "RESERVED"
+        },
+        "tlso": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        },
+        "pid_provider": {
+          "status": "RESERVED"
+        },
+        "access_ca": {
+          "status": "RESERVED"
+        },
+        "national_root_ca": {
+          "status": "ACTIVE",
+          "cert": "root-ca",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        }
+      },
+      "recognition": {
+        "mode": "unilateral",
+        "recognizes": ["AZ", "TR", "KZ"]
+      }
+    },
+    {
+      "state_code": "KZ",
+      "status": "ACTIVE",
+      "membership": "TDT_MEMBER",
+      "list_url": "https://trust.sandbox.tamga.network/tl-kz.jws",
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "status": "provisional",
+        "on_behalf_of": "Representative test slot for Kazakhstan — no participation or endorsement by the state of Kazakhstan (ADR-0093, ADR-0038)"
+      },
+      "signing_certs": ["tl-signer-kz-1"],
+      "roles": {
+        "registrar": {
+          "status": "RESERVED"
+        },
+        "tlso": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        },
+        "pid_provider": {
+          "status": "RESERVED"
+        },
+        "access_ca": {
+          "status": "RESERVED"
+        },
+        "national_root_ca": {
+          "status": "ACTIVE",
+          "cert": "root-ca",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        }
+      },
+      "recognition": {
+        "mode": "unilateral",
+        "recognizes": ["KZ", "TR", "AZ"]
       }
     }
   ],
@@ -211,6 +289,93 @@
       "approval": {
         "approved_at": "2026-10-13T00:00:00Z",
         "ref": "Project management approval 2026-10-13 (EU alignment review, decision 11: OpenID self-test)"
+      }
+    },
+    {
+      "list_id": "sandbox-pid-tr",
+      "territory": "TR",
+      "format": "etsi-lote-json",
+      "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-tr.jws",
+      "signing_keys": [
+        {
+          "fingerprint_sha256": "91d56829bf5bd341b3e679ecbc052a5e3d9a56355e0acca1e00a2d153c77283b",
+          "status": "ACTIVE"
+        }
+      ],
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "note": "Sandbox only (ADR-0094). Representative PID provider for Türkiye (National Identity Authority — Türkiye (representative)); the state does not participate in or endorse it. Own test root, not chained to the Tamga sandbox root (PP3); never in the real network's list (PP1)."
+      },
+      "status": "ACTIVE",
+      "scope": {
+        "entity_kinds": ["pid_provider"],
+        "vct": ["urn:eudi:pid:1", "eu.europa.ec.eudi.pid.1"],
+        "category": "IDENTITY",
+        "assurance": "I3",
+        "class": "PUB",
+        "recognized_by": ["TR", "AZ", "KZ"]
+      },
+      "approval": {
+        "approved_at": "2026-11-21T00:00:00Z",
+        "ref": "Project management approval 2026-11-21 (ADR-0094: one PID provider list per state)"
+      }
+    },
+    {
+      "list_id": "sandbox-pid-az",
+      "territory": "AZ",
+      "format": "etsi-lote-json",
+      "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-az.jws",
+      "signing_keys": [
+        {
+          "fingerprint_sha256": "e175f77b0465da3dffb87989520478cf986c0855bb15cdbd8d0fd425a08744e5",
+          "status": "ACTIVE"
+        }
+      ],
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "note": "Sandbox only (ADR-0094). Representative PID provider for Azerbaijan (National Identity Authority — Azerbaijan (representative)); the state does not participate in or endorse it. Own test root, not chained to the Tamga sandbox root (PP3); never in the real network's list (PP1)."
+      },
+      "status": "ACTIVE",
+      "scope": {
+        "entity_kinds": ["pid_provider"],
+        "vct": ["urn:eudi:pid:1", "eu.europa.ec.eudi.pid.1"],
+        "category": "IDENTITY",
+        "assurance": "I3",
+        "class": "PUB",
+        "recognized_by": ["TR", "AZ", "KZ"]
+      },
+      "approval": {
+        "approved_at": "2026-11-21T00:00:00Z",
+        "ref": "Project management approval 2026-11-21 (ADR-0094: one PID provider list per state)"
+      }
+    },
+    {
+      "list_id": "sandbox-pid-kz",
+      "territory": "KZ",
+      "format": "etsi-lote-json",
+      "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-kz.jws",
+      "signing_keys": [
+        {
+          "fingerprint_sha256": "cdd9bbd797fe322040d6928112055f374968a41141de1ffb69ad4c5a52ca802a",
+          "status": "ACTIVE"
+        }
+      ],
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "note": "Sandbox only (ADR-0094). Representative PID provider for Kazakhstan (National Identity Authority — Kazakhstan (representative)); the state does not participate in or endorse it. Own test root, not chained to the Tamga sandbox root (PP3); never in the real network's list (PP1)."
+      },
+      "status": "ACTIVE",
+      "scope": {
+        "entity_kinds": ["pid_provider"],
+        "vct": ["urn:eudi:pid:1", "eu.europa.ec.eudi.pid.1"],
+        "category": "IDENTITY",
+        "assurance": "I3",
+        "class": "PUB",
+        "recognized_by": ["TR", "AZ", "KZ"]
+      },
+      "approval": {
+        "approved_at": "2026-11-21T00:00:00Z",
+        "ref": "Project management approval 2026-11-21 (ADR-0094: one PID provider list per state)"
       }
     }
   ],

@@ -43,7 +43,11 @@ export interface IssueInput {
   signer: IssuerSigner;
   iss: string; // issuer_url (tutarlılık için; issuerId x5c'den türetilir — C15)
   vct: string; // urn:tamga:…
-  vctIntegrity: string; // sha256-… (zorunlu)
+  /**
+   * sha256-… — Tamga türlerinde (`urn:tamga:`) zorunlu (ADR-0010). Dış türlerde (ADR-0036: AB PID `urn:eudi:pid:1`, ADR-0094 sandbox
+   * temsili PID) verilmeyebilir: tür bütünlüğü dış listenin imzalı kaydından gelir, Tamga kataloğuna bağlanmaz.
+   */
+  vctIntegrity?: string;
   iat: number;
   /** geçerlilik başlangıcı (RFC 7519 `nbf`); verilirse açıkta yazılır. `iat`tan önce olamaz; ileri tarih = ARF "Issued" */
   nbf?: number;
@@ -58,6 +62,12 @@ export interface IssueInput {
    * (CIR 2026/1731 §4.2, ARF PID_21): `nationalities` gibi dizilerin her öğesi ayrı disclosure; dizi `{"...": özet}` taşır.
    */
   arrayElementSd?: readonly string[];
+  /**
+   * Üyeleri ayrı ayrı seçici açıklanan nesneler (iç içe seçici açıklama, RFC 9901 §4.2.6; AB PID `address{…}`, CIR 2026/1731 §4.2):
+   * nesne açıkta durur ve yalnız `_sd` özetlerini taşır, her üyesi ayrı disclosure. Kişi `address.locality`'yi ötekiler olmadan
+   * gösterebilir. Yalnız düz nesne (dizi değil); üyelerin kendisi yeniden iç içe açılmaz.
+   */
+  objectMemberSd?: readonly string[];
 }
 
 export interface IssueOutput {
@@ -87,11 +97,12 @@ const RESERVED = new Set([
 
 export async function issueSdJwtVc(input: IssueInput): Promise<IssueOutput> {
   if (!input.cnfJwk) throw new Error("C16: cnf zorunlu");
-  if (!input.vctIntegrity?.startsWith("sha256-")) throw new Error("vct#integrity zorunlu (ADR-0010)");
+  if (input.vctIntegrity !== undefined ? !input.vctIntegrity.startsWith("sha256-") : input.vct.startsWith("urn:tamga:"))
+    throw new Error("vct#integrity zorunlu (ADR-0010)");
   const plain: Record<string, unknown> = {
     iss: input.iss,
     vct: input.vct,
-    "vct#integrity": input.vctIntegrity,
+    ...(input.vctIntegrity !== undefined ? { "vct#integrity": input.vctIntegrity } : {}),
     iat: input.iat,
   };
   if (input.nbf !== undefined) {
@@ -107,8 +118,23 @@ export async function issueSdJwtVc(input: IssueInput): Promise<IssueOutput> {
   const disclosures: Disclosure[] = [];
   const elementSd = new Set(input.arrayElementSd ?? []);
   const elementDisclosures = new Set<Disclosure>();
+  const memberSd = new Set(input.objectMemberSd ?? []);
   for (const [name, raw] of Object.entries(input.claims)) {
     if (RESERVED.has(name)) throw new Error(`reserved claim name: ${name}`);
+    if (memberSd.has(name)) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw))
+        throw new Error(`objectMemberSd: ${name} is not a plain object`);
+      // iç içe: her üye ayrı disclosure (kök `_sd`'ye girmez — nesnenin kendi `_sd`'sinde), nesne açıkta
+      const members = Object.entries(raw as Record<string, unknown>).map(([k, v]) => {
+        if (RESERVED.has(k)) throw new Error(`reserved claim name: ${name}.${k}`);
+        const d = makeDisclosure(k, v);
+        disclosures.push(d);
+        elementDisclosures.add(d);
+        return d.digest;
+      });
+      plain[name] = { _sd: members.sort() };
+      continue;
+    }
     let value = raw;
     if (elementSd.has(name) && Array.isArray(raw)) {
       // dizi öğeleri önce: her biri ayrı disclosure, dizide yerini özeti tutar (sıra korunur)

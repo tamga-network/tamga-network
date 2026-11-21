@@ -40,7 +40,7 @@ seçici açıklamalı, cihaza bağlı bir belge olarak taşımasını sağlamak:
 yaş ya da "geçerli kimlik var mı" sorar, kişi yalnız gerekeni açar.
 
 **Statü.** Kimlik belgesi **PID değildir**: Tamga'nın geçici olarak verdiği, nitelikli olmayan bir **[[t:EAA]]**'dır
-([[ADR-0011]], [[ADR-0022]]); [[t:trust-list|güven listesinde]] `pid_providers[]` boş kalır. Devlet sağlayıcısı atanınca yeni belge
+([[ADR-0011]], [[ADR-0022]]); [[t:trust-list|güven listesinde]] `pid_providers[]` boş kalır (sandbox'ta üç temsili ulusal kimlik makamı AB PID biçiminde PID verir; ayrı sağlayıcı listesinde, gerçek ağ değişmez — [[ADR-0094]]). Devlet sağlayıcısı atanınca yeni belge
 verilmez ve kayıt halefe devredilir (§4.7). Sürücü belgesi bilgisi **resmî sürücü belgesi değildir, [[t:mDL]] değildir** (§4.8).
 
 Teknik tanım [[SPEC-ID-0003]] §9 ve şema kataloğundadır; çelişkide onlar geçerlidir. Bu rulebook yeni kural koymaz;

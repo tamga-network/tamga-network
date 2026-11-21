@@ -238,6 +238,36 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
     expect(resp.every((b) => b === 0)).toBe(true);
   });
 
+  it("ADR-0093 UL1: kurum kimliği güven kaynağından; iki ülkede → geçersiz; kullanılamayan ülke → bilinmiyor", async () => {
+    const run = async (t: W2wTrust) => {
+      const { verifier } = await session(["given_name"], await wallet());
+      if (verifier.outcome !== "response") throw new Error(verifier.outcome);
+      return verifyW2wResponse(verifier.deviceResponse, verifier.transcript, {
+        profile: PROFILE,
+        trust: t,
+        requested: ["given_name"],
+        fetchStatus: async () => statusToken({}),
+        stateCode: "AZ", // eski türetme bu ülkeyle yanlış kimlik verirdi; çözülen kimlik kullanılır
+      });
+    };
+    const found = (await run({
+      ...trust,
+      resolveIssuerId: (fp) =>
+        fp === certFingerprintHex(issuerCert)
+          ? { kind: "found", issuerId, stateCode: "TR" }
+          : { kind: "none", unavailableStates: [] },
+    })) as { kind: string };
+    expect(found.kind).toBe("valid");
+    expect(await run({ ...trust, resolveIssuerId: () => ({ kind: "ambiguous", stateCodes: ["AZ", "TR"] }) })).toEqual({
+      kind: "invalid",
+      reason: "untrusted_issuer",
+    });
+    expect(await run({ ...trust, resolveIssuerId: () => ({ kind: "none", unavailableStates: ["KZ"] }) })).toEqual({
+      kind: "indeterminate",
+      reason: "trust_unknown",
+    });
+  });
+
   it("Status List'te iptal edilmiş belge geçersiz", async () => {
     const { verifier } = await session(["given_name"], await wallet());
     if (verifier.outcome !== "response") throw new Error(verifier.outcome);

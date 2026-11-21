@@ -12,6 +12,7 @@ import {
   type ListVersionMemory,
   type LoadReport,
 } from "./loader.js";
+import { b64ToBytes } from "./lote-reader.js";
 import type { TrustStore } from "./store.js";
 import { ListTrustSource } from "./trust-source.js";
 
@@ -55,6 +56,13 @@ export async function fetchListTrustSource(
      * alınamıyorsa. Sessizce daha az listeyle dönülmez — çağıran, kuralın işlediğini sanmasın.
      */
     additionalStates?: string[];
+    /**
+     * ADR-0093 K2 (0.9.0): `"all-active"` — LOTL'daki bütün ETKİN ülke listelerini de yükle. `stateCode` (ve `additionalStates`)
+     * zorunludur; ötekiler isteğe bağlıdır: alınamayan, doğrulanamayan, geri sarılmış ya da süresi geçmiş bir liste yalnız o ülkenin
+     * kurumlarını UNKNOWN yapar (UL2). İndirilecek dosyaları imzası henüz doğrulanmamış LOTL'dan seçer; hangi listenin SAYILACAĞINA
+     * yükleyici imzası doğrulanmış LOTL'a göre karar verir. Verilmezse yalnız `stateCode` + `additionalStates`.
+     */
+    nationalLists?: "all-active";
     now?: Date;
     /** Çapa günlüğünü de yükle (doğrulayıcı sunucular: iptal listesi çapaları için gerekir). */
     anchors?: boolean;
@@ -97,14 +105,18 @@ export async function fetchListTrustSource(
       `additionalStates: not a two-letter state code: ${malformed.map((s) => `"${s}"`).join(", ")}`,
     );
   const extra = requested.filter((s) => s !== cc);
-  const [lotlJws, tlJws, anchorsJsonl, ...extraJws] = await Promise.all([
-    get("lotl.jws"),
+  const allActive = opts.nationalLists === "all-active";
+  const lotlJws = await get("lotl.jws");
+  // ADR-0093 K2: yalnız indirilecek dosyaları seçer (imza yükleyicide doğrulanır; LOTL'da olmayan liste sayılmaz)
+  const optional = allActive ? activeStatesOf(lotlJws).filter((s) => s !== cc && !extra.includes(s)) : [];
+  const fetchStates = [...extra, ...optional];
+  const [tlJws, anchorsJsonl, ...extraJws] = await Promise.all([
     get(`tl-${cc.toLowerCase()}.jws`).catch(() => ""),
     opts.anchors ? get("anchors.jsonl") : Promise.resolve(""),
-    ...extra.map((s) => get(`tl-${s.toLowerCase()}.jws`).catch(() => "")),
+    ...fetchStates.map((s) => get(`tl-${s.toLowerCase()}.jws`).catch(() => "")),
   ]);
   const nationalListJws: Record<string, string> = tlJws ? { [cc]: tlJws } : {};
-  extra.forEach((s, k) => {
+  fetchStates.forEach((s, k) => {
     if (extraJws[k]) nationalListJws[s] = extraJws[k];
   });
   const { store, report } = await loadTrustSetWith(
@@ -115,7 +127,8 @@ export async function fetchListTrustSource(
       rootFingerprints: opts.rootFingerprints.map((f) => f.toLowerCase()),
       now,
       skipAnchors: !opts.anchors,
-      states: [cc, ...extra],
+      // all-active: LOTL'daki bütün ETKİN listeler (imzalı LOTL'a göre), zorunlu olanlar kendi ülkesi + istenenler
+      ...(allActive ? { requiredStates: [cc, ...extra] } : { states: [cc, ...extra] }),
       anchorMaxAgeMs: opts.anchorMaxAgeMs,
       environment: opts.environment,
       versionMemory: opts.versionMemory,
@@ -161,7 +174,40 @@ export async function fetchListTrustSource(
   if (prev && (store.lotl.version < prev.lotl || tl.version < prev.tl))
     throw new TrustListError("trusted list older than a previously seen version (rollback)");
   seen.set(key, { lotl: Math.max(store.lotl.version, prev?.lotl ?? 0), tl: Math.max(tl.version, prev?.tl ?? 0) });
+  // ADR-0093 K2: isteğe bağlı listelerde geri sarma yalnız o ülkeyi kullanılamaz yapar (oturum içi bellek, liste başına)
+  for (const [s, { list }] of store.national) {
+    if (s === cc || extra.includes(s)) continue;
+    const k = `${base}|${cc}|tl-${s}`;
+    const p = seen.get(k);
+    if (p && list.version < p.tl) {
+      store.unavailable_states.add(s);
+      report.warnings.push(`tl-${s.toLowerCase()} older than a previously seen version (rollback) — not used`);
+      continue;
+    }
+    seen.set(k, { lotl: 0, tl: Math.max(list.version, p?.tl ?? 0) });
+  }
   // Saat donmaz (güvenlik incelemesi 2026-11-18): `now` yalnız YÜKLEME anıdır. Kaynağın saati gerçek zamanla ilerler — `now`
   // verildiyse ondan başlayıp geçen süre kadar ilerler; liste `next_update`'i geçince sorgular UNKNOWN olur.
   return { source: new ListTrustSource(store, advancingClock(opts.now)), store, report };
+}
+
+/**
+ * ADR-0093 K2: imzası HENÜZ doğrulanmamış LOTL'dan ETKİN ülke listelerinin kodları — yalnız hangi dosyaların indirileceğini seçmek
+ * için. Okunamazsa boş (o zaman yalnız zorunlu listeler indirilir; yükleyici eksikleri "kullanılamaz" işaretler).
+ */
+/** Bir LOTL'dan indirilecek en çok ülke listesi (TDT üye ve gözlemci yerleri bunun çok altında). */
+const MAX_NATIONAL_LISTS = 32;
+function activeStatesOf(lotlJws: string): string[] {
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(b64ToBytes(lotlJws.split(".")[1] ?? ""))) as {
+      national_lists?: Array<{ state_code?: unknown; status?: unknown }>;
+    };
+    // imzası henüz doğrulanmamış içerik: tekrarlar ayıklanır ve indirme sayısı sınırlıdır (hangi listenin sayılacağını imzalı LOTL seçer)
+    const codes = (payload.national_lists ?? [])
+      .filter((n) => n.status === "ACTIVE" && typeof n.state_code === "string" && /^[A-Z]{2}$/.test(n.state_code))
+      .map((n) => n.state_code as string);
+    return [...new Set(codes)].slice(0, MAX_NATIONAL_LISTS);
+  } catch {
+    return [];
+  }
 }

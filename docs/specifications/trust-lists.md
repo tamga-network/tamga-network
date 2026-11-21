@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -209,6 +209,16 @@ kaydı şu kuralla seçer; sonuç listelerin yükleme sırasından bağımsızd�
 3. Aksi hâlde (iptal edilmemiş iki kayıt, devir kaydı olmayan ya da başka ülkeyi gösteren iptal) ad **belirsizdir**: `null`,
    kapı grupları etkin değil (kapalı güvenli). Başka ülkede iptal sonrası yeniden kayıt (RO2) ağ düzeyinde kayıt gelene kadar
    bu yüzden belirsiz kalır.
+
+**Birden çok ülke listesi (uygulama notu, 2026-11-21, [[ADR-0093]]).** Yükleyiciye zorunlu ülkeler (`requiredStates`, kendi
+ülkesi) verilirse öteki ETKİN listeler isteğe bağlıdır: eksik, bayat, geri sarılmış (geri sarma belleği liste başına) ya da
+doğrulanamaz liste yüklenmez ve yalnız o ülkeye dair sorular UNKNOWN döner; genel tazeliği bozmaz. Zorunlu liste yüklenmezse kaynak
+sağlıksızdır. Listeler arası yalıtım: her kurum ve kök CA kimliği listenin kendi ülke koduyla türetilmiş olmalı ([[SPEC-ID-0002]]);
+bir liste başka listenin kurum (kimlik ya da sertifika), kök, doğrulayıcı istemci kimliği ya da şema kaydını (ağ şemaları dahil)
+taşıyamaz — taşıyan liste yüklenmez (zorunluysa yükleme durur). Bu yüzden ülkeler arası doğrulayıcı devri ([[ADR-0075]]) yeni
+ülkenin erişim sertifikasıyla (yeni istemci kimliği) yapılır. İsteğe bağlı liste doğrulayıcı kaydını ancak LOTL'daki kayıt makamı
+rolü etkinse taşıyabilir; kurumları yalnız kendi kök CA'sına bağlanır. Kurum kimliği sertifikadan, kayıtlı olduğu listenin ülke
+koduyla çözülür (`resolveIssuerId`).
 
 ---
 

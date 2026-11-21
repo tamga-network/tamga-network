@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -168,6 +168,14 @@ valid with its own certificate, the chain is valid, `iss` is forged.
 Rule: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002]]. The `iss` claim is used only for a
 **consistency check**: it must match the registered issuer's `metadataURI`; if it does not, REJECT.
 
+**Which state's `stateCode` (implementation note, 2026-11-21, [[ADR-0093]]).** `stateCode` is the code of the national list the
+institution is registered in, not the policy's state. The verifier computes the identifier for every loaded national list and looks
+it up in that list: a single match is the identifier; several matches are REJECTED at `A3b`; with no match, the result is
+INDETERMINATE at `C1` if a national list could not be loaded (missing, stale or unverifiable), otherwise the institution is not
+listed (`C1` REJECTED). The same principle applies at the chain step (`A3`): if the chain anchors to none of the loaded roots while
+a national list could not be loaded, the result is INDETERMINATE. A national list cannot take the place of another list's
+institution, root, relying party or schema record; such a list is not loaded.
+
 **`iss` is mandatory (SD-JWT VC).** For types in the Tamga catalogue a missing or empty `iss` is REJECTED at `A3b`; the value must equal the `issuer_url` field of the institution's trust list record exactly. mdoc and ZK presentations have no `iss` field; the binding comes from the certificate alone. For an institution in an external list ([[ADR-0036]]) the record has no address, so this check is not applied.
 
 **Local development flag (`allowLocalIssuerUrls`).** Off by default. When on, an `iss` that is a local address — `http://localhost` or an IPv4 address in 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12 or 192.168.0.0/16 — need not equal the registered address; the same relaxation applies to the `iss` of the status token. A public IP address is not local. Tamga Verify turns the flag on only when its public address is not `https`; it is off on the live verifier.
@@ -267,6 +275,8 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 }
 ```
 
+**`issuer.state_code` (implementation note, 2026-11-21).** The code of the national list the institution is registered in ([[ADR-0093]] UL1), not the policy's state; recognition (`C3`) asks whether the policy's state recognises this state. For an external provider (external trusted list, [[ADR-0036]]) it is the external list's `territory` (may be `EU`; [[ADR-0094]] K7).
+
 **`checks_skipped` in the example (implementation note, 2026-11-12).** The example is the result the reference implementation (`@tamga-network/verifier`) returns for an SD-JWT VC presentation when an audit sink is given. The reference implementation does not perform two steps today and reports them in `checks_skipped` for every presentation: `A3c` (CRL/OCSP query for the leaf certificate) and `B5` (`extends` chain). Steps that do not exist in the presentation's format are listed in `checks_skipped` too: `Z1` for every non-ZK presentation (2026-11-19); `P1` is outside the step list and never appears in `checks_skipped` (§1.F). In the result object `failed_reason` is always present (`null` on acceptance); `freshness` carries the trust source's kind, version and age (`trust_source`, `trust_version`, `trust_age_sec`); `schema` has no version field; `issuer.legal_name` comes from the trust list record. Field order carries no meaning. `E4` is in `checks_performed` because the audit record was written; without an audit sink it also appears in `checks_skipped` (§1.E, `E4`).
 
 | Field | Meaning |
@@ -304,6 +314,7 @@ The following also give `INDETERMINATE`, not `REJECTED`:
 
 - **The reason is a fixed message (2026-11-11):** `failed_reason` carries no value from the credential (for example `category`, `typ`, `_sd_alg`), no free text sent by the wallet and no library exception message; it may carry a claim **name**. If a certificate or signature that came with the credential cannot be read the result is REJECTED; an unexpected error after the certificates were read (a corrupt anchor given by the caller, a library fault) is `INDETERMINATE`.
 - **Unavailable external list ([[ADR-0036]] FD3):** when the chain does not reach any of the given roots (`A3`), or the type is not in the catalogue and the anchor does not resolve to an external institution (`B2`), and an external list that could vouch for the requested type is unavailable at that moment (not loaded or expired), the result is not REJECTED but `INDETERMINATE`/`INDEXER_STALE`. At `A3` the type is read from the policy, not from the unverified credential.
+- **Unavailable national list ([[ADR-0093]] UL2; implementation note 2026-11-21):** if an optional national list (other than the verifier's own state) is missing, stale, rolled back or unverifiable: when the issuer identifier is not found in the loaded lists (`C1`), when the chain reaches none of the given roots (`A3`), or when the type is not registered and could be a national schema of that list (`B2`), the result is `INDETERMINATE`/`INDEXER_STALE`. C1–C3 answers about that state's institutions are unknown as well.
 - **Attempt limit on the hosted verifier:** responses that end `INDETERMINATE` before proof of possession also count as attempts; if the presentation closes because of them its result is `INDETERMINATE`, not `REJECTED`, and `indeterminate_reason` is kept (AP2). The `last_attempt` field of a pending presentation also carries the attempt's `outcome` and `indeterminate_reason`. Results produced outside the verification pipeline (the person declined, attempt limit) are written to the audit log too and E4 appears in `checks_performed`; the audit record always carries the same outcome as the returned result. The `error` of a wallet error response is recorded only when it is one of the codes defined by OpenID4VP; any other value is written as `wallet error`.
 
 ## 2.4 `disclosed_claims` — names only

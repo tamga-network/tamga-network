@@ -79,6 +79,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       cert_fingerprint_sha256: certFingerprintSha256Hex(reviewCert),
     };
     store.issuers.set(reviewId, rec);
+    store.issuer_states.set(reviewId, "TR"); // ADR-0093: kurumun ülkesi kaydın geldiği listeden
     store.issuer_schema_auth.set(reviewId, store.issuer_schema_auth.get(idRec.issuer_id));
     for (const [, v] of store.national)
       if (v.list.issuers.some((x: { slug: string }) => x.slug === "tamga-id")) v.list.issuers.push(rec);

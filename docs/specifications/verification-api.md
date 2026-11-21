@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -170,6 +170,13 @@ Kural: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002
 `iss` claim'i yalnızca **tutarlılık kontrolü** için kullanılır: kayıtlı
 belge verenin `metadataURI`'siyle eşleşmeli; eşleşmiyorsa RED.
 
+**Hangi ülkenin `stateCode`'u (uygulama notu, 2026-11-21, [[ADR-0093]]).** `stateCode` kurumun kayıtlı olduğu ülke listesinin
+kodudur, politikanın ülkesi değil. Doğrulayıcı yüklenmiş her ülke listesi için kimliği hesaplar ve o listede arar: tek eşleşme
+kimliktir; birden çok eşleşme `A3b` ile RED'dir; hiç eşleşme yoksa ve yüklenemeyen (eksik, bayat, doğrulanamayan) bir ülke listesi
+varsa sonuç `C1`'de INDETERMINATE'tir, yoksa kurum listelerde değildir (`C1` RED). Zincir adımında (`A3`) da aynı ilke geçerlidir:
+zincir yüklü köklerden hiçbirine bağlanmazken yüklenemeyen bir ülke listesi varsa sonuç INDETERMINATE'tir. Bir ülke listesi başka
+bir listenin kurum, kök, doğrulayıcı ya da şema kaydının yerine geçemez; böyle bir liste yüklenmez.
+
 **`iss` zorunludur (SD-JWT VC).** Tamga kataloğundaki türlerde `iss` eksik ya da boşsa sonuç `A3b` ile RED'dir; değer, kurumun güven listesindeki kaydının `issuer_url` alanıyla birebir aynı olmalıdır. mdoc ve ZK sunumunda `iss` alanı yoktur; bağ yalnız sertifikadan kurulur. Dış listedeki kurumda ([[ADR-0036]]) kayıtta adres olmadığından bu denetim uygulanmaz.
 
 **Yerel geliştirme bayrağı (`allowLocalIssuerUrls`).** Varsayılan kapalıdır. Açıkken `iss` yerel bir adresse — `http://localhost` ya da 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 aralığında bir IPv4 adresi — kayıttaki adresle eşitlik aranmaz; aynı gevşetme iptal belirtecinin `iss`'i için de geçerlidir. Genel bir IP adresi yerel sayılmaz. Tamga Verify bu bayrağı yalnız yayın adresi `https` değilken açar; canlı doğrulayıcıda kapalıdır.
@@ -270,6 +277,8 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 }
 ```
 
+**`issuer.state_code` (uygulama notu, 2026-11-21).** Kurumun kayıtlı olduğu ülke listesinin kodudur ([[ADR-0093]] UL1), politikanın ülkesi değildir; tanıma (`C3`) politikanın ülkesinin bu ülkeyi tanıyıp tanımadığını sorar. Dış kurumda (dış güven listesi, [[ADR-0036]]) dış listenin `territory`'sidir (`EU` olabilir; [[ADR-0094]] K7).
+
 **Örnekteki `checks_skipped` (uygulama notu, 2026-11-12).** Örnek, referans uygulamanın (`@tamga-network/verifier`) denetim kaydı yeri verilmiş bir SD-JWT VC sunumunda döndürdüğü sonuçtur. Referans uygulama iki adımı bugün yapmaz ve her sunumda `checks_skipped`'te bildirir: `A3c` (yaprak sertifikanın CRL/OCSP sorgusu) ve `B5` (`extends` zinciri). Sunumun biçiminde olmayan adımlar da `checks_skipped`'e girer: ZK olmayan her sunumda `Z1` (2026-11-19); `P1` adım listesinin dışındadır ve hiç `checks_skipped`'te görünmez (§1.F). Sonuç nesnesinde `failed_reason` her zaman vardır (kabulde `null`); `freshness` güven kaynağının türünü, sürümünü ve yaşını taşır (`trust_source`, `trust_version`, `trust_age_sec`); `schema`'da sürüm alanı yoktur; `issuer.legal_name` güven listesindeki kayıttan gelir. Alan sırası anlam taşımaz. `E4`, denetim kaydı yazıldığı için `checks_performed`'tedir; denetim kaydı yeri verilmediyse o da `checks_skipped`'te görünür (§1.E, `E4`).
 
 | Alan | Anlamı |
@@ -305,6 +314,7 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
 
 - **Ret nedeni sabit iletidir (2026-11-11):** `failed_reason` belgedeki bir değeri (ör. `category`, `typ`, `_sd_alg`), cüzdanın gönderdiği serbest metni ya da kütüphane istisnasının iletisini taşımaz; alan **adı** taşıyabilir. Belgeden gelen sertifika ya da imza okunamıyorsa sonuç RED'dir; sertifikalar okunduktan sonraki beklenmeyen hata (çağıranın verdiği çapa bozuk, kütüphane hatası) `INDETERMINATE`'tir.
 - **Kullanılamayan dış liste ([[ADR-0036]] FD3):** zincir verilen köklerin hiçbirine bağlanmıyorsa (`A3`) ya da tür katalogda yoksa ve çapa bir dış kuruma çözülemiyorsa (`B2`), istenen türe kefil olabilecek bir dış liste o an kullanılamıyor (yüklenememiş ya da süresi geçmiş) ise sonuç RED değil `INDETERMINATE`/`INDEXER_STALE`'dir. Tür, `A3`'te politikadan okunur (imzası doğrulanmamış belgeden değil).
+- **Kullanılamayan ülke listesi ([[ADR-0093]] UL2; uygulama notu 2026-11-21):** isteğe bağlı bir ülke listesi (doğrulayıcının kendi ülkesi dışındaki) eksik, bayat, geri sarılmış ya da doğrulanamazsa: kurum kimliği yüklü listelerde bulunamıyorsa `C1`; zincir verilen köklerin hiçbirine bağlanmıyorsa `A3`; tür kayıtlı değilse ve bu listenin ulusal şeması olabilirse `B2` — üçünde de sonuç `INDETERMINATE`/`INDEXER_STALE`'dir. O ülkenin kurumuna dair C1–C3 cevapları da bilinmiyordur.
 - **Barındırılan doğrulayıcıda deneme sınırı:** sahiplik kanıtına ulaşmadan `INDETERMINATE` olan yanıtlar da deneme sayılır; sunum bu yüzden kapanırsa sonucu `REJECTED` değil `INDETERMINATE`'tir ve `indeterminate_reason` korunur (AP2). Bekleyen sunumun `last_attempt` alanı denemenin `outcome` ve `indeterminate_reason` değerlerini de taşır. Doğrulama hattına girmeyen sonuçlar (kişinin reddi, deneme sınırı) da denetim kaydına yazılır ve E4 `checks_performed`'te görünür; denetim kaydı her zaman dönen sonuçla aynı çıktıyı taşır. Cüzdanın hata yanıtındaki `error` yalnız OpenID4VP'nin tanımlı kodlarından biriyse kayda geçer; başka değer `wallet error` olarak yazılır.
 
 ## 2.4 `disclosed_claims` — yalnızca adlar

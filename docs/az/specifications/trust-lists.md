@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -209,6 +209,17 @@ qeydi bu qayda ilə seçir; nəticə siyahıların yüklənmə ardıcıllığın
 3. Əks halda (ləğv edilməmiş iki qeyd, təhvil qeydi olmayan və ya başqa ölkəni göstərən ləğv) ad **qeyri-müəyyəndir**: `null`,
    keçid qrupları aktiv deyil (qapalı təhlükəsiz). Başqa ölkədə ləğvdən sonra yenidən qeydiyyat (RO2) şəbəkə səviyyəsində qeyd
    gələnə qədər buna görə qeyri-müəyyən qalır.
+
+**Bir neçə ölkə siyahısı (tətbiq qeydi, 2026-11-21, [[ADR-0093]]).** Yükləyiciyə məcburi ölkələr (`requiredStates`, öz ölkəsi)
+verilərsə, digər AKTİV siyahılar ixtiyaridir: çatışmayan, köhnəlmiş, geri sarılmış (geri sarma yaddaşı hər siyahı üçün ayrıdır)
+və ya yoxlanıla bilməyən siyahı yüklənmir və yalnız həmin ölkəyə dair suallar UNKNOWN qaytarır; ümumi təzəlik pozulmur. Məcburi
+siyahı yüklənməzsə mənbə sağlam deyil. Siyahılar arası təcrid: hər qurum və kök CA identifikatoru siyahının öz ölkə kodu ilə
+törədilməlidir ([[SPEC-ID-0002]]); bir siyahı başqa siyahının qurum (identifikator və ya sertifikat), kök, etibar edən tərəf müştəri
+identifikatoru və ya sxem qeydini (şəbəkə sxemləri daxil) daşıya bilməz — belə siyahı yüklənmir (məcburidirsə yükləmə dayanır).
+Buna görə ölkələrarası etibar edən tərəf devri ([[ADR-0075]]) yeni ölkənin giriş sertifikatı (yeni müştəri identifikatoru) ilə
+aparılır. İxtiyari siyahı etibar edən tərəf qeydini yalnız LOTL-dakı qeydiyyat orqanı rolu aktivdirsə daşıya bilər; onun
+qurumları yalnız öz kök CA-sına bağlanır. Qurum identifikatoru sertifikatdan, qeydiyyatda olduğu siyahının ölkə kodu ilə həll
+olunur (`resolveIssuerId`).
 
 ---
 

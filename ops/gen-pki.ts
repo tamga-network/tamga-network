@@ -126,6 +126,8 @@ mkdirSync(outDir, { recursive: true });
 
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const STATE = "TR";
+/** ADR-0093 K5: sandbox'ta TR dışındaki temsili ülke listelerinde kayıtlı kurumlar (pki.json kimlikleri için). */
+const SANDBOX_ISSUER_STATES: Record<string, string> = { "issuer-gunesli": "AZ", "issuer-dalaqala": "KZ" };
 /** ADR-0090: CRL ayrı alan adında (`crl.tamga.network` / `crl.sandbox.tamga.network`), `http` + `https`. */
 const TRUST_BASE = PROFILE === "sandbox" ? "https://trust.sandbox.tamga.network" : "https://trust.tamga.network";
 /** RFC 5280 §4.2.1.13 + ADR-0090 K3: tek dağıtım noktası, iki ad (önce http, sonra https); kritik değil. */
@@ -452,6 +454,21 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     ),
     await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR")),
     await ensure("registrar-1", selfSigned(4, "CN=Tamga Sandbox Registrar (TEST), O=Tamga Network Sandbox, C=TR")),
+    // ADR-0093 K3: temsili AZ ve KZ listelerinin kendi imzacıları (TL7; kökün altında değil, tl-signer-1 ile aynı desen)
+    await ensure(
+      "tl-signer-az-1",
+      selfSigned(
+        6,
+        "CN=Tamga Sandbox Trust List Signer - AZ representative slot (TEST), O=Tamga Network Sandbox, C=TR",
+      ),
+    ),
+    await ensure(
+      "tl-signer-kz-1",
+      selfSigned(
+        7,
+        "CN=Tamga Sandbox Trust List Signer - KZ representative slot (TEST), O=Tamga Network Sandbox, C=TR",
+      ),
+    ),
     // ADR-0066 K4: TS 119 612 XML liste imzacısı (§5.7.1) — O = sandbox listesinin SchemeOperatorName'i
     await ensure(
       "tl-xml-signer-1",
@@ -630,6 +647,35 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         "CN=Köprüyaka Kongre Merkezi - Status List (TEST), OU=Status, O=Köprüyaka Kongre Merkezi (TEST), 2.5.4.97=VATTR-0000000012, C=TR",
       ),
     ),
+    // ADR-0093 K5: temsili ülkelerin kurgusal üniversiteleri (Günəşli — AZ, Dalaqala — KZ); kendi ülke listelerinde kayıtlı
+    await ensure(
+      "issuer-gunesli",
+      signedByRoot(
+        1061,
+        "CN=Günəşli Texniki Universiteti (TEST), OU=Tələbə işləri, O=Günəşli Texniki Universiteti (TEST), 2.5.4.97=VATAZ-1000000001, C=AZ",
+      ),
+    ),
+    await ensure(
+      "issuer-gunesli-status",
+      signedByRoot(
+        1062,
+        "CN=Günəşli Texniki Universiteti - Status List (TEST), OU=Status, O=Günəşli Texniki Universiteti (TEST), 2.5.4.97=VATAZ-1000000001, C=AZ",
+      ),
+    ),
+    await ensure(
+      "issuer-dalaqala",
+      signedByRoot(
+        1071,
+        "CN=Dalaqala Universiteti (TEST), OU=Studentter isteri, O=Dalaqala Universiteti (TEST), 2.5.4.97=VATKZ-100000000001, C=KZ",
+      ),
+    ),
+    await ensure(
+      "issuer-dalaqala-status",
+      signedByRoot(
+        1072,
+        "CN=Dalaqala Universiteti - Status List (TEST), OU=Status, O=Dalaqala Universiteti (TEST), 2.5.4.97=VATKZ-100000000001, C=KZ",
+      ),
+    ),
     // ADR-0041 K4: test kurumları ara sertifika makamı — kökçe burada (kök anahtarının durduğu bilgisayarda) imzalanır; yol uzunluğu
     // 0 (yalnız yaprak verir), yalnız sertifika imzalar, ad kısıtı: yalnız `C=TR, OU=Tamga Sandbox Test Institutions` altındaki
     // konu adları (RFC 5280 §4.2.1.10, directoryName). Anahtarı sandbox sunucusuna gider (kök anahtarı gitmez); sunucuda liste
@@ -658,7 +704,92 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       });
       return { cert, privateKey: kp.privateKey };
     }),
+    ...(await pidAuthorityItems()),
   ];
+}
+
+/**
+ * ADR-0094 (yalnız sandbox): temsili ulusal kimlik makamları (adlar `apps/trust-publisher/registry-sandbox/pid-providers.source.json`
+ * ile aynı). Her makamın kendi test kökü (Tamga sandbox köküne BAĞLANMAZ — PP3),
+ * PID imza yaprağı ve iptal listesi yaprağı. Kök, makamın sağlayıcı listesini (ETSI TS 119 602 LoTE, `ops/sandbox-pid-lote.ts`)
+ * imzalar ve listede hizmet sertifikası olarak görünür. Kök özel anahtarı sunucuya gitmez (`upload.ps1` dışarıda bırakır); yapraklar
+ * sandbox kurumlarınınki gibi sunucuda (S-1). Adlar `pid-<cc>-*`: `issuer-` öneki yok (Tamga kurum profili ADR-0050 uygulanmaz).
+ */
+const PID_AUTHORITIES: Array<[cc: string, serialBase: number, name: string]> = [
+  ["tr", 7100, "Ulusal Kimlik Makamı — Türkiye (temsili)"],
+  ["az", 7200, "Ulusal Kimlik Makamı — Azerbaycan (temsili)"],
+  ["kz", 7300, "Ulusal Kimlik Makamı — Kazakistan (temsili)"],
+];
+async function pidAuthorityItems(): Promise<Item[]> {
+  const out: Item[] = [];
+  for (const [cc, base, name] of PID_AUTHORITIES) {
+    const C = cc.toUpperCase();
+    const org = `${name} (TEST)`;
+    const pidRoot = await ensure(`pid-${cc}-root`, async () => {
+      const kp = await keys();
+      const cert = await X509CertificateGenerator.createSelfSigned({
+        serialNumber: serial(base + 1),
+        name: `CN=${org} Test Root, O=${org}, OU=Tamga Network Sandbox, C=${C}`,
+        notBefore: new Date(),
+        notAfter: years(5),
+        signingAlgorithm: ALG,
+        keys: kp,
+        extensions: [
+          new BasicConstraintsExtension(true, 0, true),
+          new KeyUsagesExtension(
+            KeyUsageFlags.keyCertSign | KeyUsageFlags.cRLSign | KeyUsageFlags.digitalSignature,
+            true,
+          ),
+          await SubjectKeyIdentifierExtension.create(kp.publicKey),
+        ],
+      });
+      return { cert, privateKey: kp.privateKey };
+    });
+    const leaf =
+      (no: number, cn: string): Make =>
+      async (reuse?: Reuse) => {
+        const kp = reuse?.keys ?? (await keys());
+        const cert = await X509CertificateGenerator.create({
+          serialNumber: reuse?.serialHex ?? serial(no),
+          subject: `CN=${cn}, O=${org}, OU=Tamga Network Sandbox, C=${C}`,
+          issuer: pidRoot.cert.subject,
+          notBefore: new Date(),
+          notAfter: years(2),
+          signingAlgorithm: ALG,
+          publicKey: kp.publicKey,
+          signingKey: pidRoot.privateKey ?? die(`pid-${cc}-root özel anahtarı yok — yaprak imzalanamaz`),
+          extensions: (await leafExt(kp.publicKey, [
+            await AuthorityKeyIdentifierExtension.create(pidRoot.cert.publicKey),
+          ])) as never,
+        });
+        return { cert, privateKey: kp.privateKey };
+      };
+    // K3: sağlayıcı listesinin kendi imzacısı — kendinden imzalı (ülke listesi ve LOTL imzacılarından ayrı); anahtarı sunucuya gider,
+    // liste yayıncısı listeyi her yayında yeniden imzalar (kök anahtarı gerekmez)
+    const listSigner = await ensure(`pid-${cc}-list-signer`, async () => {
+      const kp = await keys();
+      const cert = await X509CertificateGenerator.createSelfSigned({
+        serialNumber: serial(base + 4),
+        name: `CN=${org} PID Provider List Signer, O=Tamga Network Sandbox (TEST), C=${C}`,
+        notBefore: new Date(),
+        notAfter: years(2),
+        signingAlgorithm: ALG,
+        keys: kp,
+        extensions: [
+          new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true),
+          await SubjectKeyIdentifierExtension.create(kp.publicKey),
+        ],
+      });
+      return { cert, privateKey: kp.privateKey };
+    });
+    out.push(
+      pidRoot,
+      await ensure(`pid-${cc}-issuer`, leaf(base + 2, `${org} PID Issuer`)),
+      await ensure(`pid-${cc}-status`, leaf(base + 3, `${org} PID Status List`)),
+      listSigner,
+    );
+  }
+  return out;
 }
 
 /**
@@ -822,14 +953,18 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
   summary.ids =
     PROFILE === "sandbox"
       ? Object.fromEntries(
-          items.map((it) => [
-            it.name,
-            it === root || /-ca(-\d+)?$/.test(it.name)
-              ? computeCaId(STATE, der(it.name))
-              : it.name.startsWith("rp-")
-                ? computeRpId(STATE, der(it.name))
-                : computeIssuerId(STATE, der(it.name)),
-          ]),
+          // ADR-0094: temsili PID makamları dış sağlayıcıdır (Tamga kimliği yok)
+          items
+            .filter((it) => !it.name.startsWith("pid-"))
+            .map((it) => [
+              it.name,
+              it === root || /-ca(-\d+)?$/.test(it.name)
+                ? computeCaId(STATE, der(it.name))
+                : it.name.startsWith("rp-")
+                  ? computeRpId(STATE, der(it.name))
+                  : // ADR-0093: temsili ülkelerin kurumları kendi ülke koduyla (liste yayıncısının hesapladığı kimlikle aynı)
+                    computeIssuerId(SANDBOX_ISSUER_STATES[it.name.replace(/-status$/, "")] ?? STATE, der(it.name)),
+            ]),
         )
       : {
           ca_id: computeCaId(STATE, der("root-ca")),

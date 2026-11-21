@@ -31,11 +31,19 @@ export interface TrustPins {
    * Pinlerle birlikte taşınır: listeyi yükleyen her yardımcı (RP kaydı, kayıt kurumu anahtarları, dizin) aynı belleği kullanır.
    */
   versionMemory?: ListVersionMemory;
+  /**
+   * ADR-0093 K2 (0.9.0): `"all-active"` — kendi ülke listesine ek olarak LOTL'daki bütün ETKİN ülke listelerini de yükle (başka
+   * ülkenin kurumunun belgesi alınabilir ve gösterilebilir). Başka bir ülkenin listesi alınamaz ya da bayatsa yalnız o ülkenin
+   * kurumları "bilinmiyor" olur. Verilmezse yalnız kendi listesi.
+   */
+  nationalLists?: "all-active";
 }
 
 export interface VerifiedTrust {
   lotl: Record<string, unknown> & { version: number; national_lists?: Array<Record<string, unknown>> };
   tl: Record<string, unknown> & { version: number; state_code: string };
+  /** ADR-0093: yüklenen bütün ülke listeleri (ülke kodu → liste); `tl` kendi listesidir. */
+  tls?: Record<string, Record<string, unknown> & { version: number; state_code: string }>;
 }
 
 const TL_TYP = "tamga-tl+jwt";
@@ -100,11 +108,13 @@ export async function fetchTrustSource(
       externalLists: opts.externalLists,
       ...(opts.externalListsDirect !== undefined ? { externalListsDirect: opts.externalListsDirect } : {}),
       ...(opts.pins.versionMemory ? { versionMemory: opts.pins.versionMemory } : {}),
+      ...(opts.pins.nationalLists ? { nationalLists: opts.pins.nationalLists } : {}),
     });
     const tl = store.national.get(cc)!.list;
+    const tls = Object.fromEntries([...store.national].map(([s, v]) => [s, v.list])) as unknown as VerifiedTrust["tls"];
     return {
       source,
-      lists: { lotl: store.lotl as unknown as VerifiedTrust["lotl"], tl: tl as unknown as VerifiedTrust["tl"] },
+      lists: { lotl: store.lotl as unknown as VerifiedTrust["lotl"], tl: tl as unknown as VerifiedTrust["tl"], tls },
     };
   } catch (e) {
     if (e instanceof WalletError) throw e;

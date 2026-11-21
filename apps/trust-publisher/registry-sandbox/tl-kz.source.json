@@ -1,0 +1,104 @@
+{
+  "list_format_version": "1.0",
+  "list_type": "trusted_list",
+  "state_code": "KZ",
+  "next_update_days": 90,
+  "operator": {
+    "name": "Tamga Network Sandbox (TEST)",
+    "status": "provisional",
+    "on_behalf_of": "Representative test slot for Kazakhstan — no participation or endorsement by the state of Kazakhstan (ADR-0093, ADR-0038)"
+  },
+  "root_cas": [
+    {
+      "cert": "root-ca",
+      "legal_name": "Tamga Sandbox Root CA (TEST)",
+      "service_type": "http://uri.etsi.org/TrstSvc/Svctype/CA/PKC",
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "status": "provisional",
+        "on_behalf_of": "Representative test slot for Kazakhstan — no participation or endorsement by the state of Kazakhstan (ADR-0093, ADR-0038)"
+      },
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2036-10-03T00:00:00Z",
+      "successor_ca_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "sandbox"
+        }
+      ]
+    }
+  ],
+  "issuers": [
+    {
+      "cert": "issuer-dalaqala",
+      "status_cert": "issuer-dalaqala-status",
+      "parent_ca": "root-ca",
+      "slug": "dalaqala",
+      "legal_name": "Dalaqala Universiteti (TEST)",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example institution with a fictional name in the representative Kazakhstan test list (ADR-0093, ADR-0038). Records come from the sandbox example registry (made-up people only). Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/dalaqala",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-21T00:00:00Z",
+      "valid_until": "2028-11-21T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-21T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network, representative state)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Dalaqala Universiteti öğrenci kayıtları (TEST, örnek kayıt defteri)",
+        "mode": "PORTAL_DB"
+      },
+      "trade_name": "Dalaqala Universiteti (TEST)",
+      "identifiers": [
+        {
+          "scheme": "KZ-BIN",
+          "value": "KZ100000000001",
+          "note": "sandbox test value (representative state)"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Almaty",
+        "country": "KZ"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Personal data protection authority of Kazakhstan (representative, TEST)",
+        "country": "KZ",
+        "info_uri": "https://sandbox.tamga.network",
+        "form_uri": "https://sandbox.tamga.network"
+      }
+    }
+  ],
+  "relying_parties": [],
+  "national_schemas": [],
+  "environment": "sandbox"
+}

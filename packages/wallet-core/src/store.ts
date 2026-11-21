@@ -2,14 +2,15 @@
  * Cüzdan deposu — SPEC-WALLET-0001 §3 (yerel depo), §4 (batch kopyaları, WL5 yapışkan kopya), §7 (manifest; anahtar yok — WL2).
  * Depo soyut: uygulama JSON'u nereye yazacağını seçer (expo-file-system); anahtarlar KeyProvider'da (ayrı).
  */
-import { computeSchemaId, verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
+import { certFingerprintHex, computeSchemaId, verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
 import { assertReceiveTrust } from "./receive-trust.js";
 import type { KeyStorage, PublicJwk } from "./keys.js";
 import type { RedeemOutput } from "./oid4vci.js";
 import type { WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
 import { stableJson } from "./stable-json.js";
-import type { TrustSource } from "@tamga-network/trust/core";
+import { anchoredChainCerts, type TrustSource } from "@tamga-network/trust/core";
+import { b64Decode } from "./b64.js";
 import { disclosurePolicyFromMetadata, type StoredDisclosurePolicy } from "./disclosure-policy.js";
 
 export interface StoredCopy {
@@ -261,6 +262,37 @@ const comparableClaims = (claims: Record<string, unknown>) =>
  * `validUntil`. Kopyaya özgü olanlar (cihaz anahtarı, iptal sırası, verme anı, tuzlar, imzalar) karşılaştırılmaz. Tutarsızlıkta
  * hata fırlatılır ve hiçbir şey eklenmez; çağıran o paketin bütün anahtarlarını siler ve kişiye bildirir (ISSU_11b).
  */
+/**
+ * Dış sağlayıcı (ADR-0036): türü Tamga'nın şema kaydında olmayan belgenin x5c zinciri, güven kaynağının dış listelerdeki çapa
+ * sertifikalarından birine bağlanıyorsa o kurumun cevabı; Tamga türü ya da dış yolu olmayan güven kaynağı için `null` (olağan
+ * C1/C2 denetimi). Tür Tamga'da yok ve zincir bağlanmıyorsa: ilgili dış liste kullanılamıyorsa "sonra dene", değilse ret.
+ */
+function externalIssuerOf(
+  trust: TrustSource,
+  v: LocalVerifyOk,
+): { tri: "YES" | "NO" | "UNKNOWN"; issuerId: string } | null {
+  if (v.vct.startsWith("urn:tamga:") || !trust.externalIssuerByAnchor || !trust.externalAnchorCertsDer) return null;
+  if (trust.schema(computeSchemaId(v.vct))) return null;
+  const x5c = (v.header.x5c as string[] | undefined) ?? [];
+  let chain: Uint8Array[];
+  try {
+    chain = x5c.map((c) => b64Decode(c));
+  } catch {
+    throw new Error("credential certificate chain unreadable");
+  }
+  const anchored = anchoredChainCerts(chain, { anchorCertificates: trust.externalAnchorCertsDer() });
+  const anchor = anchored[anchored.length - 1];
+  if (!anchor) {
+    if (trust.unavailableExternalListFor?.(v.vct))
+      throw new Error("the trusted list could not be checked; try again later");
+    throw new Error("the issuer is not in the trusted list (C1)");
+  }
+  const fp = certFingerprintHex(anchor);
+  const a = trust.externalIssuerByAnchor(fp, v.vct, v.iat);
+  if (!a) throw new Error("the issuer is not in the trusted list (C1)");
+  return { tri: a.tri, issuerId: `0x${fp}` };
+}
+
 export function receiveCredentials(
   state: WalletState,
   out: RedeemOutput,
@@ -279,6 +311,20 @@ export function receiveCredentials(
       now: opt.now,
     });
     if (!v.ok) throw new Error(`copy rejected (${v.failedStep}): ${v.reason}`);
+    // ADR-0094 K8 / ADR-0036 K5 alma yönü: Tamga kataloğunda olmayan tür (AB PID) yalnız, belge zinciri imzalı LOTL'da sabitlenmiş
+    // bir dış sağlayıcı listesindeki kuruma bağlıysa ve tür o listenin kapsamındaysa alınır (doğrulayıcının B2/C yolunun aynısı);
+    // kurum kimliği çapa sertifikasının parmak izi (doğrulayıcıdaki dış kurum kaydıyla aynı biçim). Ülke listesi
+    // çözümünden ÖNCE: başka bir ülke listesinin kullanılamaması dış sağlayıcının belgesini durdurmaz
+    const ext = trust ? externalIssuerOf(trust, v) : null;
+    // ADR-0093 UL1: kurum kimliği imza sertifikasından ve kurumun kayıtlı olduğu ülke listesinden (yüklü listelerde tek eşleşme)
+    if (ext) v.issuerId = ext.issuerId;
+    else if (trust?.resolveIssuerId) {
+      const r = trust.resolveIssuerId(v.leafFingerprint);
+      if (r.kind === "found") v.issuerId = r.issuerId;
+      else if (r.kind === "ambiguous")
+        throw new Error("the issuer's certificate is listed in several national lists (ADR-0093)");
+      else if (r.unavailableStates.length) throw new Error("the trusted list could not be checked; try again later");
+    }
     if (first && (first.vct !== v.vct || first.issuerId !== v.issuerId))
       throw new Error("copies are not of the same type/issuer");
     // ARF ISSU_11a: kopyalar birbiriyle tutarlı (iletide alan değeri yok)
@@ -290,7 +336,13 @@ export function receiveCredentials(
       if (comparableClaims(first.claims) !== comparableClaims(v.claims))
         throw new Error("copies are not consistent: field values differ (ISSU_11a)");
     }
-    if (trust) {
+    if (ext) {
+      if (v.iss !== out.credentialIssuer)
+        throw new Error("credential iss does not match the offer's credential_issuer");
+      if (ext.tri === "UNKNOWN") throw new Error("the trusted list could not be checked; try again later");
+      if (ext.tri === "NO")
+        throw new Error("the provider is not authorised for this credential type in its provider list (FD2)");
+    } else if (trust) {
       if (v.iss !== out.credentialIssuer)
         throw new Error("credential iss does not match the offer's credential_issuer");
       const c1 = trust.isCredentialAcceptable(v.issuerId, v.iat);

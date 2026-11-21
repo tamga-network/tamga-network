@@ -37,7 +37,7 @@ seçici paylaşımlı, cihaza bağlı rəqəmsal sənəd kimi daşımasını tə
 yaşı və ya "etibarlı şəxsiyyət sənədi varmı" sualını soruşur, şəxs yalnız lazım olanı açır.
 
 **Status.** Şəxsiyyət sənədi **PID deyil**: Tamga-nın müvəqqəti olaraq verdiyi, kvalifikasiyalı olmayan **[[t:EAA]]**-dır
-([[ADR-0011]], [[ADR-0022]]); [[t:trust-list|etibar siyahısında]] `pid_providers[]` boş qalır. Dövlət provayderi təyin edildikdə yeni rəqəmsal sənəd
+([[ADR-0011]], [[ADR-0022]]); [[t:trust-list|etibar siyahısında]] `pid_providers[]` boş qalır (sandbox-da üç təmsili milli identifikasiya orqanı AB PID formatında PID verir; ayrıca provayder siyahısında, real şəbəkə dəyişmir — [[ADR-0094]]). Dövlət provayderi təyin edildikdə yeni rəqəmsal sənəd
 verilmir və qeyd varisə ötürülür (§4.7). Sürücülük vəsiqəsi məlumatı **rəsmi sürücülük vəsiqəsi deyil, [[t:mDL]] deyil** (§4.8).
 
 Texniki tərif [[SPEC-ID-0003]] §9-da və sxem kataloqundadır; ziddiyyət olduqda onlar üstündür. Bu rulebook yeni qayda qoymur;

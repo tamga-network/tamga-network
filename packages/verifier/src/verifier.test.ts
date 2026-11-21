@@ -31,7 +31,7 @@ import {
   type Policy,
 } from "./index.js";
 import { encryptJwe, utf8 } from "@tamga-network/wallet-core";
-import { epochSeconds } from "@tamga-network/core";
+import { certFingerprintSha256Hex, epochSeconds } from "@tamga-network/core";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -229,6 +229,80 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       "issuer not acceptable at iat",
     );
     expect((await verifyPresentation({ ...base, trust })).result.outcome).toBe("ACCEPTED");
+  });
+  it("ADR-0093 UL1/UL2: kurum kimliği güven kaynağından; iki ülkede → A3b RED; kullanılamayan ülke → DOĞRULANAMADI", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(16, now);
+    const cache = new MemoryStatusCache();
+    cache.set(STATUS_URI, await statusToken(now), now);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-ul",
+      iat: now,
+    });
+    const base = {
+      rp: "none" as const,
+      presentation: pres,
+      aud: AUD,
+      nonce: "n-ul",
+      policy,
+      policyCredentialId: "diploma",
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now: epochSeconds(now),
+    };
+    const leafFp = certFingerprintSha256Hex(pemToDer(readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8")));
+    // gerçek kaynak: kurum TR listesinde bulunur, sonuçtaki ülke kurumun ülkesi
+    const found = trust.resolveIssuerId(leafFp);
+    expect(found).toMatchObject({ kind: "found", stateCode: "TR" });
+    const ok = (await verifyPresentation({ ...base, trust })).result;
+    expect(ok.outcome).toBe("ACCEPTED");
+    expect(ok.issuer?.state_code).toBe("TR");
+    // aynı sertifika iki ülkenin listesinde → A3b RED (güven sorgusuna girmez)
+    const twice = Object.assign(Object.create(trust) as TrustSource, {
+      resolveIssuerId: () => ({ kind: "ambiguous" as const, stateCodes: ["AZ", "TR"] }),
+    });
+    expect((await verifyPresentation({ ...base, trust: twice })).result).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "A3b",
+    });
+    // hiçbir yüklü listede yok ama KZ listesi kullanılamıyor → hüküm yok (RED değil)
+    const kzDown = Object.assign(Object.create(trust) as TrustSource, {
+      resolveIssuerId: () => ({ kind: "none" as const, unavailableStates: ["KZ"] }),
+    });
+    expect((await verifyPresentation({ ...base, trust: kzDown })).result).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "C1",
+    });
+    // zincir verilen köklerin hiçbirine bağlanmıyor: bir ülke listesi kullanılamıyorsa DOĞRULANAMADI, değilse RED
+    const wrongRoot = [pemToDer(readFileSync(resolve(PKI, "issuer-bilgi-status.cert.pem"), "utf8"))];
+    expect((await verifyPresentation({ ...base, trust, rootCertsDer: wrongRoot })).result).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "A3",
+    });
+    const anyDown = Object.assign(Object.create(trust) as TrustSource, { unavailableStates: () => ["KZ"] });
+    expect((await verifyPresentation({ ...base, trust: anyDown, rootCertsDer: wrongRoot })).result).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "A3",
+    });
+    // tür kullanılamayan bir ülke listesinin ulusal şeması → B2 DOĞRULANAMADI (RED değil); ülke listesi sorunu yoksa B2 RED
+    const noSchema = Object.assign(Object.create(trust) as TrustSource, { schema: () => null });
+    expect((await verifyPresentation({ ...base, trust: noSchema })).result).toMatchObject({
+      outcome: "REJECTED",
+      failed_step: "B2",
+    });
+    const schemaDown = Object.assign(Object.create(trust) as TrustSource, {
+      schema: () => null,
+      schemaUnavailable: () => true,
+    });
+    expect((await verifyPresentation({ ...base, trust: schemaDown })).result).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "B2",
+    });
   });
   it("D3: iptal listesini kurumun kayıtlı iptal anahtarı dışında bir anahtar imzalamışsa RED (S11)", async () => {
     const now = Math.floor(Date.now() / 1000);

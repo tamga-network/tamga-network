@@ -134,7 +134,14 @@ export function statusBitAt(list: StatusList, idx: number): 0 | 1 | 2 | 3 {
 
 /** Belgenin durumu: kopyalardan biri iptalse belge iptal (aynı mantıksal belge), askıdaysa askıda. */
 export function credentialStatusFrom(cred: StoredCredential, list: StatusList, trust: TrustSource): CredentialStatus {
-  const keys = (trust.issuer(cred.issuerId)?.delegate_keys ?? [])
+  // ADR-0094 / ADR-0036 K5: dış sağlayıcının (AB PID) Tamga listesinde kaydı yok — iptal imzacısı dış listedeki iptal hizmeti
+  // (kurum kimliği = çapa parmak izi, `externalIssuerOf`)
+  const rec =
+    trust.issuer(cred.issuerId) ??
+    (/^0x[0-9a-f]{64}$/.test(cred.issuerId)
+      ? (trust.externalIssuerByAnchor?.(cred.issuerId.slice(2), cred.vct, cred.iat)?.issuer ?? null)
+      : null);
+  const keys = (rec?.delegate_keys ?? [])
     .filter((k) => k.purpose === "status_list" && (k.status ?? "ACTIVE") === "ACTIVE")
     .map((k) => k.fingerprint_sha256);
   if (!keys.includes(list.signerFingerprint)) return "unknown"; // S11: imzacı kurumun kayıtlı iptal anahtarı değil

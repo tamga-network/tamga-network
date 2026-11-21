@@ -22,6 +22,18 @@
     "fingerprint_sha256": "4bc0ae1a04bac158690119eb04d7e69b1b66b2141a1cba6e8a14c5655f83c93a",
     "not_after": "2028-10-03T09:26:26.000Z"
   },
+  "tl-signer-az-1": {
+    "subject": "CN=Tamga Sandbox Trust List Signer - AZ representative slot (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "7a6868e602e7ddd1c45dab0b6958c3db87f96123efba6f7b8019072a5feb4deb",
+    "not_after": "2028-11-21T13:19:13.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
+  "tl-signer-kz-1": {
+    "subject": "CN=Tamga Sandbox Trust List Signer - KZ representative slot (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "1b82d88aaf1f22e3245b5831cb348e428f547b8da6c1fe75099d98674a0bcf4b",
+    "not_after": "2028-11-21T13:19:13.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
   "tl-xml-signer-1": {
     "subject": "CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR",
     "fingerprint_sha256": "5576ff2bf0380b32e21a1859c267e6b0031d3c2bbc935adacb7d129eb6dac9c9",
@@ -202,17 +214,115 @@
     "not_after": "2028-11-19T14:41:51.000Z",
     "created_at": "2026-11-19T14:41:51.154Z"
   },
+  "issuer-gunesli": {
+    "subject": "CN=Günəşli Texniki Universiteti (TEST), OU=Tələbə işləri, O=Günəşli Texniki Universiteti (TEST), 2.5.4.97=VATAZ-1000000001, C=AZ",
+    "fingerprint_sha256": "7bd17a5e52bd38b2ab4381584ff4914056a71eeacf9b14855c2c26f7008dc111",
+    "not_after": "2028-11-21T13:19:13.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
+  "issuer-gunesli-status": {
+    "subject": "CN=Günəşli Texniki Universiteti - Status List (TEST), OU=Status, O=Günəşli Texniki Universiteti (TEST), 2.5.4.97=VATAZ-1000000001, C=AZ",
+    "fingerprint_sha256": "88bb3d89ead507a20970105fd2a6f6d94939285481b78fa9110e8a3a6304f9f1",
+    "not_after": "2028-11-21T13:19:13.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
+  "issuer-dalaqala": {
+    "subject": "CN=Dalaqala Universiteti (TEST), OU=Studentter isteri, O=Dalaqala Universiteti (TEST), 2.5.4.97=VATKZ-100000000001, C=KZ",
+    "fingerprint_sha256": "c194d05bc145aa21bcab4b506add75be977067f49e4ee5855c3e06bc1407f3d3",
+    "not_after": "2028-11-21T13:19:14.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
+  "issuer-dalaqala-status": {
+    "subject": "CN=Dalaqala Universiteti - Status List (TEST), OU=Status, O=Dalaqala Universiteti (TEST), 2.5.4.97=VATKZ-100000000001, C=KZ",
+    "fingerprint_sha256": "d9f15dbde4aab3566040bf5c240074e0a9712e13029774a47a98b26a49ea599b",
+    "not_after": "2028-11-21T13:19:14.000Z",
+    "created_at": "2026-11-21T13:19:13.571Z"
+  },
   "test-institutions-ca": {
     "subject": "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
     "fingerprint_sha256": "2f8667951aea66a08fc085c0b1b13e129080ae3312e0d8400ca2fed65d61ba1c",
     "not_after": "2027-10-05T04:34:26.000Z",
     "created_at": "2026-10-05T04:34:26.570Z"
   },
+  "pid-tr-root": {
+    "subject": "CN=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST) Test Root, O=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST), OU=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "27b549f900e5e307533b87dd34464b1fa3ab1035a42948dacd1be4443057c53c",
+    "not_after": "2031-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-tr-issuer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST) PID Issuer, O=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST), OU=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "be3005d53c8ad063540c6388e6f2850cb780363411b94228ba9d3c21b31612c0",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-tr-status": {
+    "subject": "CN=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST) PID Status List, O=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST), OU=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "c10a8c67a78bd1b34ef49969cf2a79bc5fe4d694c78ea9155d45b9c0f54e7314",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-tr-list-signer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Türkiye (temsili) (TEST) PID Provider List Signer, O=Tamga Network Sandbox (TEST), C=TR",
+    "fingerprint_sha256": "91d56829bf5bd341b3e679ecbc052a5e3d9a56355e0acca1e00a2d153c77283b",
+    "not_after": "2028-11-21T17:26:17.000Z",
+    "created_at": "2026-11-21T17:26:16.982Z"
+  },
+  "pid-az-root": {
+    "subject": "CN=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST) Test Root, O=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST), OU=Tamga Network Sandbox, C=AZ",
+    "fingerprint_sha256": "21bd5d25335e0e4b235a370248ecb0dc4009d3803a84bb965ea98c856f90953e",
+    "not_after": "2031-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-az-issuer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST) PID Issuer, O=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST), OU=Tamga Network Sandbox, C=AZ",
+    "fingerprint_sha256": "28d01170957f9298b6ecf52873ad475cb74f0ad36371bd6bf6b68b404c204054",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-az-status": {
+    "subject": "CN=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST) PID Status List, O=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST), OU=Tamga Network Sandbox, C=AZ",
+    "fingerprint_sha256": "eea9f8eb63b70f6ed1cc4f3256e5950b740d4c0bff9fdb36e39299f271b1cae1",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-az-list-signer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Azerbaycan (temsili) (TEST) PID Provider List Signer, O=Tamga Network Sandbox (TEST), C=AZ",
+    "fingerprint_sha256": "e175f77b0465da3dffb87989520478cf986c0855bb15cdbd8d0fd425a08744e5",
+    "not_after": "2028-11-21T17:26:17.000Z",
+    "created_at": "2026-11-21T17:26:16.982Z"
+  },
+  "pid-kz-root": {
+    "subject": "CN=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST) Test Root, O=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST), OU=Tamga Network Sandbox, C=KZ",
+    "fingerprint_sha256": "e1aa954e5063bb8dcc9e194f8378a8f1b9220fd28d3aa555aebd5975b7f7da8e",
+    "not_after": "2031-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-kz-issuer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST) PID Issuer, O=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST), OU=Tamga Network Sandbox, C=KZ",
+    "fingerprint_sha256": "52d57e7d6c09d12646d36345465dd90812f50afd0be599c62f527915e54206ed",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-kz-status": {
+    "subject": "CN=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST) PID Status List, O=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST), OU=Tamga Network Sandbox, C=KZ",
+    "fingerprint_sha256": "349f7beac57831f4a4d31bc7ac5d7312bb04cb4563b100c46cd09b7dc9442f43",
+    "not_after": "2028-11-21T17:21:34.000Z",
+    "created_at": "2026-11-21T17:21:34.289Z"
+  },
+  "pid-kz-list-signer": {
+    "subject": "CN=Ulusal Kimlik Makamı — Kazakistan (temsili) (TEST) PID Provider List Signer, O=Tamga Network Sandbox (TEST), C=KZ",
+    "fingerprint_sha256": "cdd9bbd797fe322040d6928112055f374968a41141de1ffb69ad4c5a52ca802a",
+    "not_after": "2028-11-21T17:26:17.000Z",
+    "created_at": "2026-11-21T17:26:16.982Z"
+  },
   "ids": {
     "root-ca": "0x77c545c337206d1cdc74a259d815db411a651fd5f16a31b25b6739cc23bf9b12",
     "tl-signer-1": "0xb02cf6392def2df946f246b8bb6bdfb6ab9f8aeb59e9b4c532736ed622ff7977",
     "wallet-provider": "0xb3a90464be7295eefd71c6e3dee0fe07692c434f48c55ae51e3f7207a04d90b9",
     "registrar-1": "0x0d7ff82bbf309ee9170650bebabde074525fc72afba9b177d1a8986b3196dbb2",
+    "tl-signer-az-1": "0x9f8027ee878b0733752b97331c8ee9b1be4c26c049d3a2dde8fa187f0896e793",
+    "tl-signer-kz-1": "0x16696178e9eb14627532210f83ad75cb9092f72c26ef8fd77edd3ae7bed2b893",
     "tl-xml-signer-1": "0xff13d95fd4b5414e6da840a0d3530773e3e0b6930fc7e6b619d7404ff8a9a29f",
     "rp-verify": "0xf47e99105565b687dd100aad8c4f3aaab1831b12b37c92e3a0d41ba2aa764e1f",
     "access-ca-1": "0x783793435f6bcb76bce1ca58a7a7436ecea7bd6765749cc35eef722d1548c769",
@@ -243,6 +353,10 @@
     "issuer-gokkapi-status": "0xa3378fe2a873731b59a8ff94988bac0eb144a084aaabcb7ee7e2dc20fe214ada",
     "issuer-kopruyaka": "0x7522512f8cb754ec00b62061271afe5c36adb4684599f26fef3998e4dd60f4d8",
     "issuer-kopruyaka-status": "0x293f90d57b82b1023f0de2add92359576856c08381abf0d392e6e6d23c56c3b5",
+    "issuer-gunesli": "0x95a9df08a5e2760f4ae3b8d6717dec6589b3538d99f160d7eead9d1b379cd7e8",
+    "issuer-gunesli-status": "0xadea1cf228cbd0eccc3ce4ca3b4017fc69ce62bd31607c1b735c62b497f25bc9",
+    "issuer-dalaqala": "0x0fbd1171d64108d445e0ee7ebb45f7d931d2563d82944695cd6a693e92d93025",
+    "issuer-dalaqala-status": "0x964bbff274cb374773d6a94507b2992c1a4668e102162cf8c34b9f1c8ceaa067",
     "test-institutions-ca": "0x746b935c11d2a9bba85643e12c91f2e0d1071ecf10d99b1465ad6718b4f3826a"
   }
 }

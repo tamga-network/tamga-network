@@ -46,7 +46,7 @@ in the wallet as a selectively disclosable, device-bound credential: institution
 websites ask for age or "is there a valid identity", and the person discloses only what is needed.
 
 **Status.** The identity credential **is not a PID**: it is a non-qualified **[[t:EAA]]** that Tamga issues on a provisional basis
-([[ADR-0011]], [[ADR-0022]]); `pid_providers[]` in the [[t:trust-list]] stays empty. When a state provider is appointed, no new
+([[ADR-0011]], [[ADR-0022]]); `pid_providers[]` in the [[t:trust-list]] stays empty (in the sandbox three representative national identity authorities issue PID in the EU PID format, in a separate provider list; the real network does not change — [[ADR-0094]]). When a state provider is appointed, no new
 credentials are issued and the registration is handed over to the successor (§4.7). The driving licence information **is not an
 official driving licence and not an [[t:mDL]]** (§4.8).
 

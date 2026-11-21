@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -217,6 +217,17 @@ group answers) select the record with this rule; the result does not depend on t
 3. Otherwise (two records not revoked, a revocation with no reassignment record or naming another country) the name is
    **ambiguous**: `null`, terminal groups inactive (fail closed). A re-registration after revocation in another country (RO2)
    therefore stays ambiguous until a network-level record exists.
+
+**Several national lists (implementation note, 2026-11-21, [[ADR-0093]]).** When the loader is given required states
+(`requiredStates`, its own state), the other ACTIVE lists are optional: a missing, stale, rolled-back (rollback memory is per list)
+or unverifiable list is not loaded and only questions about that state answer UNKNOWN; overall freshness is not affected. If a
+required list is not loaded, the source is unhealthy. Isolation between lists: every institution and root CA identifier must be
+derived from the list's own state code ([[SPEC-ID-0002]]); a list cannot carry another list's institution (identifier or
+certificate), root, relying party client identifier or schema record (network schemas included) — such a list is not loaded (if
+required, loading stops). A cross-state relying party handover ([[ADR-0075]]) therefore uses an access certificate of the new state
+(a new client identifier). An optional list may carry relying parties only if its registrar role in the LOTL is active; its
+institutions chain only to its own root CAs. The issuer identifier is resolved from the certificate with the state code of the list
+it is registered in (`resolveIssuerId`).
 
 ---
 

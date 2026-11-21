@@ -15,12 +15,35 @@
  * dizini) cevap VERMEZ — null / boş döner. Bayat listeden okunan kayıt kararda kullanılmasın; doğrulayıcı tazeliği T0'da
  * `freshness()` ile ayrıca denetler ve bayat kaynakta INDETERMINATE döner.
  */
+import { idFromFingerprintHex } from "./portable-hash.js";
 import { activeFps, type TrustStore, type StatusAnchorRow, type ExternalEntity } from "./store.js";
 import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, TerminalGroup, ZkCircuit } from "./types.js";
 
 export type Tri = "YES" | "NO" | "UNKNOWN";
 
+/**
+ * ADR-0093 UL1: belgenin imza sertifikasından kurum kimliği. `found` — yüklü ülke listelerinden TAM BİRİNDE kayıtlı;
+ * `ambiguous` — aynı sertifika birden çok ülkenin listesinde (RED); `none` — hiçbir yüklü listede yok, `unavailableStates`
+ * kullanılamayan (yüklenememiş ya da süresi geçmiş) isteğe bağlı ülke listeleri: boş değilse kurum onlardan birinde olabilir →
+ * "bilinmiyor" (INDETERMINATE), boşsa RED.
+ */
+export type IssuerIdResolution =
+  | { kind: "found"; issuerId: string; stateCode: string }
+  | { kind: "ambiguous"; stateCodes: string[] }
+  | { kind: "none"; unavailableStates: string[] };
+
 export interface TrustSource {
+  /**
+   * ADR-0093 UL1: kurum kimliğini belgenin imza sertifikasının SHA-256 parmak izinden (onaltılık) ve kurumun kayıtlı olduğu ülke listesinin ülke kodundan
+   * çözer (SPEC-ID-0002). `iss` hiçbir zaman kaynak değildir. Bayat kaynakta `none` (sonraki sorular zaten UNKNOWN döner).
+   * Uygulamayan eski kaynaklarda çağıran eski türetmeye (`computeIssuerId(politikanın ülkesi, DER)`) düşer.
+   */
+  resolveIssuerId?(leafCertFingerprintHex: string): IssuerIdResolution;
+  /**
+   * ADR-0093 UL2: LOTL'da ETKİN olup şu an kullanılamayan (yüklenemeyen ya da `next_update`'i geçmiş) isteğe bağlı ülke listeleri.
+   * Doğrulayıcı zinciri hiçbir köke bağlayamadığında RED demeden önce buna bakar (FD3 ile aynı ilke).
+   */
+  unavailableStates?(): string[];
   /**
    * C1 — belge veren, belgenin `iat` anında belge verebilir miydi VE şu an askıda değil mi (ADR-0088 SI1). Askıdaki kurumun
    * belgesi için NO; nedeni ayırmak için `isIssuerSuspended`.
@@ -42,6 +65,12 @@ export interface TrustSource {
   relyingPartyByDnsName(dnsName: string): RelyingParty | null;
   issuer(issuerId: string): Issuer | null;
   schema(schemaId: string): SchemaEntry | null;
+  /**
+   * ADR-0093 UL2: tür, şu an kullanılamayan (eksik değil; yüklenmiş ama bayat ya da geri sarılmış) bir ülke listesinin ulusal
+   * şeması mı — `schema()` null döndüğünde doğrulayıcı RED yerine INDETERMINATE verir. Hiç yüklenmemiş listenin şeması bilinemez;
+   * o durumda `unavailableStates()` boş değilse doğrulayıcı yine INDETERMINATE verir.
+   */
+  schemaUnavailable?(schemaId: string): boolean;
   isWalletProviderKey(fingerprintHex: string): Tri;
   /** ADR-0032 ZK2: imzalı listede kabul edilen ZK devresi (yalnız ACTIVE); yoksa null → ispat RED. */
   zkCircuit?(circuitId: string): ZkCircuit | null;
@@ -164,10 +193,48 @@ export class ListTrustSource implements TrustSource {
     return !f || !f.healthy || (f.staleAfter !== undefined && this.now().getTime() > f.staleAfter.getTime());
   }
 
+  /**
+   * ADR-0093 UL2: isteğe bağlı ülke listesi kullanılabilir mi — yüklenmiş ve `next_update`'i geçmemiş. Zorunlu listeler genel
+   * tazelikle (`unhealthy`) denetlenir; burada hep kullanılabilir sayılır.
+   */
+  private stateUsable(cc: string | undefined): boolean {
+    if (cc === undefined) return true;
+    if (this.store.unavailable_states.has(cc)) return false;
+    const d = this.store.optional_national_deadlines.get(cc);
+    return d === undefined || this.now().getTime() <= d.getTime();
+  }
+  /** Kurum kaydı kullanılamayan bir ülke listesinden mi (ADR-0093 UL2 → UNKNOWN). */
+  private issuerStateUnusable(issuerId: string): boolean {
+    return !this.stateUsable(this.store.issuer_states.get(issuerId));
+  }
+
+  unavailableStates(): string[] {
+    if (this.unhealthy()) return [];
+    const out = new Set(this.store.unavailable_states);
+    for (const cc of this.store.optional_national_deadlines.keys()) if (!this.stateUsable(cc)) out.add(cc);
+    return [...out].sort();
+  }
+
+  resolveIssuerId(leafCertFingerprintHex: string): IssuerIdResolution {
+    if (this.unhealthy() || !/^[0-9a-fA-F]{64}$/.test(leafCertFingerprintHex))
+      return { kind: "none", unavailableStates: [] };
+    const hits: Array<{ issuerId: string; stateCode: string }> = [];
+    for (const [cc, { list }] of this.store.national) {
+      // kullanılamayan (bayat, geri sarılmış) listenin kaydı karar vermez — o ülke `none.unavailableStates`'te görünür
+      if (!this.stateUsable(cc)) continue;
+      const id = idFromFingerprintHex(cc, leafCertFingerprintHex);
+      if (list.issuers.some((i) => i.issuer_id === id)) hits.push({ issuerId: id, stateCode: cc });
+    }
+    if (hits.length > 1) return { kind: "ambiguous", stateCodes: hits.map((h) => h.stateCode).sort() };
+    if (hits.length === 1) return { kind: "found", ...hits[0] };
+    return { kind: "none", unavailableStates: this.unavailableStates() };
+  }
+
   isCredentialAcceptable(issuerId: string, iat: number): Tri {
     if (this.unhealthy()) return "UNKNOWN";
     const i = this.store.issuers.get(issuerId);
     if (!i) return "NO";
+    if (this.issuerStateUnusable(issuerId)) return "UNKNOWN";
     if (iat < sec(i.valid_from) || iat > sec(i.valid_until)) return "NO";
     const st = statusAt(i.status_history, iat);
     if (!st || st.status !== "ACTIVE") return "NO";
@@ -187,6 +254,7 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return "UNKNOWN";
     const i = this.store.issuers.get(issuerId);
     if (!i) return "NO";
+    if (this.issuerStateUnusable(issuerId)) return "UNKNOWN";
     return this.suspendedNow(i) ? "YES" : "NO";
   }
   /** Doğrulama anındaki durum `SUSPENDED` mı (durum geçmişinden: `since` ≤ şimdi olan son değişiklik). */
@@ -197,6 +265,9 @@ export class ListTrustSource implements TrustSource {
 
   isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): Tri {
     if (this.unhealthy()) return "UNKNOWN";
+    if (this.store.issuers.has(issuerId) && this.issuerStateUnusable(issuerId)) return "UNKNOWN";
+    // ülke şeması ancak listesi kullanılabilirken geçerli
+    if (!this.stateUsable(this.store.schemaOwnerState(schemaId))) return "UNKNOWN";
     const s = this.store.schemas.get(schemaId);
     if (!s) return "NO";
     const sst = statusAt(s.status_history, iat);
@@ -217,20 +288,20 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return "UNKNOWN";
     const i = this.store.issuers.get(issuerId);
     if (!i) return "NO";
-    const issuerState = [...this.store.national.entries()].find(([, v]) =>
-      v.list.issuers.some((x) => x.issuer_id === issuerId),
-    )?.[0];
+    // ADR-0093: kurumun ülkesi, kaydın geldiği liste (yalıtım: bir kimlik tek listede)
+    const issuerState = this.store.issuer_states.get(issuerId);
     if (!issuerState) return "NO";
+    if (!this.stateUsable(issuerState)) return "UNKNOWN";
     if (issuerState === stateCode) return "YES";
     return this.store.recognition.get(stateCode)?.has(issuerState) ? "YES" : "NO";
   }
 
   schemaContentHash(schemaId: string): string | null {
-    if (this.unhealthy()) return null;
+    if (this.unhealthy() || !this.stateUsable(this.store.schemaOwnerState(schemaId))) return null;
     return this.store.schemas.get(schemaId)?.content_hash ?? null;
   }
   schemaContentHashes(schemaId: string): string[] {
-    if (this.unhealthy()) return [];
+    if (this.unhealthy() || !this.stateUsable(this.store.schemaOwnerState(schemaId))) return [];
     const s = this.store.schemas.get(schemaId);
     if (!s) return [];
     return s.content_hashes?.length ? s.content_hashes : [s.content_hash];
@@ -249,6 +320,8 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return null;
     const rp = this.store.relying_parties.get(clientId) ?? null;
     if (rp?.dns_name && this.dnsAmbiguous(rp.dns_name.toLowerCase())) return null;
+    // ADR-0093 UL2: kullanılamayan ülke listesinin kaydı geçerli sayılmaz
+    if (rp && !this.stateUsable(this.store.relyingPartyOwner(clientId))) return null;
     return rp;
   }
   /**
@@ -260,7 +333,9 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return null;
     const dns = dnsName.toLowerCase();
     if (this.dnsAmbiguous(dns)) return null;
-    return this.store.relying_parties_by_dns.get(dns) ?? null;
+    const rp = this.store.relying_parties_by_dns.get(dns) ?? null;
+    if (rp && !this.stateUsable(this.store.relyingPartyStateOf(dns))) return null;
+    return rp;
   }
   /** Aynı `dns_name` iptal edilmemiş birden çok ülke listesi kaydında (2026-11-04; ADR-0075). */
   private dnsAmbiguous(dns: string): boolean {
@@ -269,15 +344,20 @@ export class ListTrustSource implements TrustSource {
   /** Kayıtlı tüm belge verenler (kurum dizini; ADR-0015 K2). Kişisel veri yok. Bayat kaynakta boş. */
   issuers(): Issuer[] {
     if (this.unhealthy()) return [];
-    return [...this.store.issuers.values()];
+    return [...this.store.issuers.values()].filter((i) => !this.issuerStateUnusable(i.issuer_id));
   }
   issuer(issuerId: string): Issuer | null {
-    if (this.unhealthy()) return null;
+    if (this.unhealthy() || this.issuerStateUnusable(issuerId)) return null;
     return this.store.issuers.get(issuerId) ?? null;
   }
   schema(schemaId: string): SchemaEntry | null {
-    if (this.unhealthy()) return null;
+    if (this.unhealthy() || !this.stateUsable(this.store.schemaOwnerState(schemaId))) return null;
     return this.store.schemas.get(schemaId) ?? null;
+  }
+  schemaUnavailable(schemaId: string): boolean {
+    if (this.unhealthy()) return false;
+    const owner = this.store.schemaOwnerState(schemaId);
+    return owner !== undefined && !this.stateUsable(owner);
   }
   /** ADR-0032 ZK2: yalnız ETKİN (ACTIVE) devreler; bayat kaynakta boş. */
   zkCircuits(): ZkCircuit[] {
@@ -488,7 +568,8 @@ export class ListTrustSource implements TrustSource {
       for (const g of rp.terminal_groups ?? []) {
         const from = Date.parse(g.valid_from);
         const until = g.valid_until ? Date.parse(g.valid_until) : Number.POSITIVE_INFINITY;
-        const ambiguous = this.dnsAmbiguous(rp.dns_name);
+        const ambiguous =
+          this.dnsAmbiguous(rp.dns_name) || !this.stateUsable(this.store.relyingPartyStateOf(rp.dns_name));
         const institutionActive =
           g.institution_id === undefined || this.institutionActive(g.institution_id, rp.dns_name);
         out.push({
@@ -508,12 +589,13 @@ export class ListTrustSource implements TrustSource {
   private institutionActive(id: string, rpDns: string): boolean {
     const dns = id.toLowerCase();
     const rp = this.store.relying_parties_by_dns.get(dns);
-    if (rp) return !this.dnsAmbiguous(dns) && rp.status === "ACTIVE";
+    if (rp)
+      return !this.dnsAmbiguous(dns) && rp.status === "ACTIVE" && this.stateUsable(this.store.relyingPartyStateOf(dns));
     const state = this.store.relyingPartyStateOf(rpDns);
     const hits = [...this.store.issuers.values()].filter(
       (i) => i.slug === id && (state === undefined || this.store.issuer_states.get(i.issuer_id) === state),
     );
-    return hits.length === 1 && hits[0].status === "ACTIVE";
+    return hits.length === 1 && hits[0].status === "ACTIVE" && !this.issuerStateUnusable(hits[0].issuer_id);
   }
 
   walletProviderOfKey(fp: string): string | null {

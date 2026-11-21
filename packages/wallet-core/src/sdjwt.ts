@@ -96,7 +96,8 @@ export interface LocalVerifyOk {
   leafDer: Uint8Array;
   iss: string;
   vct: string;
-  vctIntegrity: string;
+  /** Tamga türlerinde her zaman var; dış türlerde (AB PID) olmayabilir */
+  vctIntegrity?: string;
   iat: number;
   exp?: number;
   /**
@@ -154,7 +155,12 @@ export function verifyIssuedSdJwt(combined: string, opt: LocalVerifyOptions = {}
   const cnf = (p.cnf as { jwk?: PublicJwk } | undefined)?.jwk;
   if (!cnf) return fail("A3", "cnf missing (C16)");
   if (opt.expectedCnf && !sameJwk(cnf, opt.expectedCnf)) return fail("A3", "cnf does not match the wallet key (PR6)");
-  if (typeof p.vct !== "string" || typeof p["vct#integrity"] !== "string")
+  // vct#integrity Tamga türlerinde zorunlu (ADR-0010); dış türlerde (ADR-0036 / ADR-0094 AB PID) tür bütünlüğü dış listenin imzalı
+  // kaydından gelir — alan yoksa olur, varsa dizgi olmalı
+  if (
+    typeof p.vct !== "string" ||
+    (p["vct#integrity"] !== undefined ? typeof p["vct#integrity"] !== "string" : p.vct.startsWith("urn:tamga:"))
+  )
     return fail("A3", "vct / vct#integrity missing");
   if (typeof p.iat !== "number") return fail("A3", "iat missing");
   checks.push("A3");
@@ -198,7 +204,7 @@ export function verifyIssuedSdJwt(combined: string, opt: LocalVerifyOptions = {}
     leafDer,
     iss: String(p.iss ?? ""),
     vct: p.vct as string,
-    vctIntegrity: p["vct#integrity"] as string,
+    ...(typeof p["vct#integrity"] === "string" ? { vctIntegrity: p["vct#integrity"] } : {}),
     iat: p.iat as number,
     exp: p.exp as number | undefined,
     ...(typeof p.nbf === "number" ? { nbf: p.nbf } : {}),

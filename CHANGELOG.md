@@ -6,6 +6,53 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Several national lists (ADR-0093)
+
+- Added: `@tamga-network/trust` resolves the issuer identifier from the signing certificate across all loaded national lists
+  (`resolveIssuerId`: one match, several matches, or no match while a national list is unavailable). `loadTrustSet` takes
+  `requiredStates`; any other national list is optional — if it is missing, stale, rolled back or unverifiable, only that state's
+  institutions answer UNKNOWN. `fetchListTrustSource({ nationalLists: "all-active" })` loads every ACTIVE list named by the signed
+  LOTL. A list cannot replace another list's institution, root CA, relying party or schema record, and every identifier must be
+  derived from the list's own state code; such a list is not loaded. The derivation check applies to every list, the own state's
+  included: hand-built test lists with made-up `issuer_id` or `ca_id` values must derive them (`computeIssuerId`) — lists built by
+  the trust publisher already do.
+- Changed: the verifier and the wallet core take the issuer identifier from the trust source (the issuer's own state), not the
+  policy's state. A certificate listed in two national lists is REJECTED (`A3b`); no match while a national list is unavailable is
+  INDETERMINATE (`C1`, and `A3` at the chain step). Tamga Verify and the platform services require only their own state's list.
+- Added: the trust publisher signs each further `tl-<cc>.source.json` with its own LOTL slot signer (sandbox only); it stops if a
+  list would carry relying parties, be signed by the LOTL signer, repeat an institution certificate of another list, or if an
+  ACTIVE slot has no list. All checks finish before any list is written.
+- Note for policy owners: with `nationalLists: "all-active"` a policy without `require_recognition` accepts institutions of every
+  loaded national list, not only the verifier's own state. Set `require_recognition: true` to keep accepting only recognised states.
+- Changed: an optional national list may carry relying parties only if its registrar role in the LOTL is active; institutions of an
+  optional list chain only to its own root CAs; records of an unusable optional list (relying parties, terminal groups, issuer
+  directory) do not count. A required state that is not loaded makes the source unhealthy; an empty `requiredStates` is rejected.
+- Added (sandbox): representative Azerbaijan and Kazakhstan lists (`tl-az`, `tl-kz`, own test signers, no state participation),
+  TR↔AZ↔KZ recognition and two fictional universities (Günəşli Texniki Universiteti, Dalaqala Universiteti).
+
+### Representative PID providers in the sandbox (ADR-0094)
+
+- Added: `@tamga-network/sd-jwt` `issueSdJwtVc` takes `objectMemberSd` (nested selective disclosure: the object stays in clear
+  with its own `_sd`, each member is a separate disclosure — the EU PID `address{…}` encoding). `vctIntegrity` may be left out for
+  types outside the Tamga catalogue (EU PID); it stays required for every `urn:tamga:` type.
+- Added: `@tamga-network/wallet-core` receives a credential of a type outside the Tamga catalogue (EU PID) from a provider listed in
+  an external provider list pinned by the signed LOTL (ADR-0036 K5, receiving direction): the certificate chain must reach the
+  list's anchor certificate and the type must be in the list's scope; otherwise it is refused, and if the list is unavailable the
+  wallet says to try again later. `vct#integrity` is optional for such types; the mdoc copy of an EU PID is checked against the
+  `eu.europa.ec.eudi.pid.1` document type (`mdocDocTypeFor`).
+- Added: the wallet core checks a stored external-provider credential's own status against the revocation service certificate in
+  the external list (`credentialStatusFrom`; before, such a credential's status stayed unknown).
+- Changed: for an external provider the verification result's `issuer.state_code` is the external list's `territory` (it was the
+  policy's state).
+- Added (sandbox): three representative national identity authorities (TR, AZ, KZ) with their own test roots, not chained to the
+  sandbox root; the trust publisher builds and signs one ETSI TS 119 602 provider list per state (`sandbox-pid-tr|az|kz`) from
+  `pid-providers.source.json` with the list's own signer, publishes it under `external-src/` and keeps the verified copy, and the
+  sandbox LOTL points to each list. Tamga Verify adds `bank-account-opening-pid` and `hotel-check-in-pid`; the two sandbox
+  verifiers have a matching registered use for `urn:eudi:pid:1`. The two PID policies fetch the status list at verification time
+  (the lists are not anchored; only from the status server named in the provider list). A provider list's sequence number is
+  time-based and never goes back, so a wiped copy or a fresh install does not trip the reader's rollback check. The real network is
+  unchanged.
+
 ### Schemas and verifier
 
 - Added: `age_over_21` (ADR-0092) in the identity credential (age thresholds {15, 18, 21}) and in the driving licence information
@@ -154,7 +201,7 @@ without a version change (SPEC-API-0001, SPEC-PROTO-0002 and the issuer OpenAPI 
 
 - **wallet-core: transaction data binding.** `respond` binds an item listing several `credential_ids` to the first of those ids
   that has an SD-JWT VC presentation in the response (no longer the order of `matches`); `transactionDataFor(items, queryId,
-  presentedQueryIds)` applies the same rule. The request's transaction data is now part of the `checkRp` approval: changing or
+presentedQueryIds)` applies the same rule. The request's transaction data is now part of the `checkRp` approval: changing or
   removing it after approval makes `respond` refuse (`trust_error`).
 - **mdoc: `plainElementValue`.** A CBOR map key `__proto__` becomes an own property (the object's prototype is not changed); a
   map with a non-text key is rejected instead of silently dropping that entry.

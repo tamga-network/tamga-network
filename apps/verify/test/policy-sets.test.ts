@@ -250,7 +250,7 @@ describe("OpenID uyum öz-testi politikası (V1)", () => {
     expect(p.pseudonym).toBeUndefined();
     expect(p.credentials[0].format ?? "dc+sd-jwt").toBe("dc+sd-jwt");
   });
-  it("doğrulama başına iptal listesi çekimi (SPEC-CRED-0003 §9.1, T1) yalnız sandbox'ta ve yalnız bu politikada", () => {
+  it("doğrulama başına iptal listesi çekimi (SPEC-CRED-0003 §9.1, T1) yalnız sandbox'ta ve yalnız dış sağlayıcı politikalarında", () => {
     const p = policiesFor("sandbox").find((x) => x.policy_id === "oidf-selftest-eu-pid")!;
     expect(statusFetchOnDemandFor("sandbox", p)).toBe(true);
     expect(statusFetchOnDemandFor("production", p)).toBe(false);
@@ -259,7 +259,11 @@ describe("OpenID uyum öz-testi politikası (V1)", () => {
       policiesFor("sandbox")
         .filter((x) => statusFetchOnDemandFor("sandbox", x))
         .map((x) => x.policy_id),
-    ).toEqual(["oidf-selftest-eu-pid"]);
+    ).toEqual(["bank-account-opening-pid", "hotel-check-in-pid", "oidf-selftest-eu-pid"]);
+    // ADR-0094: hepsi yalnız dış türü (AB PID) ister — Tamga türlerinin listesi ön çekimle gelir
+    for (const x of policiesFor("sandbox").filter((y) => statusFetchOnDemandFor("sandbox", y)))
+      expect(x.credentials.every((c) => c.vct_values.every((v) => v === "urn:eudi:pid:1"))).toBe(true);
+    expect(policiesFor("production").some((x) => statusFetchOnDemandFor("production", x))).toBe(false);
   });
 });
 

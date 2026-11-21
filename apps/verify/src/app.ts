@@ -173,6 +173,8 @@ export async function buildVerifyApp(
     const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, {
       environment: cfg.network,
       anchorMaxAgeMs: cfg.anchorMaxAgeSec === undefined ? LOCAL_DEV_ANCHOR_MAX_AGE_MS : cfg.anchorMaxAgeSec * 1000,
+      // ADR-0093 K2: bütün etkin ülke listeleri; kendi ülkesininki zorunlu, başka ülkenin bozuk listesi yalnız o ülkeyi etkiler
+      requiredStates: [cfg.stateCode],
     });
     trust = t;
     rootDer = rootCertPem ? [pemToDer(rootCertPem)] : [];

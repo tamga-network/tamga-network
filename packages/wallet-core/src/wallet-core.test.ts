@@ -340,6 +340,24 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     // C6-K1 (güvenlik incelemesi 2026-11-18): C2 — listede olup bu türe yetkisi olmayan kurumun belgesi alınmaz
     expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("YES", "NO") })).toThrow(/C2/);
     expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("YES", "UNKNOWN") })).toThrow(/later/);
+    // ADR-0093 UL1: kurum kimliği güven kaynağından — başka ülkenin listesindeki kurum o ülkenin kimliğiyle alınır
+    const kzId = "0x" + "a".repeat(64);
+    const fromKz = {
+      resolveIssuerId: () => ({ kind: "found" as const, issuerId: kzId, stateCode: "KZ" }),
+      isCredentialAcceptable: (x: string) => (x === kzId ? "YES" : "NO"),
+      isCredentialSchemaAcceptable: (x: string) => (x === kzId ? "YES" : "NO"),
+    } as unknown as Exclude<ReceiveOptions["trust"], "none">;
+    expect(receiveCredentials(newState("x"), out, { now, trust: fromKz }).credential.issuerId).toBe(kzId);
+    const twice = {
+      ...(trust("YES") as object),
+      resolveIssuerId: () => ({ kind: "ambiguous" as const, stateCodes: ["AZ", "TR"] }),
+    } as unknown as Exclude<ReceiveOptions["trust"], "none">;
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: twice })).toThrow(/several national lists/);
+    const down = {
+      ...(trust("YES") as object),
+      resolveIssuerId: () => ({ kind: "none" as const, unavailableStates: ["KZ"] }),
+    } as unknown as Exclude<ReceiveOptions["trust"], "none">;
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: down })).toThrow(/later/);
     // C6-K1: güven kaynağı verilmezse (JavaScript çağıran dahil) sessiz kabul yok — yalnız açık "none" atlar
     const untyped = receiveCredentials as unknown as (s: unknown, o: unknown, opt?: unknown) => unknown;
     expect(() => untyped(newState("x"), out, { now })).toThrow(/trust source missing/);

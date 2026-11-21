@@ -8,7 +8,7 @@
  */
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
 import { X509Certificate, cryptoProvider } from "@peculiar/x509";
-import { b64uToBytes, computeIssuerId } from "@tamga-network/core";
+import { b64uToBytes, certFingerprintSha256Hex, computeIssuerId } from "@tamga-network/core";
 import type { EpochSeconds } from "@tamga-network/core/time";
 import {
   dcApiSessionTranscript,
@@ -167,6 +167,7 @@ export async function verifyMdocZkFormat(
     ok: true,
     format: "mso_mdoc_zk",
     issuerId,
+    leafFingerprint: certFingerprintSha256Hex(leafDer),
     vct: z.docType,
     vctIntegrity: null,
     // İmza anı gizli: C1/C2 sunum anına göre (kurum ve şema yetkisi ŞİMDİ geçerli olmalı — iat'tan sıkı)

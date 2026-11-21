@@ -35,6 +35,7 @@ import {
   type PresentationOffer,
 } from "@tamga-network/mdoc";
 import { epochSeconds } from "@tamga-network/core/time";
+import type { IssuerIdResolution } from "@tamga-network/trust/core";
 import { b64Decode, b64u, b64uToUtf8 } from "./b64.js";
 import { mdocElementValues, mdocIssuerKeys } from "./mdoc.js";
 import { certFingerprintHex, computeIssuerId, computeSchemaId, p256PointFromCertDer } from "./sdjwt.js";
@@ -68,6 +69,8 @@ export interface CentralTransport {
 
 /** Güven kaynağından gereken sorgular (`ListTrustSource` bunları sağlar). */
 export interface W2wTrust {
+  /** ADR-0093 UL1: kurum kimliği sertifika parmak izinden ve kurumun ülke listesinden (yoksa `stateCode` ile eski türetme). */
+  resolveIssuerId?(leafCertFingerprintHex: string): IssuerIdResolution;
   isCredentialAcceptable(issuerId: string, iat: number): "YES" | "NO" | "UNKNOWN";
   isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): "YES" | "NO" | "UNKNOWN";
   issuer(issuerId: string): {
@@ -405,7 +408,12 @@ export async function verifyW2wResponse(
 
     // belge veren: imzalı güven listesinde, belgenin verildiği anda (C1) ve bu tür için (C2)
     if (!ctx.trust) return { kind: "indeterminate", reason: "trust_unavailable" };
-    const issuerId = computeIssuerId(ctx.stateCode ?? "TR", leaf);
+    let issuerId = computeIssuerId(ctx.stateCode ?? "TR", leaf);
+    const resolved = ctx.trust.resolveIssuerId?.(certFingerprintHex(leaf));
+    if (resolved?.kind === "found") issuerId = resolved.issuerId;
+    else if (resolved?.kind === "ambiguous") return { kind: "invalid", reason: "untrusted_issuer" };
+    else if (resolved?.kind === "none" && resolved.unavailableStates.length)
+      return { kind: "indeterminate", reason: "trust_unknown" };
     const iat = v.signedEpoch ?? now;
     const c1 = ctx.trust.isCredentialAcceptable(issuerId, iat);
     const c2 = c1 === "YES" ? ctx.trust.isCredentialSchemaAcceptable(issuerId, computeSchemaId(docType), iat) : c1;

@@ -273,25 +273,23 @@ export const POLICIES: Policy[] = [
   // eşiği; ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
   // ADR-0092 değişiklik notu (2026-11-21): alt yaş sınırı ülkeden ülkeye değişir — 18 ve 21 için ayrı politikalar; her biri tek
   // eşik ister (K3: iki eşik birlikte istenmez).
-  ...([18, 21] as const).map(
-    (age): Policy => ({
-      policy_id: `car-rental-driving-${age}`,
-      purpose: {
-        "en-US": `Car rental — driving licence categories and over-${age} (verified driving licence information; not an official driving licence)`,
-        "tr-TR": `Araç kiralama — sürücü belgesi sınıfları ve ${age} yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)`,
+  ...([18, 21] as const).map((age): Policy => ({
+    policy_id: `car-rental-driving-${age}`,
+    purpose: {
+      "en-US": `Car rental — driving licence categories and over-${age} (verified driving licence information; not an official driving licence)`,
+      "tr-TR": `Araç kiralama — sürücü belgesi sınıfları ve ${age} yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)`,
+    },
+    credentials: [
+      {
+        id: "driving",
+        vct_values: [DRIVING_LICENCE_VCT],
+        required_claims: ["driving_privileges", `age_over_${age}`],
+        constraints: { [`age_over_${age}`]: true },
       },
-      credentials: [
-        {
-          id: "driving",
-          vct_values: [DRIVING_LICENCE_VCT],
-          required_claims: ["driving_privileges", `age_over_${age}`],
-          constraints: { [`age_over_${age}`]: true },
-        },
-      ],
-      trust: TRUST_ID,
-      freshness: FRESH,
-    }),
-  ),
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  })),
   // 2026-11-19: sandbox kurgusal doğrulayıcılarının senaryoları (yalnız sandbox; portal her birini kendi kaydıyla açar,
   // doğrulayıcı aracıdır — ADR-0017 K7). Her politika yalnız o kullanımın gerektirdiği alanları ister.
   {
@@ -337,6 +335,43 @@ export const POLICIES: Policy[] = [
       {
         id: "identity",
         vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        required_claims: ["given_name", "family_name", "nationalities", "personal_administrative_number"],
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  // ADR-0094 (yalnız sandbox; PP5, K7): kimlik soran iki doğrulayıcı AB PID'ini de kabul eder — temsili ulusal kimlik makamlarından
+  // (dış sağlayıcı listeleri `sandbox-pid-tr|az|kz`). Uygulama notu: istek başına TEK kayıt sertifikası gider (ETSI TS 119 472-2
+  // RO-13…16) ve bir kayıtlı kullanım tek türdür; bu yüzden seçenek tek istekte iki tür değil, doğrulayıcının sayfasında iki senaryo
+  // (Tamga kimlik belgesiyle / PID ile). Alan adları aynı (ADR-0045).
+  {
+    policy_id: "bank-account-opening-pid",
+    purpose: {
+      "en-US":
+        "Opening a bank account with the EU-format identity data (PID) — only the identity details needed for the account",
+      "tr-TR": "Banka hesabı açma, AB biçimli kimlik verisiyle (PID) — yalnız hesap için gereken kimlik bilgileri",
+    },
+    credentials: [
+      {
+        id: "pid",
+        vct_values: ["urn:eudi:pid:1"],
+        required_claims: ["given_name", "family_name", "birthdate", "nationalities", "personal_administrative_number"],
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  {
+    policy_id: "hotel-check-in-pid",
+    purpose: {
+      "en-US": "Hotel check-in with the EU-format identity data (PID) — guest registration",
+      "tr-TR": "Otel girişi, AB biçimli kimlik verisiyle (PID) — konuk kaydı",
+    },
+    credentials: [
+      {
+        id: "pid",
+        vct_values: ["urn:eudi:pid:1"],
         required_claims: ["given_name", "family_name", "nationalities", "personal_administrative_number"],
       },
     ],
@@ -439,12 +474,18 @@ export const isScenarioPolicy = (p: Policy) => !PRODUCTION_IDS.has(p.policy_id);
 export const isReviewPolicy = (p: Policy) => (REVIEW_POLICY_IDS as readonly string[]).includes(p.policy_id);
 
 /**
- * Doğrulama başına iptal listesi çekimini açan politikalar (SPEC-CRED-0003 §9.1, T1: açıkça etkinleştirilmeli). Yalnız sandbox'taki
- * OpenID uyum öz-testi: test aracı her test için yeni bir Status List adresi üretir ve listenin çekildiğini denetler; ön çekim
+ * Doğrulama başına iptal listesi çekimini açan politikalar (SPEC-CRED-0003 §9.1, T1: açıkça etkinleştirilmeli). Yalnız sandbox'ta:
+ * OpenID uyum öz-testi ve temsili PID senaryoları (ADR-0094). Öz-testte test aracı her test için yeni bir Status List adresi üretir ve listenin çekildiğini denetler; ön çekim
  * (S12) bu adresi bilemez. Liste yalnız dış listenin bildirdiği iptal sunucusundan çekilir (test aracının alan adı). Gerçek ağda hiçbir
  * politika açmaz (`statusFetchOnDemandFor`).
  */
-export const ON_DEMAND_STATUS_POLICY_IDS = ["oidf-selftest-eu-pid"] as const;
+// ADR-0094: temsili PID makamlarının iptal listeleri çapalanmaz (dış sağlayıcı; ön çekim yalnız çapalı listeleri bilir) — liste
+// doğrulama anında, yalnız sağlayıcı listesinin bildirdiği iptal sunucusundan çekilir
+export const ON_DEMAND_STATUS_POLICY_IDS = [
+  "oidf-selftest-eu-pid",
+  "bank-account-opening-pid",
+  "hotel-check-in-pid",
+] as const;
 export const statusFetchOnDemandFor = (network: "production" | "sandbox" | undefined, p: Policy) =>
   network === "sandbox" && (ON_DEMAND_STATUS_POLICY_IDS as readonly string[]).includes(p.policy_id);
 

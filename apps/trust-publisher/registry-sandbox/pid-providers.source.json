@@ -1,0 +1,42 @@
+{
+  "operator": {
+    "name": "Tamga Network Sandbox (TEST)",
+    "note": "ADR-0094 (sandbox only): representative PID providers in the EU PID format. Not a list notified under Regulation (EU) No 910/2014; never in the real network's list (PP1)."
+  },
+  "next_update_days": 30,
+  "providers": [
+    {
+      "list_id": "sandbox-pid-tr",
+      "territory": "TR",
+      "name": "National Identity Authority — Türkiye (representative)",
+      "issuer_url": "https://issuer.sandbox.tamga.network/pid-tr",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "root_cert": "pid-tr-root",
+      "status_cert": "pid-tr-status",
+      "list_signer": "pid-tr-list-signer",
+      "note": "Operated by Tamga Network Sandbox (TEST) for demonstration; the state of Türkiye does not participate in or endorse it. Fictional people only."
+    },
+    {
+      "list_id": "sandbox-pid-az",
+      "territory": "AZ",
+      "name": "National Identity Authority — Azerbaijan (representative)",
+      "issuer_url": "https://issuer.sandbox.tamga.network/pid-az",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "root_cert": "pid-az-root",
+      "status_cert": "pid-az-status",
+      "list_signer": "pid-az-list-signer",
+      "note": "Operated by Tamga Network Sandbox (TEST) for demonstration; the state of Azerbaijan does not participate in or endorse it. Fictional people only."
+    },
+    {
+      "list_id": "sandbox-pid-kz",
+      "territory": "KZ",
+      "name": "National Identity Authority — Kazakhstan (representative)",
+      "issuer_url": "https://issuer.sandbox.tamga.network/pid-kz",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "root_cert": "pid-kz-root",
+      "status_cert": "pid-kz-status",
+      "list_signer": "pid-kz-list-signer",
+      "note": "Operated by Tamga Network Sandbox (TEST) for demonstration; the state of Kazakhstan does not participate in or endorse it. Fictional people only."
+    }
+  ]
+}

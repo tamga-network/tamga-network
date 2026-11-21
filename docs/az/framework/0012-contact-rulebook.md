@@ -157,7 +157,7 @@ edilməyib. Yoxlayan tərəf kanonik ardıcıllığı tətbiq edir (RB-RP-03); n
 
 | Tələb | Dəyər |
 |---|---|
-| Sənədi verən | Yalnız Tamga Network identifikasiya xidməti (`IDENTITY` · `EAA` · I2) |
+| Sənədi verən | Yalnız Tamga Network identifikasiya xidməti (`IDENTITY` · `EAA` · I2). Sandbox-da həmçinin mənbə qurumlar: uydurma operator telefon, uydurma e-poçt xidməti e-poçt sənədini öz qeydindən verir (kod yerinə qurumun qeydi; [[ADR-0095]]) |
 | Şəxsiyyətin yoxlanılması | Tələb olunmur (T0): rəqəmsal sənəd yalnız sahibliyi sübut edir |
 | Sahibliyin sübutu | Birdəfəlik 6 rəqəmli kod e-poçt və ya SMS ilə göndərilir; düzgün kod daxil edildikdə rəqəmsal sənəd verilir (CT1). Kod 10 dəqiqə etibarlıdır, ən çox 5 cəhd; axın başına ən çox 3, ünvan başına saatda ən çox 5 göndəriş; kod yaddaşda yalnız heş kimi saxlanılır |
 | Axın | Şəxsiyyət sənədi ilə eyni: [[t:OpenID4VCI]] avtorizasiya kodu + [[t:PAR]] + PKCE + rəqəmsal cüzdan sübutu (WIA, KA; RB-AP-10) |

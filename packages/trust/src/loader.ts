@@ -20,7 +20,7 @@
  * (Node: jose — `loadTrustSet`; cüzdan/React Native: saf TS doğrulayıcı). Bu dosya jose/node:fs içe aktarmaz.
  */
 import { Anchor, Lotl, NationalList, KNOWN_FORMAT_VERSIONS } from "./types.js";
-import { sha256Tag, utf8 } from "./portable-hash.js";
+import { idFromFingerprintHex, sha256Tag, utf8 } from "./portable-hash.js";
 import { TrustStore, activeFps } from "./store.js";
 import { parseLote, type ParsedLote } from "./lote-reader.js";
 import { readTrustedListXml } from "./tl-reader.js";
@@ -136,6 +136,12 @@ export interface TrustSetInput {
   skipAnchors?: boolean;
   /** Yalnızca bu devletlerin ulusal listeleri beklenir (ör. ["TR"]); verilmezse tüm ACTIVE listeler. */
   states?: string[];
+  /**
+   * ADR-0093 UL2: zorunlu ülke listeleri (kendi ülkesi). Verilirse bunlar dışındaki listeler isteğe bağlıdır: eksik, doğrulanamaz,
+   * geri sarılmış ya da biçim dışıysa yüklenmez (`store.unavailable_states`), süresi geçmişse genel tazeliği bozmaz — yalnız o ülkenin
+   * kurumlarına dair sorular UNKNOWN döner. Verilmezse bugünkü davranış: beklenen her liste zorunludur.
+   */
+  requiredStates?: string[];
   /** Çapa günlüğünün son satırı bundan eskiyse liste bayat sayılır (varsayılan 2 saat — saatlik kadans). */
   anchorMaxAgeMs?: number;
   /**
@@ -150,6 +156,33 @@ export interface TrustSetInput {
    * `"none"` geri sarma denetimini kapatır.
    */
   versionMemory?: ListVersionMemory | "none";
+}
+
+/**
+ * ADR-0093 (listeler arası yalıtım; SPEC-ID-0002): ülke listesindeki kurum ve kök CA kimlikleri o listenin ülke koduyla ve kaydın
+ * sertifika parmak iziyle türetilmiş olmalı. Böylece bir liste başka bir ülkenin kimliğini taşıyamaz; uymayan liste yüklenmez.
+ */
+function checkDerivedIds(tl: NationalList, optional = false, registrarActive = true) {
+  const cc = tl.state_code;
+  if (optional) {
+    // ADR-0093 K3: doğrulayıcı kayıtları yalnız kayıt makamı rolü etkin olan listede (öteki listeler başka ülkenin doğrulayıcı
+    // adını gölgeleyemesin, kendi doğrulayıcısını da uyduramasın)
+    if (!registrarActive && tl.relying_parties.length)
+      throw new Error(`tl-${cc}: relying parties in a list whose registrar role is not active (ADR-0093 K3)`);
+    // kurum yalnız kendi listesinin kök CA'sına bağlanır (başka listenin kökü iptal edilse de ayakta kalmasın)
+    const own = new Set(tl.root_cas.map((r) => r.ca_id));
+    for (const i of tl.issuers)
+      if (!own.has(i.parent_ca_id))
+        throw new Error(`tl-${cc}: issuer ${i.slug} parent CA is not a root CA of this list (ADR-0093)`);
+  }
+  for (const i of tl.issuers)
+    if (i.issuer_id !== idFromFingerprintHex(cc, i.cert_fingerprint_sha256))
+      throw new Error(
+        `tl-${cc}: issuer ${i.slug} issuer_id is not derived from ${cc} and its certificate (SPEC-ID-0002)`,
+      );
+  for (const ca of tl.root_cas)
+    if (ca.ca_id !== idFromFingerprintHex(cc, ca.cert_fingerprint_sha256))
+      throw new Error(`tl-${cc}: root CA ca_id is not derived from ${cc} and its certificate (SPEC-ID-0002)`);
 }
 
 export interface LoadReport {
@@ -208,47 +241,75 @@ export async function loadTrustSetWith(
   const store = new TrustStore();
   store.applyLotl(lotl, lotlV.raw, now);
 
-  // 2) Ulusal listeler
+  // 2) Ulusal listeler — zorunlular önce (ADR-0093: isteğe bağlı bir liste zorunlu listenin kimliklerini önceden kapatamasın)
   const nationalVersions: Record<string, number> = {};
-  for (const ptr of lotl.national_lists) {
-    if (ptr.status !== "ACTIVE") continue;
-    if (input.states && !input.states.includes(ptr.state_code)) continue;
+  const required = input.requiredStates?.map((s) => s.trim().toUpperCase());
+  if (required && required.length === 0)
+    throw new RangeError("requiredStates must name at least one state (ADR-0093 UL2)");
+  const isOptional = (cc: string) => !!required && !required.includes(cc);
+  const optionalStates = new Set<string>();
+  const pointers = lotl.national_lists
+    .filter((p) => p.status === "ACTIVE" && (!input.states || input.states.includes(p.state_code)))
+    .sort((a, b) => Number(isOptional(a.state_code)) - Number(isOptional(b.state_code)));
+  for (const ptr of pointers) {
+    const optional = isOptional(ptr.state_code);
     const jws = input.nationalListJws[ptr.state_code];
     if (!jws) {
       warnings.push(`tl-${ptr.state_code.toLowerCase()} verilmedi`);
-      healthy = false;
+      if (optional) store.unavailable_states.add(ptr.state_code);
+      else healthy = false;
       continue;
     }
-    const fps = activeFps(ptr.signing_keys, now);
-    if (fps.size === 0) throw new Error(`lotl: no active signing key for ${ptr.state_code}`);
-    const v = await verifyJws<unknown>(jws, fps);
-    rejectXmlListSigner(v.raw, `tl-${ptr.state_code}`);
-    const raw = v.payload as { list_format_version?: string; state_code?: string };
-    if (!KNOWN_FORMAT_VERSIONS.has(String(raw.list_format_version)))
-      throw new Error(`CMP2: tl-${ptr.state_code} bilinmeyen format — DURDU`);
-    const tl: NationalList = NationalList.parse(v.payload);
-    if ((tl.environment ?? "production") !== expectedEnv)
-      throw new Error(
-        `SB2: tl-${ptr.state_code} environment=${tl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`,
-      );
-    if (tl.state_code !== ptr.state_code)
-      throw new Error(`tl state_code mismatch: ${tl.state_code} ≠ ${ptr.state_code}`);
-    checkOperator(`tl-${tl.state_code}`, tl.operator);
-    const key = `tl-${tl.state_code}`;
-    const tlMark = { version: tl.version, hash: sha256Tag(utf8(v.raw)) };
-    const tlProblem = rollbackProblem(key, mem?.get(key), {
-      ...tlMark,
-      previous_version_hash: tl.previous_version_hash,
-    });
-    if (tlProblem) throw new Error(`${tlProblem} — DURDU`);
-    marks.push([key, tlMark]);
-    if (new Date(tl.next_update) < now) {
-      healthy = false;
-      warnings.push(`tl-${tl.state_code} next_update passed`);
+    try {
+      const fps = activeFps(ptr.signing_keys, now);
+      if (fps.size === 0) throw new Error(`lotl: no active signing key for ${ptr.state_code}`);
+      const v = await verifyJws<unknown>(jws, fps);
+      rejectXmlListSigner(v.raw, `tl-${ptr.state_code}`);
+      const raw = v.payload as { list_format_version?: string; state_code?: string };
+      if (!KNOWN_FORMAT_VERSIONS.has(String(raw.list_format_version)))
+        throw new Error(`CMP2: tl-${ptr.state_code} bilinmeyen format — DURDU`);
+      const tl: NationalList = NationalList.parse(v.payload);
+      if ((tl.environment ?? "production") !== expectedEnv)
+        throw new Error(
+          `SB2: tl-${ptr.state_code} environment=${tl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`,
+        );
+      if (tl.state_code !== ptr.state_code)
+        throw new Error(`tl state_code mismatch: ${tl.state_code} ≠ ${ptr.state_code}`);
+      checkOperator(`tl-${tl.state_code}`, tl.operator);
+      const registrar = (ptr.roles as Record<string, { status?: string }> | undefined)?.registrar?.status;
+      checkDerivedIds(tl, optional, registrar === "ACTIVE" || registrar === "PROVISIONAL");
+      const key = `tl-${tl.state_code}`;
+      const tlMark = { version: tl.version, hash: sha256Tag(utf8(v.raw)) };
+      const tlProblem = rollbackProblem(key, mem?.get(key), {
+        ...tlMark,
+        previous_version_hash: tl.previous_version_hash,
+      });
+      if (tlProblem) throw new Error(`${tlProblem} — DURDU`);
+      store.applyNationalList(tl, v.raw);
+      marks.push([key, tlMark]);
+      if (optional) {
+        optionalStates.add(tl.state_code);
+        store.optional_national_deadlines.set(tl.state_code, new Date(tl.next_update));
+        if (new Date(tl.next_update) < now)
+          warnings.push(`tl-${tl.state_code} next_update passed — its institutions answer UNKNOWN (ADR-0093 UL2)`);
+      } else if (new Date(tl.next_update) < now) {
+        healthy = false;
+        warnings.push(`tl-${tl.state_code} next_update passed`);
+      }
+      nationalVersions[tl.state_code] = tl.version;
+    } catch (e) {
+      if (!optional) throw e;
+      store.unavailable_states.add(ptr.state_code);
+      warnings.push(`tl-${ptr.state_code.toLowerCase()}: ${(e as Error).message} — not loaded (ADR-0093 UL2)`);
     }
-    store.applyNationalList(tl, v.raw);
-    nationalVersions[tl.state_code] = tl.version;
   }
+
+  // ADR-0093 UL2: zorunlu liste gerçekten yüklenmiş olmalı (LOTL'da ETKİN değil, yanlış kod ya da süzgeç dışı → sağlıksız)
+  for (const cc of required ?? [])
+    if (!store.national.has(cc)) {
+      healthy = false;
+      warnings.push(`required national list tl-${cc.toLowerCase()} not loaded`);
+    }
 
   // 2b) ADR-0036 dış listeler — imzacı LOTL'da sabitlenmiş parmak izi; kapsam dışı kayıtlar alınmaz (FD2)
   if (input.externalListJws)
@@ -290,7 +351,9 @@ export async function loadTrustSetWith(
   }
 
   const deadlines = [new Date(lotl.next_update).getTime()];
-  for (const { list } of store.national.values()) deadlines.push(new Date(list.next_update).getTime());
+  // ADR-0093 UL2: isteğe bağlı listeler genel tazeliğe katılmaz (sorgu anında ülke başına bakılır)
+  for (const [cc, { list }] of store.national)
+    if (!optionalStates.has(cc)) deadlines.push(new Date(list.next_update).getTime());
   if (!input.skipAnchors && lastTs) deadlines.push(lastTs.getTime() + maxAgeMs);
   store.setFreshness({
     source: "list",

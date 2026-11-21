@@ -24,6 +24,11 @@ export interface DistLoadOptions {
   now?: Date;
   /** TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`). */
   versionMemory?: ListVersionMemory | "none";
+  /**
+   * ADR-0093 UL2: zorunlu ülke listeleri (ör. `["TR"]`); ötekiler isteğe bağlıdır — eksik ya da bayat olan yalnız kendi ülkesinin
+   * kurumlarını UNKNOWN yapar. Verilmezse klasördeki her ETKİN liste zorunludur (önceki davranış).
+   */
+  requiredStates?: string[];
 }
 
 /** `dist/` düzeni: lotl.jws, tl-<cc>.jws, anchors.jsonl, keys/root-fingerprints.json ({ lotl_signing_keys: [{fingerprint_sha256}] }). */
@@ -62,6 +67,7 @@ export async function loadTrustSourceFromDir(
     externalListJws: external,
     environment: opt.environment,
     versionMemory: opt.versionMemory,
+    ...(opt.requiredStates ? { requiredStates: opt.requiredStates } : {}),
   });
   const rootPath = resolve(dir, "keys", "root-ca.cert.pem");
   return {

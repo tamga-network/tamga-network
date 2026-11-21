@@ -119,3 +119,18 @@ listesini yüklemesini kurala bağlar ve bunu denemek için sandbox'ta Azerbayca
 # Durum
 
 **Accepted — 2026-11-21** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-TRUST-9. UL1–UL3 bağlayıcıdır.
+
+**Uygulama notları (2026-11-21):**
+- Listeler arası yalıtım: yükleyici her kaydın kimliğinin listenin kendi ülke koduyla türetildiğini denetler ([[SPEC-ID-0002]]);
+  bir liste başka bir listenin kurum (kimlik ya da imza sertifikası), kök, doğrulayıcı ya da şema kaydının (ağ şemaları dahil)
+  yerine geçemez — böyle bir liste yüklenmez; zorunlu listeler önce yüklendiğinden kendi ülkesinin kayıtları hep korunur. Yayıncı
+  da aynı kurum sertifikasını iki ülke listesine yazmaz (UL1), her listeyi kendi imzacısıyla imzalar (imzacılar parmak iziyle
+  karşılaştırılır) ve bütün denetimler (imza anahtarlarının yüklenmesi dahil) hiçbir liste yazılmadan biter.
+- Doğrulayıcı kaydı ([[ADR-0075]]): isteğe bağlı bir liste doğrulayıcıyı ancak LOTL'daki kayıt makamı rolü etkinse taşıyabilir
+  (K3 yükleyicide de zorlanır); kullanılamayan (bayat, geri sarılmış) listenin doğrulayıcı, kapı grubu ve kurum dizini kayıtları
+  geçerli sayılmaz. Aynı istemci kimliği iki listede olamadığından ülkeler arası devir yeni ülkenin erişim sertifikasıyla yapılır.
+- Zincir adımı: zincir yüklü köklerden hiçbirine bağlanmazken yüklenemeyen bir ülke listesi varsa INDETERMINATE (`A3`); şema
+  adımında da kayıtsız tür kullanılamayan listenin ulusal şeması olabiliyorsa INDETERMINATE (`B2`). Bilinçli olarak geniş tutuldu
+  (FD3 ile aynı ilke); kök kümesinin ülke listelerinden kurulması sonraki iş.
+- Zincir indeksleyicinin güven kaynağı henüz kurumu ülkesiyle çözmez (zincir kapalı); zincir açılmadan önce eşdeğer hâle getirilir.
+- Tamga Wallet'ın yeni çekirdeği paketlerin yeni sürümüyle gelir (K6); o zamana kadar cüzdan yalnız TR listesini yükler.

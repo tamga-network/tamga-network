@@ -120,3 +120,7 @@ hesapları) değişti (2026-10-04). K1/K6'daki test cüzdan sağlayıcısını a
 sandbox'ta cüzdan sağlayıcısını cüzdan işletir.
 
 **Not (2026-11-04):** 2026-10-06 notundaki gerçek kurum adı ve ilişki ifadesi kaldırıldı ("örnek bir üniversite kurumu"); karar içeriği değişmedi (proje yönetimi).
+
+**Not (2026-11-21):** [[ADR-0093]] ile sandbox LOTL'ında temsili Azerbaycan (`tl-az`) ve Kazakistan (`tl-kz`) listeleri açıldı;
+her biri kendi test imzacısıyla imzalanır, işletici alanı devlet katılımı olmadığını yazar ve sandbox sayfaları bu kurumların
+temsili test listelerinde olduğunu gösterir. Sandbox kökü ve LOTL imzacısı değişmedi (cüzdanlardaki sabit değerler aynı).
