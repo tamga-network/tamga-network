@@ -105,3 +105,13 @@ does not change.
 **Accepted — 2026-11-21** (project management approval). CS1–CS3 are binding.
 Implementation order: sandbox PKI (two institution
 certificates) → two records in the TR sandbox list → contact types in the hosted issuer → portal page.
+
+**Implementation (2026-11-22).** All four steps are done: the two institutions' credential and status list certificates in the
+sandbox PKI; two records in the TR sandbox list (`OTHER`, `EAA`, `I1`, authorised for their own type only); the hosted issuer's
+tenant setting `contact_provider` (`claim`: `phone_number` or `email`; such a tenant does not start on the real network — CS1;
+the value comes from the institution's record — CS2; no refresh token and no wallet-initiated path, getting it again is a new
+offer); on the portal's person page the buttons "From Sinyalnet Mobil" / "From Postakuş" (the identity service path stays; no
+suspension, revocation only). Note: the informational `tamga` block of the contact types in the catalogue names the issuer as
+`IDENTITY` with at least `I2`, and its description mentions an SMS/e-mail code; these fields are not enforced in code and no
+verification policy asks for a contact credential. The catalogue was not changed (its integrity digest would change); a real
+source institution joining would be handled by a separate decision.

@@ -143,6 +143,8 @@ short names in the addresses (`slug`) are technical identifiers only. The creden
 | Uzakyol Açıköğretim Üniversitesi, an open university (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
 | Gökkapı Arena, a sports venue (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (fictional matches) |
 | Köprüyaka Kongre Merkezi, a congress centre (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (fictional conferences) |
+| Sinyalnet Mobil, a mobile operator (TEST) — `issuer.sandbox.tamga.network/sinyalnet` | `urn:tamga:contact:PhoneNumber:1` (the number in its subscriber record; no code is sent — `ADR-0095`) |
+| Postakuş, an e-mail service (TEST) — `issuer.sandbox.tamga.network/postakus` | `urn:tamga:contact:EmailAddress:1` (the address in its user record; no code is sent — `ADR-0095`) |
 | Identity service — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, pseudonym seed (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Example people

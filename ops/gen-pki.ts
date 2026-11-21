@@ -647,6 +647,35 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         "CN=Köprüyaka Kongre Merkezi - Status List (TEST), OU=Status, O=Köprüyaka Kongre Merkezi (TEST), 2.5.4.97=VATTR-0000000012, C=TR",
       ),
     ),
+    // ADR-0095 K2: iletişim belgesinin kaynak kurumları (yalnız sandbox; registry-sandbox TR-VKN TR0000000020 / TR0000000021)
+    await ensure(
+      "issuer-sinyalnet",
+      signedByRoot(
+        1401,
+        "CN=Sinyalnet Mobil (TEST), OU=Abone Hizmetleri, O=Sinyalnet Mobil (TEST), 2.5.4.97=VATTR-0000000020, C=TR",
+      ),
+    ),
+    await ensure(
+      "issuer-sinyalnet-status",
+      signedByRoot(
+        1402,
+        "CN=Sinyalnet Mobil - Status List (TEST), OU=Status, O=Sinyalnet Mobil (TEST), 2.5.4.97=VATTR-0000000020, C=TR",
+      ),
+    ),
+    await ensure(
+      "issuer-postakus",
+      signedByRoot(
+        1411,
+        "CN=Postakuş (TEST), OU=Kullanıcı Hizmetleri, O=Postakuş (TEST), 2.5.4.97=VATTR-0000000021, C=TR",
+      ),
+    ),
+    await ensure(
+      "issuer-postakus-status",
+      signedByRoot(
+        1412,
+        "CN=Postakuş - Status List (TEST), OU=Status, O=Postakuş (TEST), 2.5.4.97=VATTR-0000000021, C=TR",
+      ),
+    ),
     // ADR-0093 K5: temsili ülkelerin kurgusal üniversiteleri (Günəşli — AZ, Dalaqala — KZ); kendi ülke listelerinde kayıtlı
     await ensure(
       "issuer-gunesli",

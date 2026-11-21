@@ -137,6 +137,8 @@ kısa adlar (`slug`) yalnız teknik tanımlayıcıdır. Buradaki belgeler test a
 | Uzakyol Açıköğretim Üniversitesi (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
 | Gökkapı Arena (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (kurgusal maçlar) |
 | Köprüyaka Kongre Merkezi (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (kurgusal konferanslar) |
+| Sinyalnet Mobil (TEST) — `issuer.sandbox.tamga.network/sinyalnet` | `urn:tamga:contact:PhoneNumber:1` (kurgusal mobil operatör; abone kaydındaki numara, kod gönderilmez — `ADR-0095`) |
+| Postakuş (TEST) — `issuer.sandbox.tamga.network/postakus` | `urn:tamga:contact:EmailAddress:1` (kurgusal e-posta hizmeti; kullanıcı kaydındaki adres, kod gönderilmez — `ADR-0095`) |
 | Kimlik servisi — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, takma ad tohumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Örnek kişiler

@@ -137,6 +137,8 @@ Sandbox-dakı qurumlar yalnız sınaq üçündür; heç biri real qurumla əlaq�
 | Uzakyol Açıköğretim Üniversitesi, açıq universitet (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
 | Gökkapı Arena, idman məkanı (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (uydurma oyunlar) |
 | Köprüyaka Kongre Merkezi, konqres mərkəzi (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (uydurma konfranslar) |
+| Sinyalnet Mobil, mobil operator (TEST) — `issuer.sandbox.tamga.network/sinyalnet` | `urn:tamga:contact:PhoneNumber:1` (abunəçi qeydindəki nömrə; kod göndərilmir — `ADR-0095`) |
+| Postakuş, e-poçt xidməti (TEST) — `issuer.sandbox.tamga.network/postakus` | `urn:tamga:contact:EmailAddress:1` (istifadəçi qeydindəki ünvan; kod göndərilmir — `ADR-0095`) |
 | Şəxsiyyət xidməti — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, psevdonim toxumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Nümunə şəxslər

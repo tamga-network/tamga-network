@@ -98,3 +98,12 @@ Barındırılan belge veren iletişim türlerini sandbox kiracılarına açar: k
 **Accepted — 2026-11-21** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-CONTACT-2. CS1–CS3 bağlayıcıdır.
 Uygulama sırası: sandbox PKI (iki kurum sertifikası) → TR sandbox
 listesine iki kayıt → barındırılan belge verende iletişim türleri → portal sayfası.
+
+**Uygulama (2026-11-22).** Dört adım da yapıldı: sandbox PKI'da iki kurumun belge ve iptal listesi sertifikaları; TR sandbox
+listesinde iki kayıt (`OTHER`, `EAA`, `I1`, yetki yalnız kendi türü); barındırılan belge verende kiracı ayarı `contact_provider`
+(`claim`: `phone_number` ya da `email`; gerçek ağda kiracı açılmaz — CS1; değer kurumun kaydından — CS2; yenileme belirteci ve
+cüzdan başlatmalı yol yok, yeniden almak yeni teklif); portalda kişi sayfasında "Sinyalnet Mobil verir" / "Postakuş verir"
+düğmeleri (kimlik servisi yolu da durur; askı yok, yalnız iptal). Not: katalogdaki iletişim türlerinin bilgi amaçlı `tamga`
+bloğu belge vereni `IDENTITY` ve en az `I2` diye anar ve açıklaması SMS/e-posta kodundan söz eder; bu alanlar kodda zorlanmaz,
+iletişim belgesi isteyen bir doğrulama politikası yoktur. Katalog değiştirilmedi (bütünlük özeti değişirdi); gerçek bir kaynak
+kurum katılırsa ayrı kararla ele alınır.

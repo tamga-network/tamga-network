@@ -6,6 +6,10 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+- Added (sandbox, ADR-0095): two fictional source institutions for the contact credentials — Sinyalnet Mobil
+  (`issuer.sandbox.tamga.network/sinyalnet`, phone number) and Postakuş (`issuer.sandbox.tamga.network/postakus`, e-mail address)
+  — with their sandbox PKI certificates and records in the TR sandbox list (`OTHER`, `I1`). The real network is unchanged.
+
 ## 0.9.0 — 2026-11-21
 
 All ten packages move to 0.9.0 together. This test release is **breaking** for callers that build trust lists by hand or rely on

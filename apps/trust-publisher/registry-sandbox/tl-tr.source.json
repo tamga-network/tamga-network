@@ -683,6 +683,124 @@
         "info_uri": "https://www.kvkk.gov.tr",
         "form_uri": "https://www.kvkk.gov.tr"
       }
+    },
+    {
+      "cert": "issuer-sinyalnet",
+      "status_cert": "issuer-sinyalnet-status",
+      "parent_ca": "root-ca",
+      "slug": "sinyalnet",
+      "legal_name": "Sinyalnet Mobil (TEST)",
+      "category": "OTHER",
+      "assurance": "I1",
+      "class": "EAA",
+      "assurance_basis": "Sandbox fictional mobile operator (ADR-0095): issues a phone number credential to its subscriber for the number in its own subscriber register; no one-time code, no identity proofing. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/sinyalnet",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-21T00:00:00Z",
+      "valid_until": "2028-11-21T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-21T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network, ADR-0095)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:contact:PhoneNumber:1",
+          "allowed": true,
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox subscriber register (fictional people file)",
+        "mode": "SUBSCRIBER_REGISTER"
+      },
+      "trade_name": "Sinyalnet Mobil (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000020",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "İstanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-postakus",
+      "status_cert": "issuer-postakus-status",
+      "parent_ca": "root-ca",
+      "slug": "postakus",
+      "legal_name": "Postakuş (TEST)",
+      "category": "OTHER",
+      "assurance": "I1",
+      "class": "EAA",
+      "assurance_basis": "Sandbox fictional e-mail service (ADR-0095): issues an e-mail address credential to its user for the address in its own account register; no one-time code, no identity proofing. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/postakus",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-21T00:00:00Z",
+      "valid_until": "2028-11-21T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-21T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network, ADR-0095)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:contact:EmailAddress:1",
+          "allowed": true,
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox account register (fictional people file)",
+        "mode": "SUBSCRIBER_REGISTER"
+      },
+      "trade_name": "Postakuş (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000021",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "İstanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
     }
   ],
   "relying_parties": [

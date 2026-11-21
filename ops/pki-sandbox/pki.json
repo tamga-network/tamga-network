@@ -214,6 +214,30 @@
     "not_after": "2028-11-19T14:41:51.000Z",
     "created_at": "2026-11-19T14:41:51.154Z"
   },
+  "issuer-sinyalnet": {
+    "subject": "CN=Sinyalnet Mobil (TEST), OU=Abone Hizmetleri, O=Sinyalnet Mobil (TEST), 2.5.4.97=VATTR-0000000020, C=TR",
+    "fingerprint_sha256": "09e0eae2fe18b3a81d6e895e8965fa78555e74ec6af6ddfbc1e91e8dff2f7821",
+    "not_after": "2028-11-21T21:51:53.000Z",
+    "created_at": "2026-11-21T21:51:53.000Z"
+  },
+  "issuer-sinyalnet-status": {
+    "subject": "CN=Sinyalnet Mobil - Status List (TEST), OU=Status, O=Sinyalnet Mobil (TEST), 2.5.4.97=VATTR-0000000020, C=TR",
+    "fingerprint_sha256": "27444bab746a8c77af2f28b4c867eb5955088abc83eca5305d06347cfbd99dca",
+    "not_after": "2028-11-21T21:51:53.000Z",
+    "created_at": "2026-11-21T21:51:53.000Z"
+  },
+  "issuer-postakus": {
+    "subject": "CN=Postakuş (TEST), OU=Kullanıcı Hizmetleri, O=Postakuş (TEST), 2.5.4.97=VATTR-0000000021, C=TR",
+    "fingerprint_sha256": "f024719042467126a0d7efce9880c6e8de990d09c8196a116083f6dd7fe945bf",
+    "not_after": "2028-11-21T21:51:53.000Z",
+    "created_at": "2026-11-21T21:51:53.000Z"
+  },
+  "issuer-postakus-status": {
+    "subject": "CN=Postakuş - Status List (TEST), OU=Status, O=Postakuş (TEST), 2.5.4.97=VATTR-0000000021, C=TR",
+    "fingerprint_sha256": "8faec0d4e92b3784b1a907e9d28911bc32c34dd89001b70f003df7e7dbbaccb7",
+    "not_after": "2028-11-21T21:51:53.000Z",
+    "created_at": "2026-11-21T21:51:53.000Z"
+  },
   "issuer-gunesli": {
     "subject": "CN=Günəşli Texniki Universiteti (TEST), OU=Tələbə işləri, O=Günəşli Texniki Universiteti (TEST), 2.5.4.97=VATAZ-1000000001, C=AZ",
     "fingerprint_sha256": "7bd17a5e52bd38b2ab4381584ff4914056a71eeacf9b14855c2c26f7008dc111",
@@ -353,6 +377,10 @@
     "issuer-gokkapi-status": "0xa3378fe2a873731b59a8ff94988bac0eb144a084aaabcb7ee7e2dc20fe214ada",
     "issuer-kopruyaka": "0x7522512f8cb754ec00b62061271afe5c36adb4684599f26fef3998e4dd60f4d8",
     "issuer-kopruyaka-status": "0x293f90d57b82b1023f0de2add92359576856c08381abf0d392e6e6d23c56c3b5",
+    "issuer-sinyalnet": "0x6d8431cf38f70090f9c2446bdf120be0f5c9280ad6d871d43fff5a935ab74bb5",
+    "issuer-sinyalnet-status": "0xb3eb74c43bd0150c0aa5dc963e86adb5c7271f85f5b0dcd5c2e5d2777b341157",
+    "issuer-postakus": "0x28e54d3b94eb4bc322748581dbcd84e341a951b1b9f024f7fcc7de54ab71943d",
+    "issuer-postakus-status": "0x1ca322db8695ce586710f163dbcf579c1a8242541f8932f1704d611c4cc6900b",
     "issuer-gunesli": "0x95a9df08a5e2760f4ae3b8d6717dec6589b3538d99f160d7eead9d1b379cd7e8",
     "issuer-gunesli-status": "0xadea1cf228cbd0eccc3ce4ca3b4017fc69ce62bd31607c1b735c62b497f25bc9",
     "issuer-dalaqala": "0x0fbd1171d64108d445e0ee7ebb45f7d931d2563d82944695cd6a693e92d93025",
