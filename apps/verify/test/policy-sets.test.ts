@@ -20,7 +20,8 @@ const SCENARIOS = [
   "campus-access",
   "event-tamga-id",
   "event-ticket",
-  "car-rental-driving",
+  "car-rental-driving-18",
+  "car-rental-driving-21",
   "oidf-selftest-eu-pid",
   // 2026-11-19: sandbox kurgusal doğrulayıcılarının senaryoları
   "bank-account-opening",

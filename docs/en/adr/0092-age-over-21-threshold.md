@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-20
-last_updated: 2026-11-20
+last_updated: 2026-11-21
 summary: >
   21 joins the identity credential's closed set of age thresholds: {15, 18, 21}. The driving licence information also carries
   `age_over_21` next to `age_over_18`, so that checks made with the driving licence, such as car rental, can ask about 21 in a
@@ -62,7 +62,13 @@ decision.
   threshold, the date of birth is not disclosed.
 - The network's policies ask for one threshold; asking for two together reveals an age range. A policy that asks about 21 does
   not also ask about 18.
-- This decision opens no new general policy. Tamga Verify's car rental policy (`car-rental-driving`) asks 21 instead of 18; the
+- **Change note (2026-11-21, project management):** the minimum age for car rental varies by state (18 in Türkiye, 21 in some
+  states). Tamga Verify has two policies: `car-rental-driving-18` and `car-rental-driving-21`; each asks for one threshold. The
+  old `car-rental-driving` was removed; the sandbox's `car-rental-driving-1` scope expired and was replaced by
+  `car-rental-driving-18-1` and `car-rental-driving-21-1` (the sandbox's sample car rental verifier uses 21). The real network has no car rental scope: Tamga
+  Verify's demonstration record `car-rental-driving-1` had ended on 2026-10-04; the original change rewrote this expired record to
+  21 by mistake, and its text was restored. The original text below is history.
+- Original: this decision opens no new general policy. Tamga Verify's car rental policy (`car-rental-driving`) asks 21 instead of 18; the
   `car-rental-driving-1` scope in the real network and sandbox records is updated accordingly. The scope name does not change:
   during the development phase records are corrected in place ([[ADR-0029]]); the scope's registration certificate is regenerated
   with the new attribute set ([[ADR-0026]]).
@@ -98,7 +104,7 @@ decision.
 
 - Schema catalogue: `age_over_21` in the identity credential and driving licence information types (`packages/schemas`).
 - Identity service: derivation in the identity credential, the driving licence information and renewal.
-- Tamga Verify: the car rental policy asks 21; the scope in the real network and sandbox records.
+- Tamga Verify: car rental policies for 18 and 21 (2026-11-21 note); the scopes in the sandbox records.
 - Wallet: attribute label (tr, en, tk).
 - Documents: the identity rulebook ([[FW-RB-0003]]) and guides.
 - Next: 21 in the ZK copy; further thresholds by separate ADRs when needed.

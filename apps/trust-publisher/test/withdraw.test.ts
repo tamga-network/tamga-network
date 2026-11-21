@@ -163,7 +163,8 @@ const DEMO_SCOPES = [
   "campus-access-1",
   "event-tamga-id-1",
   "event-ticket-1",
-  "car-rental-driving-1",
+  "car-rental-driving-18-1",
+  "car-rental-driving-21-1",
 ];
 
 describe("gerçek ağ kayıt defteri: test/demo kurumu yok (2026-10-04)", () => {
@@ -182,6 +183,7 @@ describe("gerçek ağ kayıt defteri: test/demo kurumu yok (2026-10-04)", () => 
     const now = Date.now();
     const open = v.scopes.filter((s) => Date.parse(s.valid_until) > now).map((s) => s.scope_id);
     for (const d of DEMO_SCOPES) expect(open).not.toContain(d);
+    expect(open).not.toContain("car-rental-driving-1"); // 2026-11-21: 18 ve 21 ayrı kullanımlara bölündü (ADR-0092 notu)
     expect(open).toEqual(expect.arrayContaining(["age-over-18-1", "site-signup-1"]));
     expect((v.terminal_groups ?? []).every((g) => g.valid_until && Date.parse(g.valid_until) <= now)).toBe(true);
   });

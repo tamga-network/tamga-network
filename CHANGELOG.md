@@ -10,8 +10,11 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 - Added: `age_over_21` (ADR-0092) in the identity credential (age thresholds {15, 18, 21}) and in the driving licence information
   ({18, 21}); ISO/IEC 18013-5 name in both formats, derived from the date of birth, selectively disclosable. The ZK copy is unchanged.
-- Changed: Tamga Verify's `car-rental-driving` policy asks `age_over_21` instead of `age_over_18` (one threshold); the
-  `car-rental-driving-1` scope in the trust lists follows. Credentials issued earlier get the attribute when re-issued or renewed.
+- Changed: Tamga Verify's car rental policy is split by minimum age, which varies by state: `car-rental-driving-18` and
+  `car-rental-driving-21` (one threshold each); the old `car-rental-driving` is removed. In the sandbox the `car-rental-driving-1`
+  scope expired and `car-rental-driving-18-1` / `car-rental-driving-21-1` replace it. The real network has no car rental scope
+  (the demonstration record ended on 2026-10-04); its text, rewritten to 21 by mistake, was restored. Credentials issued earlier get `age_over_21`
+  when re-issued or renewed.
 
 ### Sandbox
 

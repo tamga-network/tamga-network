@@ -894,7 +894,39 @@
             "age_over_21"
           ],
           "valid_from": "2026-10-04T00:00:00Z",
-          "valid_until": "2027-10-04T00:00:00Z",
+          "valid_until": "2026-11-21T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "car-rental-driving-18-1",
+          "purpose": "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
+          "purpose_localized": {
+            "tr-TR": "Araç kiralama — sürücü belgesi sınıfları ve 18 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+            "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 18 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
+          },
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "claims": [
+            "driving_privileges",
+            "age_over_18"
+          ],
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": "2027-11-21T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "car-rental-driving-21-1",
+          "purpose": "Car rental — driving licence categories and over-21 (verified driving licence information; not an official driving licence)",
+          "purpose_localized": {
+            "tr-TR": "Araç kiralama — sürücü belgesi sınıfları ve 21 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+            "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 21 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
+          },
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "claims": [
+            "driving_privileges",
+            "age_over_21"
+          ],
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": "2027-11-21T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         },
         {
@@ -1372,7 +1404,24 @@
             "age_over_21"
           ],
           "valid_from": "2026-11-19T00:00:00Z",
-          "valid_until": "2027-11-19T00:00:00Z",
+          "valid_until": "2026-11-21T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "car-rental-driving-21-1",
+          "service_id": "rental",
+          "purpose": "Car rental — driving licence categories and over-21 (verified driving licence information; not an official driving licence)",
+          "purpose_localized": {
+            "tr-TR": "Araç kiralama — sürücü belgesi sınıfları ve 21 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+            "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 21 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
+          },
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "claims": [
+            "driving_privileges",
+            "age_over_21"
+          ],
+          "valid_from": "2026-11-21T00:00:00Z",
+          "valid_until": "2027-11-21T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         }
       ],

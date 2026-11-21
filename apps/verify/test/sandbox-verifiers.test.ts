@@ -31,7 +31,7 @@ const CASES: Array<[string, string]> = [
   ["rp-sikkebank", "bank-account-opening"],
   ["rp-sayfalik", "library-membership"],
   ["rp-kampuskart", "student-discount"],
-  ["rp-yolgezer", "car-rental-driving"],
+  ["rp-yolgezer", "car-rental-driving-21"],
   ["rp-gecekonak", "hotel-check-in"],
   ["rp-kampusyuva", "dormitory-application"],
 ];

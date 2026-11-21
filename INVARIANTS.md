@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-20
+last_updated: 2026-11-21
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 519 kodlanmış değişmez, 94 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 522 kodlanmış değişmez, 95 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -971,6 +971,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0092/YE4` | Kimlik belgesinin yaş eşik kümesi {15, 18, 21}, sürücü belgesi bilgisininki {18, 21}'dir; ikisi de kapalıdır ve yalnız ADR ile değişir. Alanlar ISO/IEC 18013-5 `age_over_NN` adıyla, iki biçimde aynı adla, ihraçta doğum tarihinden türetilip seçici açıklanır. |
 
 
+## ADR-0093
+
+*"Birden çok ülke listesi: kurum kimliği kurumun ülkesiyle, cüzdan bütün etkin listeleri yükler, sandbox'ta temsili AZ ve KZ"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0093/UL1` | `issuerId` belgenin imza sertifikasından ve kurumun kayıtlı olduğu ülke listesinin ülke kodundan türetilir; yüklenen listelerde tam bir eşleşme aranır, birden çok eşleşme RED'dir, `iss` kimliğin kaynağı olamaz. |
+| `ADR-0093/UL2` | Kendi ülkesi dışındaki bir ülke listesinin eksik, bayat ya da doğrulanamaz olması yalnız o ülkenin kurumlarına dair soruları UNKNOWN yapar; kendi ülke listesi zorunludur. |
+| `ADR-0093/UL3` | Temsili ülke listeleri yalnız sandbox'tadır; her biri kendi imzacısıyla imzalanır ve devlet katılımı olmadığını işletici alanında belirtir. Gerçek ağda bir ülkenin listesi ancak o ülkeyle anlaşmayla `ACTIVE` olur. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1323,12 +1334,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 519 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 522 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, UL, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-20 (`scripts/sync-invariants.mjs`). Toplam 519 kodlanmış değişmez, 94 dokümanda.
+**Üretilen dosya** — 2026-11-21 (`scripts/sync-invariants.mjs`). Toplam 522 kodlanmış değişmez, 95 dokümanda.

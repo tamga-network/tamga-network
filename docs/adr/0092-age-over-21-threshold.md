@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-20
-last_updated: 2026-11-20
+last_updated: 2026-11-21
 summary: >
   Kimlik belgesinin kapalı yaş eşiği kümesine 21 eklenir: {15, 18, 21}. Sürücü belgesi bilgisi de `age_over_18`'in yanında
   `age_over_21` taşır; araç kiralama gibi sürücü belgesiyle yapılan doğrulamalar tek sunumda 21 yaşını sorabilsin diye. Ad ve
@@ -57,7 +57,13 @@ paylaşılmaz. Yaş eşikleri yine kapalı bir kümedir; bundan sonraki eşik de
 - Gizlilik [[ADR-0064]] K3 ile aynıdır: her eşik ayrı açıklanır, cüzdan yalnız istenen eşiği gösterir, doğum tarihi açılmaz.
 - Ağın politikaları tek eşik ister; iki eşiği birlikte istemek yaş aralığını ele verir. 21 yaşını soran bir politika 18'i
   ayrıca istemez.
-- Bu karar yeni genel politika açmaz. Tamga Verify'ın araç kiralama politikası (`car-rental-driving`) 18 yerine 21'i sorar;
+- **Değişiklik notu (2026-11-21, proje yönetimi):** araç kiralamada alt yaş sınırı ülkeden ülkeye değişir (Türkiye'de 18, bazı
+  ülkelerde 21). Tamga Verify'da iki politika vardır: `car-rental-driving-18` ve `car-rental-driving-21`; her biri tek eşik ister.
+  Eski `car-rental-driving` kaldırıldı; sandbox'taki `car-rental-driving-1` kapsamının süresi doldu, yerine `car-rental-driving-18-1`
+  ve `car-rental-driving-21-1` geldi (sandbox'taki örnek araç kiralama doğrulayıcısı 21'i kullanır). Gerçek ağda araç kiralama kapsamı yoktur: Tamga Verify'ın
+  tanıtım kaydı `car-rental-driving-1` 2026-10-04'te sona ermişti; ilk hâlde bu süresi geçmiş kayıt yanlışlıkla 21'e çevrilmişti,
+  eski metnine döndü. Aşağıdaki ilk hâl tarihçedir.
+- İlk hâl: bu karar yeni genel politika açmaz. Tamga Verify'ın araç kiralama politikası (`car-rental-driving`) 18 yerine 21'i sorar;
   gerçek ağ ve sandbox kayıtlarındaki `car-rental-driving-1` kapsamı buna göre güncellenir. Kapsam adı değişmez: geliştirme
   evresinde kayıtlar yerinde düzeltilir ([[ADR-0029]]); kapsamın kayıt sertifikası yeni alan kümesiyle yeniden üretilir ([[ADR-0026]]).
 
@@ -92,7 +98,7 @@ paylaşılmaz. Yaş eşikleri yine kapalı bir kümedir; bundan sonraki eşik de
 
 - Şema kataloğu: kimlik belgesi ve sürücü belgesi bilgisi türlerine `age_over_21` (`packages/schemas`).
 - Kimlik servisi: kimlik belgesinde, sürücü belgesi bilgisinde ve yenilemede türetme.
-- Tamga Verify: araç kiralama politikası 21 sorar; gerçek ağ ve sandbox kayıtlarındaki kapsam.
+- Tamga Verify: araç kiralama politikaları 18 ve 21 (2026-11-21 notu); sandbox kayıtlarındaki kapsamlar.
 - Cüzdan: alan adı (tr, en, tk).
 - Belgeler: kimlik kural kitabı ([[FW-RB-0003]]) ve rehberler.
 - Sonraki iş: ZK kopyasında 21; başka eşikler ihtiyaç doğunca ayrı ADR ile.

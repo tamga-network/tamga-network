@@ -269,27 +269,29 @@ export const POLICIES: Policy[] = [
     trust: TRUST_ID,
     freshness: FRESH,
   },
-  // ADR-0039 — araç kiralama: doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi DEĞİL, DL1). Yalnız sınıflar + 21 yaş
-  // üstü (ADR-0092 K3: tek eşik, 18 ayrıca istenmez); ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
-  {
-    policy_id: "car-rental-driving",
-    purpose: {
-      "en-US":
-        "Car rental — driving licence categories and over-21 (verified driving licence information; not an official driving licence)",
-      "tr-TR":
-        "Araç kiralama — sürücü belgesi sınıfları ve 21 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
-    },
-    credentials: [
-      {
-        id: "driving",
-        vct_values: [DRIVING_LICENCE_VCT],
-        required_claims: ["driving_privileges", "age_over_21"],
-        constraints: { age_over_21: true },
+  // ADR-0039 — araç kiralama: doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi DEĞİL, DL1). Yalnız sınıflar + bir yaş
+  // eşiği; ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
+  // ADR-0092 değişiklik notu (2026-11-21): alt yaş sınırı ülkeden ülkeye değişir — 18 ve 21 için ayrı politikalar; her biri tek
+  // eşik ister (K3: iki eşik birlikte istenmez).
+  ...([18, 21] as const).map(
+    (age): Policy => ({
+      policy_id: `car-rental-driving-${age}`,
+      purpose: {
+        "en-US": `Car rental — driving licence categories and over-${age} (verified driving licence information; not an official driving licence)`,
+        "tr-TR": `Araç kiralama — sürücü belgesi sınıfları ve ${age} yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)`,
       },
-    ],
-    trust: TRUST_ID,
-    freshness: FRESH,
-  },
+      credentials: [
+        {
+          id: "driving",
+          vct_values: [DRIVING_LICENCE_VCT],
+          required_claims: ["driving_privileges", `age_over_${age}`],
+          constraints: { [`age_over_${age}`]: true },
+        },
+      ],
+      trust: TRUST_ID,
+      freshness: FRESH,
+    }),
+  ),
   // 2026-11-19: sandbox kurgusal doğrulayıcılarının senaryoları (yalnız sandbox; portal her birini kendi kaydıyla açar,
   // doğrulayıcı aracıdır — ADR-0017 K7). Her politika yalnız o kullanımın gerektirdiği alanları ister.
   {
