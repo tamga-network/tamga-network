@@ -57,6 +57,9 @@ paylaşılmaz. Sıfır bilgi ispatı da aynı devreyle çalışır. Yeni bir ya�
   Kümede olmayan bir eşiği isteyen doğrulayıcı eşleşme bulamaz; cüzdan eşiği kendisi hesaplamaz.
 - Sürücü belgesi bilgisi ([[ADR-0039]]) yalnız `age_over_18` taşımaya devam eder; bu karar yalnız kimlik belgesini kapsar.
 
+> **Değişiklik (2026-11-20, [[ADR-0092]]):** kimlik belgesinin eşik kümesi {15, 18, 21} oldu; sürücü belgesi bilgisi artık
+> `age_over_18` ve `age_over_21` taşır (küme {18, 21}).
+
 ## K3 — Gizlilik `age_over_18` ile aynı
 
 - Yaş alanı türetilmiş bir evet/hayır'dır; yaş doğrulamasında doğum tarihi açılmaz. Her eşik ayrı açıklanır; cüzdan yalnız
@@ -101,7 +104,7 @@ paylaşılmaz. Sıfır bilgi ispatı da aynı devreyle çalışır. Yeni bir ya�
 
 | Kod | Kural |
 |---|---|
-| YE1 | Kimlik belgesinin yaş alanları ISO/IEC 18013-5 `age_over_NN` adıyla ve boolean değerle, SD-JWT VC'de ve mdoc'ta aynı adla taşınır. Eşik kümesi kapalıdır (bugün 15 ve 18); yeni eşik yalnız ADR ile eklenir. |
+| YE1 | Kimlik belgesinin yaş alanları ISO/IEC 18013-5 `age_over_NN` adıyla ve boolean değerle, SD-JWT VC'de ve mdoc'ta aynı adla taşınır. Eşik kümesi kapalıdır (bugün 15, 18 ve 21; [[ADR-0092]]); yeni eşik yalnız ADR ile eklenir. |
 | YE2 | Yaş alanı ihraç anında kimlik servisinde doğum tarihinden türetilir ve seçici açıklanır; yaş doğrulaması doğum tarihini açmaz; ağın doğrulayıcı politikaları tek eşik ister. |
 | YE3 | ZK kopyası kimlik belgesinin yaş alanlarından başka kişi alanı taşımaz; yeni bir yaş eşiği eşitlik devresiyle ispatlanır, devre kaydı değişmez. |
 

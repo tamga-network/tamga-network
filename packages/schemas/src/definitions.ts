@@ -465,9 +465,10 @@ export const IDENTITY: SchemaDef = {
       verification_method: {
         enum: ["remote-document-liveness-face", "remote-nfc-liveness-face", "in-person", "review-demo"],
       },
-      // ADR-0064: yaş eşikleri ISO/IEC 18013-5 `age_over_NN` deseni, kapalı küme {15, 18} (yeni eşik yalnız ADR ile)
+      // ADR-0064 + ADR-0092: yaş eşikleri ISO/IEC 18013-5 `age_over_NN` deseni, kapalı küme {15, 18, 21} (yeni eşik yalnız ADR ile)
       age_over_18: { type: "boolean" },
       age_over_15: { type: "boolean" },
+      age_over_21: { type: "boolean" },
       // ADR-0089 K2: idari geçerlilik (kaydın bitişi; AB PID `date_of_expiry`, mdoc `expiry_date`) — kopyanın teknik `exp`'inden ayrı
       date_of_expiry: DATE,
       // ADR-0091: AB PID doğum yeri (CIR 2026/1731 §4.1 (j), Tablo 7 — `place_of_birth` {country?, region?, locality?}, en az biri);
@@ -565,6 +566,14 @@ export const IDENTITY: SchemaDef = {
         ],
       },
       {
+        path: ["age_over_21"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "21 yaş üstü" },
+          { lang: "en-US", label: "Over 21" },
+        ],
+      },
+      {
         path: ["date_of_expiry"],
         sd: "always",
         display: [
@@ -597,9 +606,9 @@ export const IDENTITY: SchemaDef = {
       uses_status_list: true,
       min_issuer_assurance: "I2", // ADR-0022: nitelikli olmayan EAA
       min_binding_level: "T2",
-      derived_claims: ["age_over_18", "age_over_15", "document_number_hash", "date_of_expiry"],
+      derived_claims: ["age_over_18", "age_over_15", "age_over_21", "document_number_hash", "date_of_expiry"],
       status: "ACTIVE",
-      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable. ADR-0089: default_ttl_days is the administrative validity of the logical credential, carried in every copy as date_of_expiry (mdoc expiry_date); renewable copies have a technical validity of at most 30 days and are re-issued against a presentation of a current copy (age attributes are recomputed at renewal). ADR-0091: place_of_birth (EU PID structure country/region/locality; written only when the source document carries it) and issuing_authority (EU PID metadata; the name of the provisional operator) follow Implementing Regulation (EU) 2026/1731.",
+      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18, 21}; ADR-0092) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable. ADR-0089: default_ttl_days is the administrative validity of the logical credential, carried in every copy as date_of_expiry (mdoc expiry_date); renewable copies have a technical validity of at most 30 days and are re-issued against a presentation of a current copy (age attributes are recomputed at renewal). ADR-0091: place_of_birth (EU PID structure country/region/locality; written only when the source document carries it) and issuing_authority (EU PID metadata; the name of the provisional operator) follow Implementing Regulation (EU) 2026/1731.",
     },
   },
 };
@@ -962,6 +971,8 @@ export const DRIVING_LICENCE: SchemaDef = {
       verified_at: DATE,
       verification_method: { enum: ["remote-document-liveness-face"] },
       age_over_18: { type: "boolean" },
+      // ADR-0092 K2: sürücü belgesi bilgisinin yaş eşikleri kapalı küme {18, 21}
+      age_over_21: { type: "boolean" },
       // DL1: sabit ibare; şema değeri true'ya kilitler, metadata görünen metni taşır
       not_official_licence: { const: true },
     },
@@ -1066,6 +1077,14 @@ export const DRIVING_LICENCE: SchemaDef = {
         ],
       },
       {
+        path: ["age_over_21"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "21 yaş üstü" },
+          { lang: "en-US", label: "Over 21" },
+        ],
+      },
+      {
         path: ["not_official_licence"],
         sd: "never",
         display: [
@@ -1082,9 +1101,9 @@ export const DRIVING_LICENCE: SchemaDef = {
       uses_status_list: true,
       min_issuer_assurance: "I2",
       min_binding_level: "T2",
-      derived_claims: ["document_number_hash", "age_over_18", "not_official_licence"],
+      derived_claims: ["document_number_hash", "age_over_18", "age_over_21", "not_official_licence"],
       status: "ACTIVE",
-      note: "ADR-0039 DL1–DL4: not the official mDL docType/namespace; no national ID number, restriction or health codes, photo or address; validity ≤ card expiry and ≤ 1 year from inspection; issuance for a country stops once its competent authority issues digital driving licences. Prerequisite: a Tamga identity credential presented at the PAR; name and date of birth must match the card.",
+      note: "ADR-0039 DL1–DL4: not the official mDL docType/namespace; no national ID number, restriction or health codes, photo or address; validity ≤ card expiry and ≤ 1 year from inspection; issuance for a country stops once its competent authority issues digital driving licences. ADR-0092 K2: age attributes age_over_18 and age_over_21 (closed set {18, 21}), derived from the card date of birth at issuance and selectively disclosable. Prerequisite: a Tamga identity credential presented at the PAR; name and date of birth must match the card.",
     },
   },
 };

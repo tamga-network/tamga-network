@@ -67,6 +67,9 @@ is not shared. Zero-knowledge proofs work with the same circuit. A new age thres
   itself.
 - Driving licence information ([[ADR-0039]]) keeps carrying only `age_over_18`; this decision covers only the identity credential.
 
+> **Change (2026-11-20, [[ADR-0092]]):** the identity credential's threshold set became {15, 18, 21}; the driving licence
+> information now carries `age_over_18` and `age_over_21` (set {18, 21}).
+
 ## K3 — Same privacy as `age_over_18`
 
 - An age attribute is a derived yes or no; age verification does not disclose the date of birth. Each threshold is disclosed on
@@ -112,7 +115,7 @@ is not shared. Zero-knowledge proofs work with the same circuit. A new age thres
 
 | Code | Rule |
 |---|---|
-| YE1 | The identity credential's age attributes carry the ISO/IEC 18013-5 `age_over_NN` name and a boolean value, with the same name in SD-JWT VC and in mdoc. The threshold set is closed (today 15 and 18); a new threshold is added only by ADR. |
+| YE1 | The identity credential's age attributes carry the ISO/IEC 18013-5 `age_over_NN` name and a boolean value, with the same name in SD-JWT VC and in mdoc. The threshold set is closed (today 15, 18 and 21; [[ADR-0092]]); a new threshold is added only by ADR. |
 | YE2 | An age attribute is derived from the date of birth by the identity service at issuance and is selectively disclosable; age verification does not disclose the date of birth; the network's verifier policies ask for a single threshold. |
 | YE3 | The ZK copy carries no personal attribute other than the identity credential's age attributes; a new age threshold is proven with the equality circuit and the circuit entry does not change. |
 

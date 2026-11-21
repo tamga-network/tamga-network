@@ -86,7 +86,7 @@ do not say "driving licence" on its own, "digital driving licence" or "mobile dr
 | Claim | Required | Selective disclosure | Note |
 |---|---|---|---|
 | `given_name`, `family_name` | ✓ | ✓ | from the card; lets the verifier match the person |
-| `birth_date` | ○ | ✓ | from the card; `age_over_18` derived |
+| `birth_date` | ○ | ✓ | from the card; `age_over_18` and `age_over_21` derived ([[ADR-0092]] K2) |
 | `driving_privileges` | ✓ | ✓ (array as a whole) | `[{ category, issue_date?, expiry_date? }]`; `category` as printed on the card (`B`, `A2`, `C1E` …; EU 2006/126 codes, national additions as they are). Named like the ISO 18013-5 data element; the structure is Tamga's. In the development stage the array is a single disclosable claim; per-category disclosure is for a later version |
 | `issuing_country` | ✓ | ✓ | ISO 3166-1 alpha-2 |
 | `licence_issue_date` (○), `licence_expiry_date` (✓) | | ✓ | the card's own dates |

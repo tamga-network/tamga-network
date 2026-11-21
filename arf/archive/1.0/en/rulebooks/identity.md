@@ -156,11 +156,13 @@ follows from this absence and from the issuer's class in the trust list.
 | Type                        | Data identifier      | Definition                                                                                                                                                                                                                                                                                                   | Data type | Example value |
 | --------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------- |
 | Identity credential         | `age_over_18`        | Derived from the date of birth; in age verification only this attribute is disclosed. Not in the EU PID set; a Tamga attribute with the ISO/IEC 18013-5 name ([[ADR-0045]] K3)                                                                                                                               | boolean   | `true`        |
-| Identity credential         | `age_over_15`        | Derived from the date of birth with the same rule; ISO/IEC 18013-5 `age_over_NN` pattern. The identity credential's age thresholds are a closed set (15, 18); a new threshold is added only by ADR ([[ADR-0064]] K2)                                                                                         | boolean   | `true`        |
+| Identity credential         | `age_over_15`        | Derived from the date of birth with the same rule; ISO/IEC 18013-5 `age_over_NN` pattern. The identity credential's age thresholds are a closed set (15, 18, 21); a new threshold is added only by ADR ([[ADR-0064]] K2, [[ADR-0092]])                                                                       | boolean   | `true`        |
+| Identity credential         | `age_over_21`        | Derived from the date of birth with the same rule ([[ADR-0092]] K1)                                                                                                                                                                                                                                          | boolean   | `true`        |
 | ZK copy                     | `age_over_15`        | Whether the person is over 15; an element that can only be proven with ZK ([[ADR-0064]]). The identity service writes it only if the main identity credential carries the attribute (a copy of a credential issued before the attribute was added has none); the ZK schema does not make it mandatory (§7.2) | boolean   | `true`        |
 | Driving licence information | `birth_date`         | Date of birth if on the card (ISO/IEC 18013-5 mDL name)                                                                                                                                                                                                                                                      | date      | `1990-04-12`  |
 | Driving licence information | `licence_issue_date` | Issue date of the card (if present)                                                                                                                                                                                                                                                                          | date      | `2024-06-01`  |
 | Driving licence information | `age_over_18`        | Derived                                                                                                                                                                                                                                                                                                      | boolean   | `true`        |
+| Driving licence information | `age_over_21`        | Derived; the age thresholds of the driving licence information are a closed set (18, 21) ([[ADR-0092]] K2)                                                                                                                                                                                                   | boolean   | `true`        |
 
 ### 2.4 Conditional attributes
 
@@ -230,6 +232,7 @@ certificate.
 | `verification_method`            | `verification_method`            | tstr                                    | `tamga.id.1` |
 | `age_over_18`                    | `age_over_18`                    | bool                                    | `tamga.id.1` |
 | `age_over_15`                    | `age_over_15`                    | bool                                    | `tamga.id.1` |
+| `age_over_21`                    | `age_over_21`                    | bool                                    | `tamga.id.1` |
 
 Names and encoding follow EU PID Table 6 ([[ADR-0045]] K2); the name table is in the open packages (`@tamga-network/core/pid`).
 The namespace `tamga.id.1` is a Tamga-specific namespace (ARB_10): the credential is not a PID, so `eu.europa.ec.eudi.pid.1` is not
@@ -278,6 +281,7 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
 | `verification_method`                                        | `verification_method`            | string (set)       | Tamga-specific                                                      | MUST        |
 | `age_over_18`                                                | `age_over_18`                    | boolean            | ISO/IEC 18013-5 name                                                | MUST        |
 | `age_over_15`                                                | `age_over_15`                    | boolean            | ISO/IEC 18013-5 name ([[ADR-0064]])                                 | MUST        |
+| `age_over_21`                                                | `age_over_21`                    | boolean            | ISO/IEC 18013-5 name ([[ADR-0092]])                                 | MUST        |
 | `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | same                             | —                  | transport profile                                                   | MUST NOT    |
 
 **Pseudonym seed**
@@ -288,17 +292,17 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
 
 **Driving licence information**
 
-| Data identifier                             | Claim name        | Encoding           | Notes                                                                          | Disclosable |
-| ------------------------------------------- | ----------------- | ------------------ | ------------------------------------------------------------------------------ | ----------- |
-| `family_name`, `given_name`                 | same              | string             | OpenID Connect Core §5.1                                                       | MUST        |
-| `birth_date`                                | `birth_date`      | string, YYYY-MM-DD | ISO/IEC 18013-5 mDL name ([[ADR-0045]] K4)                                     | MUST        |
-| `issuing_country`                           | `issuing_country` | string (alpha-2)   | ISO/IEC 18013-5 mDL name                                                       | MUST        |
-| `document_number_hash`                      | same              | string `sha256-…`  | Tamga-specific                                                                 | MUST        |
-| `driving_privileges`                        | same              | array of objects   | ISO/IEC 18013-5 mDL name; the official mDL namespace is not used (RB-AP-ID-08) | MUST        |
-| `licence_issue_date`, `licence_expiry_date` | same              | string, YYYY-MM-DD | Tamga-specific                                                                 | MUST        |
-| `verification_method`, `age_over_18`        | same              | string / boolean   | —                                                                              | MUST        |
-| `verified_at`                               | same              | string, YYYY-MM-DD | Tamga-specific                                                                 | MUST NOT    |
-| `not_official_licence`                      | same              | constant `true`    | Tamga-specific; visible in every presentation                                  | MUST NOT    |
+| Data identifier                                     | Claim name        | Encoding           | Notes                                                                          | Disclosable |
+| --------------------------------------------------- | ----------------- | ------------------ | ------------------------------------------------------------------------------ | ----------- |
+| `family_name`, `given_name`                         | same              | string             | OpenID Connect Core §5.1                                                       | MUST        |
+| `birth_date`                                        | `birth_date`      | string, YYYY-MM-DD | ISO/IEC 18013-5 mDL name ([[ADR-0045]] K4)                                     | MUST        |
+| `issuing_country`                                   | `issuing_country` | string (alpha-2)   | ISO/IEC 18013-5 mDL name                                                       | MUST        |
+| `document_number_hash`                              | same              | string `sha256-…`  | Tamga-specific                                                                 | MUST        |
+| `driving_privileges`                                | same              | array of objects   | ISO/IEC 18013-5 mDL name; the official mDL namespace is not used (RB-AP-ID-08) | MUST        |
+| `licence_issue_date`, `licence_expiry_date`         | same              | string, YYYY-MM-DD | Tamga-specific                                                                 | MUST        |
+| `verification_method`, `age_over_18`, `age_over_21` | same              | string / boolean   | `age_over_21`: [[ADR-0092]] K2                                                 | MUST        |
+| `verified_at`                                       | same              | string, YYYY-MM-DD | Tamga-specific                                                                 | MUST NOT    |
+| `not_official_licence`                              | same              | constant `true`    | Tamga-specific; visible in every presentation                                  | MUST NOT    |
 
 **Example (identity credential; the JWT claim set with disclosures resolved):**
 
@@ -323,6 +327,7 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
   "verification_method": "remote-document-liveness-face",
   "age_over_18": true,
   "age_over_15": true,
+  "age_over_21": true,
   "issuing_authority": "Tamga Network (provisional)",
   "date_of_expiry": "2028-10-10"
 }
@@ -339,14 +344,14 @@ Not used: Tamga does not use a JSON-LD carrier.
 
 ### 4.1 Use cases and the attributes a verifier asks for
 
-| Use                                                     | Attributes requested                                                       | Rule                                                                                                                                                                                                        |
-| ------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Age verification                                        | `age_over_18` or `age_over_15` (one threshold)                             | No other attribute is requested; the two thresholds are not requested together, as that reveals an age range ([[ADR-0064]] K3); in the browser via mdoc, optionally a zero-knowledge proof with the ZK copy |
-| Matching at an institution (before issuance)            | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | The institution's issuance service receives them only within its registered scope and through the full verification pipeline; it does not store or log the matching keys (RB-RP-ID-01)                      |
-| "Is there a valid Tamga identity"                       | none                                                                       | Reference policy `event-tamga-id`                                                                                                                                                                           |
-| Sign-up and sign-in on a website ("Sign in with Tamga") | at sign-up `given_name`, `family_name`; at sign-in none                    | The account key is a per-site pseudonym; `document_number_hash` and the identity number are not requested (RB-RP-13)                                                                                        |
-| High-risk transaction                                   | per its scope                                                              | If face matching is needed it is the verifier's responsibility; the credential carries no portrait (RB-RP-11)                                                                                               |
-| Driving licence categories                              | `driving_privileges` and what is needed                                    | Not used in official checks or official procedures; the screen says "does not replace an official driving licence" (§4.8)                                                                                   |
+| Use                                                     | Attributes requested                                                       | Rule                                                                                                                                                                                                                         |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Age verification                                        | `age_over_18`, `age_over_15` or `age_over_21` (one threshold)              | No other attribute is requested; the two thresholds are not requested together, as that reveals an age range ([[ADR-0064]] K3, [[ADR-0092]] K3); in the browser via mdoc, optionally a zero-knowledge proof with the ZK copy |
+| Matching at an institution (before issuance)            | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | The institution's issuance service receives them only within its registered scope and through the full verification pipeline; it does not store or log the matching keys (RB-RP-ID-01)                                       |
+| "Is there a valid Tamga identity"                       | none                                                                       | Reference policy `event-tamga-id`                                                                                                                                                                                            |
+| Sign-up and sign-in on a website ("Sign in with Tamga") | at sign-up `given_name`, `family_name`; at sign-in none                    | The account key is a per-site pseudonym; `document_number_hash` and the identity number are not requested (RB-RP-13)                                                                                                         |
+| High-risk transaction                                   | per its scope                                                              | If face matching is needed it is the verifier's responsibility; the credential carries no portrait (RB-RP-11)                                                                                                                |
+| Driving licence categories                              | `driving_privileges` and what is needed                                    | Not used in official checks or official procedures; the screen says "does not replace an official driving licence" (§4.8)                                                                                                    |
 
 **Requesting a PID (ARB_27).** A verifier that accepts these types does not need to request a PID as well. Accepting a state PID
 for matching, once one exists, is opened by a separate decision.
@@ -427,7 +432,7 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
   applies to the attribute itself or to its parent.
 - **Age.** The EU PID has no age attribute; in the EU a separate age verification credential is used for age. The mDL has age
   elements such as `age_over_18`. The Tamga identity credential follows the same `age_over_NN` pattern; the threshold set is closed:
-  15 and 18 today ([[ADR-0064]]).
+  15, 18 and 21 today ([[ADR-0064]], [[ADR-0092]]).
 
 | Tamga identity credential (SD-JWT VC)                                                    | Tamga identity credential (mdoc, `tamga.id.1`) | EU PID (SD-JWT VC)                                                      | EU PID (mdoc)                    |
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------- |
@@ -439,6 +444,7 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
 | `issuing_country` (country that issued the document)                                     | `issuing_country`                              | `issuing_country` (country of the PID provider)                         | `issuing_country`                |
 | `age_over_18`                                                                            | `age_over_18`                                  | — (separate age verification credential)                                | —                                |
 | `age_over_15`                                                                            | `age_over_15`                                  | — (separate age verification credential)                                | —                                |
+| `age_over_21`                                                                            | `age_over_21`                                  | — (separate age verification credential)                                | —                                |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | same                                           | no equivalent (Tamga-specific)                                          | no equivalent                    |
 | `place_of_birth` (only if the verified document carries it; ADR-0091)                    | `place_of_birth`                               | `place_of_birth` (place of birth: country, region, locality; mandatory) | `place_of_birth`                 |
 | `issuing_authority` (`Tamga Network (provisional)`; ADR-0091)                            | `issuing_authority`                            | `issuing_authority` (mandatory metadata)                                | `issuing_authority`              |
@@ -583,3 +589,6 @@ moved to the conditional attributes (§2.4) and `issuing_authority` joined the t
 the document and `QU` / `QS` are not written today (§2.2); `age_over_15` is not mandatory in the ZK copy (§2.3, §7.2); the status
 list address is `https://id.tamga.network/status/` (§2.5, §3, §6.2); the §4.6 note on PID attributes was updated for
 [[ADR-0091]].
+
+**Decision note (2026-11-20; the version stays 1.0).** [[ADR-0092]]: `age_over_21` in the identity credential and in the driving
+licence information; the identity credential's age thresholds are {15, 18, 21}, the driving licence information's {18, 21}.

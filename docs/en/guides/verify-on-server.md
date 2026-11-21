@@ -116,7 +116,7 @@ with `policy.freshness.max_clock_skew_sec` (default 120 s).
   it has a single branch. Otherwise anyone who sees the QR code can fetch the request object and break the real person's
   transaction with a forged decline. Open responses with `openPresentationResponse`.
 - The policy asks only for the fields it needs; for age a single [[t:mdoc]] field such as `age_over_18` or `age_over_15` is
-  enough (the thresholds are a closed set: 15 and 18; [[ADR-0064]]). Tamga Verify also has the `age-over-15-mdoc` and
+  enough (the thresholds are a closed set: 15, 18 and 21; [[ADR-0064]], [[ADR-0092]]). Tamga Verify also has the `age-over-15-mdoc` and
   `age-over-15-zk` policies.
 - [[t:status-list|Status list]] prefetching and trust list refreshing must be running. If they are not, results become
   `INDETERMINATE` — which is the correct behaviour.

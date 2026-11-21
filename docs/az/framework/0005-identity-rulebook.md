@@ -149,11 +149,13 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 | Növ | Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
 |---|---|---|---|---|
 | Şəxsiyyət sənədi | `age_over_18` | Doğum tarixindən törədilir; yaşın yoxlanılmasında yalnız bu sahə açılır. Aİ PID toplusunda yoxdur; ISO/IEC 18013-5 adı ilə Tamga sahəsidir ([[ADR-0045]] K3) | boolean | `true` |
-| Şəxsiyyət sənədi | `age_over_15` | Doğum tarixindən eyni qayda ilə törədilir; ISO/IEC 18013-5 `age_over_NN` nümunəsi. Şəxsiyyət sənədinin yaş həddləri qapalı çoxluqdur (15, 18); yeni hədd yalnız ADR ilə əlavə edilir ([[ADR-0064]] K2) | boolean | `true` |
+| Şəxsiyyət sənədi | `age_over_15` | Doğum tarixindən eyni qayda ilə törədilir; ISO/IEC 18013-5 `age_over_NN` nümunəsi. Şəxsiyyət sənədinin yaş həddləri qapalı çoxluqdur (15, 18, 21); yeni hədd yalnız ADR ilə əlavə edilir ([[ADR-0064]] K2, [[ADR-0092]]) | boolean | `true` |
+| Şəxsiyyət sənədi | `age_over_21` | Doğum tarixindən eyni qayda ilə törədilir ([[ADR-0092]] K1) | boolean | `true` |
 | ZK nüsxəsi | `age_over_15` | 15 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element ([[ADR-0064]]). Şəxsiyyət xidməti onu yalnız əsas şəxsiyyət sənədi bu sahəni daşıyırsa yazır (sahə əlavə edilməzdən əvvəl verilmiş sənədin nüsxəsində yoxdur); ZK sxemi onu məcburi saxlamır (§7.2) | boolean | `true` |
 | Sürücülük vəsiqəsi məlumatı | `birth_date` | Kartda varsa doğum tarixi (ISO/IEC 18013-5 mDL adı) | tarix | `1990-04-12` |
 | Sürücülük vəsiqəsi məlumatı | `licence_issue_date` | Kartın verilmə tarixi (varsa) | tarix | `2024-06-01` |
 | Sürücülük vəsiqəsi məlumatı | `age_over_18` | Törədilmiş | boolean | `true` |
+| Sürücülük vəsiqəsi məlumatı | `age_over_21` | Törədilmiş; sürücülük vəsiqəsi məlumatının yaş həddləri qapalı çoxluqdur (18, 21) ([[ADR-0092]] K2) | boolean | `true` |
 
 ## 2.4 Şərti atributlar
 
@@ -224,6 +226,7 @@ sertifikatıdır.
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
 | `age_over_15` | `age_over_15` | bool | `tamga.id.1` |
+| `age_over_21` | `age_over_21` | bool | `tamga.id.1` |
 
 Ad və kodlaşdırma Aİ PID Cədvəl 6-ya əsaslanır ([[ADR-0045]] K2); ad cədvəli açıq paketlərdədir (`@tamga-network/core/pid`). Ad sahəsi
 `tamga.id.1` Tamga-ya məxsus ad sahəsidir (ARB_10): sənəd PID olmadığı üçün `eu.europa.ec.eudi.pid.1` istifadə olunmur.
@@ -270,6 +273,7 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
 | `verification_method` | `verification_method` | string (çoxluq) | Tamga-ya məxsus | MUST |
 | `age_over_18` | `age_over_18` | boolean | ISO/IEC 18013-5 adı | MUST |
 | `age_over_15` | `age_over_15` | boolean | ISO/IEC 18013-5 adı ([[ADR-0064]]) | MUST |
+| `age_over_21` | `age_over_21` | boolean | ISO/IEC 18013-5 adı ([[ADR-0092]]) | MUST |
 | `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | eyni | — | daşıma profili | MUST NOT |
 
 **Psevdonim toxumu**
@@ -288,7 +292,7 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
 | `document_number_hash` | eyni | string `sha256-…` | Tamga-ya məxsus | MUST |
 | `driving_privileges` | eyni | obyekt massivi | ISO/IEC 18013-5 mDL adı; rəsmi mDL ad sahəsi istifadə olunmur (RB-AP-ID-08) | MUST |
 | `licence_issue_date`, `licence_expiry_date` | eyni | string, YYYY-MM-DD | Tamga-ya məxsus | MUST |
-| `verification_method`, `age_over_18` | eyni | string / boolean | — | MUST |
+| `verification_method`, `age_over_18`, `age_over_21` | eyni | string / boolean | `age_over_21`: [[ADR-0092]] K2 | MUST |
 | `verified_at` | eyni | string, YYYY-MM-DD | Tamga-ya məxsus | MUST NOT |
 | `not_official_licence` | eyni | sabit `true` | Tamga-ya məxsus; hər təqdimatda görünür | MUST NOT |
 
@@ -315,6 +319,7 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
   "verification_method": "remote-document-liveness-face",
   "age_over_18": true,
   "age_over_15": true,
+  "age_over_21": true,
   "issuing_authority": "Tamga Network (provisional)",
   "date_of_expiry": "2028-10-10"
 }
@@ -335,7 +340,7 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 
 | İstifadə | Tələb olunan sahələr | Qayda |
 |---|---|---|
-| Yaşın yoxlanılması | `age_over_18` və ya `age_over_15` (tək hədd) | Başqa sahə tələb olunmur; iki hədd birlikdə istənilmir, yaş aralığını üzə çıxarır ([[ADR-0064]] K3); brauzerdə mdoc ilə, istənilərsə ZK nüsxəsi ilə sıfır bilikli sübut |
+| Yaşın yoxlanılması | `age_over_18`, `age_over_15` və ya `age_over_21` (tək hədd) | Başqa sahə tələb olunmur; iki hədd birlikdə istənilmir, yaş aralığını üzə çıxarır ([[ADR-0064]] K3); brauzerdə mdoc ilə, istənilərsə ZK nüsxəsi ilə sıfır bilikli sübut |
 | Qurumda qeydin uyğunlaşdırılması (sənəd verilməzdən əvvəl) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Qurumun sənəd vermə xidməti yalnız qeydiyyatdakı əhatə dairəsi ilə və tam yoxlama xəttindən keçirərək qəbul edir; uyğunlaşdırma açarlarını saxlamır və loglamır (RB-RP-ID-01) |
 | "Etibarlı Tamga şəxsiyyəti varmı" | heç biri | İstinad siyasəti `event-tamga-id` |
 | Veb sayta qeydiyyat və giriş ("Tamga ilə daxil ol") | qeydiyyatda `given_name`, `family_name`; girişdə heç biri | Hesab açarı hər sayt üçün ayrıca psevdonimdir; `document_number_hash` və şəxsiyyət nömrəsi tələb olunmur (RB-RP-13) |
@@ -413,7 +418,7 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
   məsələn, ünvanın yalnız şəhərini və ya vətəndaşlıqlardan birini. Yoxlayan tərəfin əhatə yoxlaması sahənin özünə və ya üst sahəsinə görə
   aparılır.
 - **Yaş.** Aİ PID-də yaş sahəsi yoxdur; Aİ-də yaş üçün ayrıca yaş təsdiqi sənədi istifadə olunur. mDL-də `age_over_18` kimi yaş elementləri
-  var. Tamga şəxsiyyət sənədi eyni `age_over_NN` nümunəsini izləyir; hədd çoxluğu qapalıdır: bu gün 15 və 18 ([[ADR-0064]]).
+  var. Tamga şəxsiyyət sənədi eyni `age_over_NN` nümunəsini izləyir; hədd çoxluğu qapalıdır: bu gün 15, 18 və 21 ([[ADR-0064]], [[ADR-0092]]).
 
 | Tamga şəxsiyyət rəqəmsal sənədi (SD-JWT VC) | Tamga şəxsiyyət rəqəmsal sənədi (mdoc, `tamga.id.1`) | Aİ PID (SD-JWT VC) | Aİ PID (mdoc) |
 |---|---|---|---|
@@ -425,6 +430,7 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
 | `issuing_country` (rəqəmsal sənədi verən ölkə) | `issuing_country` | `issuing_country` (PID provayderinin ölkəsi) | `issuing_country` |
 | `age_over_18` | `age_over_18` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `age_over_15` | `age_over_15` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
+| `age_over_21` | `age_over_21` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | eyni | qarşılığı yoxdur (Tamga-ya xasdır) | qarşılığı yoxdur |
 | `place_of_birth` (yalnız yoxlanılan sənəd daşıyırsa; ADR-0091) | `place_of_birth` | `place_of_birth` (doğum yeri: ölkə, region, yaşayış məntəqəsi; məcburi) | `place_of_birth` |
 | `issuing_authority` (`Tamga Network (provisional)`; ADR-0091) | `issuing_authority` | `issuing_authority` (məcburi metaməlumat) | `issuing_authority` |
@@ -571,3 +577,6 @@ dəyişmədi: `date_of_expiry` məcburi atributlara, mdoc və SD-JWT VC cədvəl
 köçürüldü (§2.4) və `issuing_authority` cədvəllərə daxil edildi ([[ADR-0091]]); vətəndaşlığın sənəddən oxunduğu və `QU` / `QS`-in
 bu gün yazılmadığı yazıldı (§2.2); ZK nüsxəsində `age_over_15`-in məcburi olmadığı yazıldı (§2.3, §7.2); ləğv siyahısının ünvanı
 `https://id.tamga.network/status/` (§2.5, §3, §6.2); §4.6-dakı PID sahələri qeydi [[ADR-0091]]-ə görə yeniləndi.
+
+**Qərar qeydi (2026-11-20; versiya 1.0 qalır).** [[ADR-0092]]: şəxsiyyət sənədinə və sürücülük vəsiqəsi məlumatına `age_over_21`;
+şəxsiyyət sənədinin yaş həddləri {15, 18, 21}, sürücülük vəsiqəsi məlumatınınkı {18, 21}.

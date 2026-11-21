@@ -56,6 +56,9 @@ doğum tarixi paylaşılmır. Sıfır bilik sübutu da eyni sxemlə işləyir. Y
   Çoxluqda olmayan həddi istəyən yoxlayan tərəf uyğunluq tapmır; rəqəmsal cüzdan həddi özü hesablamır.
 - Sürücülük vəsiqəsi məlumatı ([[ADR-0039]]) yalnız `age_over_18` daşımağa davam edir; bu qərar yalnız şəxsiyyət sənədini əhatə edir.
 
+> **Dəyişiklik (2026-11-20, [[ADR-0092]]):** şəxsiyyət sənədinin hədd çoxluğu {15, 18, 21} oldu; sürücülük vəsiqəsi məlumatı
+> indi `age_over_18` və `age_over_21` daşıyır (çoxluq {18, 21}).
+
 ## K3 — Məxfilik `age_over_18` ilə eynidir
 
 - Yaş sahəsi törəmə bəli/xeyr-dir; yaş yoxlamasında doğum tarixi açılmır. Hər hədd ayrıca açıqlanır; rəqəmsal cüzdan yalnız
@@ -100,7 +103,7 @@ doğum tarixi paylaşılmır. Sıfır bilik sübutu da eyni sxemlə işləyir. Y
 
 | Kod | Qayda |
 |---|---|
-| YE1 | Şəxsiyyət sənədinin yaş sahələri ISO/IEC 18013-5 `age_over_NN` adı və boolean dəyərlə, SD-JWT VC-də və mdoc-da eyni adla daşınır. Hədd çoxluğu qapalıdır (bu gün 15 və 18); yeni hədd yalnız ADR ilə əlavə edilir. |
+| YE1 | Şəxsiyyət sənədinin yaş sahələri ISO/IEC 18013-5 `age_over_NN` adı və boolean dəyərlə, SD-JWT VC-də və mdoc-da eyni adla daşınır. Hədd çoxluğu qapalıdır (bu gün 15, 18 və 21; [[ADR-0092]]); yeni hədd yalnız ADR ilə əlavə edilir. |
 | YE2 | Yaş sahəsi buraxılış anında şəxsiyyət xidmətində doğum tarixindən törədilir və seçici açıqlanır; yaş yoxlaması doğum tarixini açmır; şəbəkənin yoxlama siyasətləri tək hədd istəyir. |
 | YE3 | ZK nüsxəsi şəxsiyyət sənədinin yaş sahələrindən başqa fərdi sahə daşımır; yeni yaş həddi bərabərlik sxemi ilə sübut edilir, sxem qeydi dəyişmir. |
 

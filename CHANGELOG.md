@@ -6,6 +6,13 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Schemas and verifier
+
+- Added: `age_over_21` (ADR-0092) in the identity credential (age thresholds {15, 18, 21}) and in the driving licence information
+  ({18, 21}); ISO/IEC 18013-5 name in both formats, derived from the date of birth, selectively disclosable. The ZK copy is unchanged.
+- Changed: Tamga Verify's `car-rental-driving` policy asks `age_over_21` instead of `age_over_18` (one threshold); the
+  `car-rental-driving-1` scope in the trust lists follows. Credentials issued earlier get the attribute when re-issued or renewed.
+
 ### Sandbox
 
 - Changed: the sandbox example institutions now have made-up proper names (Ulubilim Üniversitesi, Kervanyolu Etkinlik, Işıkperde Sineması;

@@ -101,10 +101,14 @@ describe("ADR-0064: yaş eşikleri (`age_over_NN`, kapalı küme)", () => {
     const props = Object.keys((d.jsonSchema as { properties: Record<string, unknown> }).properties);
     return props.filter((k) => k.startsWith("age_over_")).sort();
   };
-  it("kimlik belgesi ve ZK kopyası tam olarak {15, 18} taşır; adlar ISO/IEC 18013-5 deseninde", () => {
-    for (const vct of ["urn:tamga:id:IdentityAttestation:1", "urn:tamga:id:ShortLivedIdentityAttestation:1"]) {
+  it("kimlik belgesi tam olarak {15, 18, 21} (ADR-0092), ZK kopyası {15, 18} taşır; adlar ISO/IEC 18013-5 deseninde", () => {
+    const want: Record<string, string[]> = {
+      "urn:tamga:id:IdentityAttestation:1": ["age_over_15", "age_over_18", "age_over_21"],
+      "urn:tamga:id:ShortLivedIdentityAttestation:1": ["age_over_15", "age_over_18"],
+    };
+    for (const [vct, exp] of Object.entries(want)) {
       const ages = ageClaims(vct);
-      expect(ages).toEqual(["age_over_15", "age_over_18"]);
+      expect(ages).toEqual(exp);
       for (const a of ages) expect(a).toMatch(/^age_over_\d{2}$/);
     }
   });
@@ -112,14 +116,21 @@ describe("ADR-0064: yaş eşikleri (`age_over_NN`, kapalı küme)", () => {
     const d = ALL.find((s) => s.vct === "urn:tamga:id:IdentityAttestation:1")!;
     const js = d.jsonSchema as { properties: Record<string, { type?: string }>; required: string[] };
     const tm = d.typeMetadata as { claims: { path: string[]; sd?: string }[]; tamga: { derived_claims: string[] } };
-    for (const a of ["age_over_15", "age_over_18"]) {
+    for (const a of ["age_over_15", "age_over_18", "age_over_21"]) {
       expect(js.properties[a]).toEqual({ type: "boolean" });
       expect(js.required).not.toContain(a);
       expect(tm.claims.find((c) => c.path.length === 1 && c.path[0] === a)?.sd).toBe("always");
       expect(tm.tamga.derived_claims).toContain(a);
     }
   });
-  it("sürücü belgesi bilgisi yalnız age_over_18 taşır (K2)", () => {
-    expect(ageClaims("urn:tamga:id:DrivingLicenceAttestation:1")).toEqual(["age_over_18"]);
+  it("sürücü belgesi bilgisi {18, 21} taşır (ADR-0092 K2); her biri seçici açıklanır ve türetilmiş", () => {
+    const vct = "urn:tamga:id:DrivingLicenceAttestation:1";
+    expect(ageClaims(vct)).toEqual(["age_over_18", "age_over_21"]);
+    const d = ALL.find((s) => s.vct === vct)!;
+    const tm = d.typeMetadata as { claims: { path: string[]; sd?: string }[]; tamga: { derived_claims: string[] } };
+    for (const a of ["age_over_18", "age_over_21"]) {
+      expect(tm.claims.find((c) => c.path.length === 1 && c.path[0] === a)?.sd).toBe("always");
+      expect(tm.tamga.derived_claims).toContain(a);
+    }
   });
 });

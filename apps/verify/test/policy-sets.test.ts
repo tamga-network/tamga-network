@@ -72,13 +72,13 @@ describe("policiesFor", () => {
     });
     expect(s.find((p) => p.policy_id === "age-over-18-mdoc")).not.toHaveProperty("accept_unrevocable_zk");
   });
-  it("ADR-0064 YE2: yaş politikaları tek eşik ister (age_over_NN, kapalı küme {15, 18}); 15 yaş ZK'sı ZK kopyasıyla", () => {
+  it("ADR-0064 YE2 + ADR-0092: yaş politikaları tek eşik ister (age_over_NN, kapalı küme {15, 18, 21}); 15 yaş ZK'sı ZK kopyasıyla", () => {
     const ages = POLICIES.flatMap((p) =>
       p.credentials.map((c) => ({ id: p.policy_id, ages: c.required_claims.filter((k) => k.startsWith("age_over_")) })),
     ).filter((x) => x.ages.length > 0);
     for (const a of ages) {
       expect(a.ages, a.id).toHaveLength(1);
-      expect(["age_over_15", "age_over_18"], a.id).toContain(a.ages[0]);
+      expect(["age_over_15", "age_over_18", "age_over_21"], a.id).toContain(a.ages[0]);
     }
     const p15 = POLICIES.find((p) => p.policy_id === "age-over-15-mdoc")!.credentials[0];
     expect(p15).toMatchObject({

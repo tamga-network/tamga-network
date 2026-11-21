@@ -74,7 +74,7 @@ ehliyet" ifadələri işlədilmir. Nəzərdən keçirilən digər adlar (`Drivin
 | Claim | Məcburi | Seçici paylaşım | Qeyd |
 |---|---|---|---|
 | `given_name`, `family_name` | ✓ | ✓ | kartdan; yoxlayan tərəfin şəxslə uyğunlaşdırması üçün |
-| `birth_date` | ○ | ✓ | kartdan; `age_over_18` törədilir |
+| `birth_date` | ○ | ✓ | kartdan; `age_over_18` və `age_over_21` törədilir ([[ADR-0092]] K2) |
 | `driving_privileges` | ✓ | ✓ (massiv bütövlükdə) | `[{ category, issue_date?, expiry_date? }]`; `category` kartda yazılan kateqoriya (`B`, `A2`, `C1E` …; Aİ 2006/126 kodları, milli əlavələr olduğu kimi). Adı ISO 18013-5 məlumat elementi ilə eyni saxlanılır; format Tamga-ya məxsusdur. İnkişaf mərhələsində massiv vahid seçici sahədir; kateqoriya üzrə paylaşım növbəti versiyaya qalır |
 | `issuing_country` | ✓ | ✓ | ISO 3166-1 alpha-2 |
 | `licence_issue_date` (○), `licence_expiry_date` (✓) | | ✓ | kartın öz tarixləri |

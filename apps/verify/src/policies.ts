@@ -269,22 +269,22 @@ export const POLICIES: Policy[] = [
     trust: TRUST_ID,
     freshness: FRESH,
   },
-  // ADR-0039 — araç kiralama: doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi DEĞİL, DL1). Yalnız sınıflar + 18 yaş
-  // üstü; ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
+  // ADR-0039 — araç kiralama: doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi DEĞİL, DL1). Yalnız sınıflar + 21 yaş
+  // üstü (ADR-0092 K3: tek eşik, 18 ayrıca istenmez); ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
   {
     policy_id: "car-rental-driving",
     purpose: {
       "en-US":
-        "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
+        "Car rental — driving licence categories and over-21 (verified driving licence information; not an official driving licence)",
       "tr-TR":
-        "Araç kiralama — sürücü belgesi sınıfları ve 18 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+        "Araç kiralama — sürücü belgesi sınıfları ve 21 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
     },
     credentials: [
       {
         id: "driving",
         vct_values: [DRIVING_LICENCE_VCT],
-        required_claims: ["driving_privileges", "age_over_18"],
-        constraints: { age_over_18: true },
+        required_claims: ["driving_privileges", "age_over_21"],
+        constraints: { age_over_21: true },
       },
     ],
     trust: TRUST_ID,

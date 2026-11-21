@@ -77,7 +77,7 @@ ehliyet" denmez. Değerlendirilen öteki adlar (`DrivingLicenceCheck`, `DrivingE
 | Claim | Zorunlu | Seçici açıklama | Not |
 |---|---|---|---|
 | `given_name`, `family_name` | ✓ | ✓ | karttan; doğrulayıcı kişiyle eşleştirmek için |
-| `birth_date` | ○ | ✓ | karttan; `age_over_18` türetilir |
+| `birth_date` | ○ | ✓ | karttan; `age_over_18` ve `age_over_21` türetilir ([[ADR-0092]] K2) |
 | `driving_privileges` | ✓ | ✓ (dizi bütünüyle) | `[{ category, issue_date?, expiry_date? }]`; `category` kartta yazan sınıf (`B`, `A2`, `C1E` …; AB 2006/126 kodları, ulusal ekler aynen). Adı ISO 18013-5 veri öğesiyle aynı tutulur; biçim Tamga'nındır. Geliştirme evresinde dizi tek seçici alandır; sınıf başına açıklama sonraki sürüme kalır |
 | `issuing_country` | ✓ | ✓ | ISO 3166-1 alpha-2 |
 | `licence_issue_date` (○), `licence_expiry_date` (✓) | | ✓ | kartın kendi tarihleri |

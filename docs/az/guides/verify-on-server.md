@@ -111,7 +111,7 @@ Müştəri identifikatoru `x509_hash` formatındadır (HAIP 1.0 §5); `pemRpSign
   Əks halda QR-ı görən hər kəs sorğu obyektini çəkib saxta imtina ilə real şəxsin əməliyyatını poza bilər. Cavabı
   `openPresentationResponse` ilə açın.
 - Siyasət yalnız lazım olan sahəni tələb edir; yaş üçün [[t:mdoc]] `age_over_18` və ya `age_over_15` kimi tək bir sahə
-  kifayətdir (həddlər qapalı çoxluqdur: 15 və 18; [[ADR-0064]]). Tamga Verify-da `age-over-15-mdoc` və `age-over-15-zk` siyasətləri də var.
+  kifayətdir (həddlər qapalı çoxluqdur: 15, 18 və 21; [[ADR-0064]], [[ADR-0092]]). Tamga Verify-da `age-over-15-mdoc` və `age-over-15-zk` siyasətləri də var.
 - [[t:status-list|Ləğv siyahısının]] əvvəlcədən alınması və etibar siyahısının yenilənməsi işləməlidir. İşləmirsə, nəticələr `INDETERMINATE` olur — bu, düzgün davranışdır.
 
 ## Ətraflı: sıfır bilik sübutu ilə yaş yoxlaması (`mso_mdoc_zk`)

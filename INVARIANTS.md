@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-18
+last_updated: 2026-11-20
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 518 kodlanmış değişmez, 93 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 519 kodlanmış değişmez, 94 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -637,7 +637,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 | Kod | Açıklama |
 |---|---|
-| `ADR-0064/YE1` | Kimlik belgesinin yaş alanları ISO/IEC 18013-5 `age_over_NN` adıyla ve boolean değerle, SD-JWT VC'de ve mdoc'ta aynı adla taşınır. Eşik kümesi kapalıdır (bugün 15 ve 18); yeni eşik yalnız ADR ile eklenir. |
+| `ADR-0064/YE1` | Kimlik belgesinin yaş alanları ISO/IEC 18013-5 `age_over_NN` adıyla ve boolean değerle, SD-JWT VC'de ve mdoc'ta aynı adla taşınır. Eşik kümesi kapalıdır (bugün 15, 18 ve 21; [[ADR-0092]]); yeni eşik yalnız ADR ile eklenir. |
 | `ADR-0064/YE2` | Yaş alanı ihraç anında kimlik servisinde doğum tarihinden türetilir ve seçici açıklanır; yaş doğrulaması doğum tarihini açmaz; ağın doğrulayıcı politikaları tek eşik ister. |
 | `ADR-0064/YE3` | ZK kopyası kimlik belgesinin yaş alanlarından başka kişi alanı taşımaz; yeni bir yaş eşiği eşitlik devresiyle ispatlanır, devre kaydı değişmez. |
 
@@ -960,6 +960,15 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0091/EA2` | Aynı uzun ömürlü anahtarla AES-GCM şifrelemesi yapılmaz: her şifreleme tek kullanımlık (türetilmiş ya da sarılmış) anahtarla yapılır. |
 | `ADR-0091/EA3` | `place_of_birth` yalnız kaynak belgeden gelir, tahmin edilmez; `issuing_authority` her kimlik belgesi kopyasında bulunur. |
 | `ADR-0091/EA4` | İşlem verisi taşıyan istekte cüzdan tanımadığı türü reddeder; kişiye gösterilmemiş işlem verisi imzalanmaz; ağ işlem türü tanımlamaz. |
+
+
+## ADR-0092
+
+*"Yaş eşiği `age_over_21`: kimlik belgesi ve sürücü belgesi bilgisi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0092/YE4` | Kimlik belgesinin yaş eşik kümesi {15, 18, 21}, sürücü belgesi bilgisininki {18, 21}'dir; ikisi de kapalıdır ve yalnız ADR ile değişir. Alanlar ISO/IEC 18013-5 `age_over_NN` adıyla, iki biçimde aynı adla, ihraçta doğum tarihinden türetilip seçici açıklanır. |
 
 
 ## ARCH-0003
@@ -1314,7 +1323,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 518 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 519 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
@@ -1322,4 +1331,4 @@ AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, D
 
 # Durum
 
-**Üretilen dosya** — 2026-11-18 (`scripts/sync-invariants.mjs`). Toplam 518 kodlanmış değişmez, 93 dokümanda.
+**Üretilen dosya** — 2026-11-20 (`scripts/sync-invariants.mjs`). Toplam 519 kodlanmış değişmez, 94 dokümanda.
