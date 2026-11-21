@@ -90,7 +90,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.9` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.9.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

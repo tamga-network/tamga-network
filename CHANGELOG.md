@@ -6,6 +6,13 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+## 0.9.0 — 2026-11-21
+
+All ten packages move to 0.9.0 together. This test release is **breaking** for callers that build trust lists by hand or rely on
+the policy's state: the issuer identifier now comes from the trust source across several national lists (ADR-0093), and the
+wallet core can receive person identification data (EU PID) from a provider listed in an external list (ADR-0094, sandbox).
+`zk` and `onboard` code is unchanged.
+
 ### Several national lists (ADR-0093)
 
 - Added: `@tamga-network/trust` resolves the issuer identifier from the signing certificate across all loaded national lists
