@@ -210,7 +210,8 @@ export const SOURCE_FIELDS = {
   external_scope: set("entity_kinds", "vct", "category", "assurance", "class", "recognized_by", "min_key_storage"),
   external_operator: set("name", "note"),
   external_approval: set("approved_at", "ref"),
-  signing_key: set("fingerprint_sha256", "status", "valid_from", "valid_to"),
+  // cert_ref: yalnız kaynakta (yayıncının kendi imzaladığı sandbox dış listesi, ADR-0094); listeye parmak izi olarak girer
+  signing_key: set("fingerprint_sha256", "status", "valid_from", "valid_to", "cert_ref"),
 } as const;
 type Kind = keyof typeof SOURCE_FIELDS;
 
@@ -397,4 +398,23 @@ export function contactProblems(where: string, c: unknown): string[] {
   if (c.phone !== undefined && !/^\+[0-9][0-9 ()-]{5,22}$/.test(String(c.phone)))
     out.push(`${where}: contact.phone uluslararası biçimde olmalı (+ ülke kodu, rakamlar)`);
   return out;
+}
+
+/**
+ * ADR-0094 (yalnız sandbox): yayıncının KENDİ imzaladığı dış liste (temsili PID makamı) işaretçisinde imzacı parmak izi sabit
+ * yazılmaz, sertifika adından (`cert_ref`) hesaplanır — ulusal listelerin `signing_certs`'i gibi. Böylece sandbox PKI yeniden
+ * üretildiğinde (CI, yeni kurulum) işaretçi listeyi imzalayan anahtarla tutarlı kalır. Başkasının listesinde imzacı anahtarı bizde
+ * olmadığından parmak izi elle sabitlenir; `cert_ref` gerçek ağ kayıt defterinde yayını durdurur. Çıktıda `cert_ref` kalmaz.
+ */
+export function resolveSigningKeyRefs(x: unknown, environment: string, fpOf: (certRef: string) => string): unknown {
+  const ptr = x as { list_id?: string; signing_keys?: Array<Record<string, unknown>> } | null;
+  if (!ptr?.signing_keys?.some((k) => typeof k.cert_ref === "string")) return x;
+  if (environment !== "sandbox")
+    throw new Error(`external list ${String(ptr.list_id)}: cert_ref only in the sandbox registry (ADR-0094 PP1)`);
+  return {
+    ...ptr,
+    signing_keys: ptr.signing_keys.map(({ cert_ref, ...k }) =>
+      typeof cert_ref === "string" ? { ...k, fingerprint_sha256: fpOf(cert_ref), status: k.status ?? "ACTIVE" } : k,
+    ),
+  };
 }

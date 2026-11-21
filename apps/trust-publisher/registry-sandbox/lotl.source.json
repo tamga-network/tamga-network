@@ -298,7 +298,7 @@
       "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-tr.jws",
       "signing_keys": [
         {
-          "fingerprint_sha256": "91d56829bf5bd341b3e679ecbc052a5e3d9a56355e0acca1e00a2d153c77283b",
+          "cert_ref": "pid-tr-list-signer",
           "status": "ACTIVE"
         }
       ],
@@ -327,7 +327,7 @@
       "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-az.jws",
       "signing_keys": [
         {
-          "fingerprint_sha256": "e175f77b0465da3dffb87989520478cf986c0855bb15cdbd8d0fd425a08744e5",
+          "cert_ref": "pid-az-list-signer",
           "status": "ACTIVE"
         }
       ],
@@ -356,7 +356,7 @@
       "list_url": "https://trust.sandbox.tamga.network/external-src/sandbox-pid-kz.jws",
       "signing_keys": [
         {
-          "fingerprint_sha256": "cdd9bbd797fe322040d6928112055f374968a41141de1ffb69ad4c5a52ca802a",
+          "cert_ref": "pid-kz-list-signer",
           "status": "ACTIVE"
         }
       ],

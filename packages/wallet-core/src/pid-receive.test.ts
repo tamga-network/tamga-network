@@ -105,7 +105,10 @@ describe.skipIf(!ready)("ADR-0094 K8 — dış PID sağlayıcısından alma", ()
 
   it("dış listeye bağlanmayan imzacı (Tamga sandbox kurumu) ret; liste kullanılamıyorsa 'sonra dene'; tür kapsam dışıysa ret", async () => {
     const foreign = await redeem("issuer-gokbilge");
-    expect(() => receiveCredentials(newState("t"), foreign, { trust })).toThrow(/not in the trusted list/);
+    // Bütün dış listeler yüklüyken: imzacı hiçbir dış listeye bağlanmıyor → ret. (Sandbox LOTL'daki `oidf-test-pid` internetten
+    // çekilir — `external-fetch`; temiz kurulumda ve CI'da kopyası yoktur, o zaman doğru yanıt "sonra dene"dir, aşağıda.)
+    const allLoaded = Object.assign(Object.create(trust) as TrustSource, { unavailableExternalListFor: () => null });
+    expect(() => receiveCredentials(newState("t"), foreign, { trust: allLoaded })).toThrow(/not in the trusted list/);
     const down = Object.assign(Object.create(trust) as TrustSource, {
       externalAnchorCertsDer: () => [],
       unavailableExternalListFor: () => "sandbox-pid-tr",

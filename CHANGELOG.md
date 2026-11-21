@@ -9,6 +9,9 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 - Added (sandbox, ADR-0095): two fictional source institutions for the contact credentials — Sinyalnet Mobil
   (`issuer.sandbox.tamga.network/sinyalnet`, phone number) and Postakuş (`issuer.sandbox.tamga.network/postakus`, e-mail address)
   — with their sandbox PKI certificates and records in the TR sandbox list (`OTHER`, `I1`). The real network is unchanged.
+- Fixed (sandbox, ADR-0094): the LOTL pointers to the representative PID provider lists name their signer by certificate
+  (`cert_ref`) instead of a pinned fingerprint, so a freshly generated sandbox PKI (CI, new setups) builds the sandbox lists. The
+  publisher resolves the name to the fingerprint; the published LOTL is unchanged. `cert_ref` stops publication in the real network.
 
 ## 0.9.0 — 2026-11-21
 

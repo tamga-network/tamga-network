@@ -16,6 +16,7 @@ import {
   missingOperatorConfigProblems,
   normalizeDnsName,
   relyingPartyNameProblems,
+  resolveSigningKeyRefs,
   tlSourceFieldProblems,
 } from "../src/source-checks.js";
 import { checkProvisionalOperator } from "../src/provisional-operator.js";
@@ -201,5 +202,30 @@ describe("ADR-0070 OP2: geçici işletmeci değeri yoksa", () => {
     // "(TEST)" işareti yetmez: ad tam olarak kuraldaki ad olmalı
     expect(missingOperatorConfigProblems("sandbox", op("Başka Bir İşletmeci (TEST)"))).toHaveLength(2);
     expect(missingOperatorConfigProblems("sandbox", op("Tamga Network Sandbox (TEST) "))).toHaveLength(2);
+  });
+});
+
+describe("ADR-0094: kendi imzalanan dış listede imzacı sertifika adından", () => {
+  const fp = (n: string) => (n === "pid-tr-list-signer" ? "a".repeat(64) : "b".repeat(64));
+  const ptr = {
+    list_id: "sandbox-pid-tr",
+    signing_keys: [
+      { cert_ref: "pid-tr-list-signer", status: "ACTIVE" },
+      { fingerprint_sha256: "c".repeat(64), status: "ACTIVE" },
+    ],
+  };
+  it("sandbox: cert_ref parmak izine çevrilir, çıktıda kalmaz; sabit parmak izi olduğu gibi", () => {
+    expect(resolveSigningKeyRefs(ptr, "sandbox", fp)).toEqual({
+      list_id: "sandbox-pid-tr",
+      signing_keys: [
+        { fingerprint_sha256: "a".repeat(64), status: "ACTIVE" },
+        { fingerprint_sha256: "c".repeat(64), status: "ACTIVE" },
+      ],
+    });
+  });
+  it("PP1: gerçek ağ kayıt defterinde cert_ref yayını durdurur; cert_ref yoksa dokunulmaz", () => {
+    expect(() => resolveSigningKeyRefs(ptr, "production", fp)).toThrow(/PP1/);
+    const pinned = { list_id: "x", signing_keys: [{ fingerprint_sha256: "c".repeat(64), status: "ACTIVE" }] };
+    expect(resolveSigningKeyRefs(pinned, "production", fp)).toBe(pinned);
   });
 });

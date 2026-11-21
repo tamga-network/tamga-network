@@ -113,6 +113,7 @@ import {
   lotlSourceFieldProblems,
   missingOperatorConfigProblems,
   relyingPartyNameProblems,
+  resolveSigningKeyRefs,
   tlSourceFieldProblems,
 } from "./source-checks.js";
 import { checkTerminalGroups, groupWithdrawalWarnings } from "./terminal-groups.js";
@@ -2384,7 +2385,7 @@ function externalListsFrom(src: unknown[]) {
   return src.map((x) => {
     if (JSON.stringify(x).includes("[DOLDURULACAK]"))
       throw new Error("external list contains [DOLDURULACAK] — not published");
-    const p = ExternalListPointer.parse(x);
+    const p = ExternalListPointer.parse(withResolvedSigningKeys(x));
     if (!p.approval.ref.trim()) throw new Error(`external list ${p.list_id}: approval reference missing (FD4)`);
     return p;
   });
@@ -2395,6 +2396,11 @@ function externalListsFrom(src: unknown[]) {
  * denetler ve dist/external/<list_id>.jws (ETSI TS 119 602 LoTE) ya da .xml (ETSI TS 119 612 TL; özgün imzalı belge) olarak yazar.
  * Hata olursa eski kopya korunur (uyarı); Tamga listeleri etkilenmez.
  */
+/** ADR-0094: işaretçideki `cert_ref`'i bu PKI'daki sertifikanın parmak izine çevirir (`resolveSigningKeyRefs`, source-checks.ts). */
+function withResolvedSigningKeys(x: unknown): unknown {
+  return resolveSigningKeyRefs(x, ENVIRONMENT, (name) => cert(name).fp);
+}
+
 /**
  * ADR-0094 (yalnız sandbox): temsili PID makamlarının sağlayıcı listeleri (`pid-lote.ts`). Kaynak `pid-providers.source.json`
  * yoksa (gerçek ağ) hiçbir şey yapılmaz; gerçek ağ kaynağında dosya bulunursa yayın durur (PP1). Her liste kendi imzacısıyla
@@ -2411,7 +2417,11 @@ async function writePidProviderLists(lotlSrc: Record<string, unknown>, now: Date
   const problems = pidSourceProblems(src);
   if (problems.length) throw new RegistryError(problems);
   const pointers = new Map(
-    ((lotlSrc.external_lists as Array<Record<string, any>> | undefined) ?? []).map((e) => [String(e.list_id), e]), // eslint-disable-line @typescript-eslint/no-explicit-any
+    ((lotlSrc.external_lists as Array<Record<string, any>> | undefined) ?? []).map((e) => [
+      // eslint-disable-line @typescript-eslint/no-explicit-any
+      String(e.list_id),
+      withResolvedSigningKeys(e) as Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+    ]),
   );
   mkdirSync(resolve(DIST, "external-src"), { recursive: true });
   mkdirSync(resolve(DIST, "external"), { recursive: true });
