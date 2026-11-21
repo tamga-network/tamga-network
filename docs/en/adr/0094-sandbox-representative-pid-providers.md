@@ -162,8 +162,10 @@ publisher (provider lists) → issuer (PID) → verifier policies → wallet (if
   rollback check).
 - K6: three sandbox tenants of the hosted issuer (`pid-tr`, `pid-az`, `pid-kz`; they open only on the sandbox network); the source is
   the fictional people file and an authority issues only to people of its own state. The status list is not anchored; the two PID
-  policies fetch it at verification time, only from the status server in the provider list. Today only the SD-JWT VC copy is
-  issued; the mdoc copy (K5) is next.
+  policies fetch it at verification time, only from the status server in the provider list. The mdoc copy of K5 is issued too
+  (2026-11-22): a second configuration with the same token (`eu.europa.ec.eudi.pid.1`, same scope as the SD-JWT one), the same
+  status index for the same key, one record (revocation closes both formats); the mdoc copies point to the CWT form of the status
+  list. The wallet core finds the mdoc configuration by the type's mdoc name and compares the nested address.
 - K7: one registration certificate goes with each request (ETSI TS 119 472-2) and a registered use has one type; so the option is
   not two types in one request but two scenarios on the verifier's page (with the Tamga identity credential / with PID:
   `bank-account-opening-pid`, `hotel-check-in-pid`, a separate registered use). The verification steps did not change; only the

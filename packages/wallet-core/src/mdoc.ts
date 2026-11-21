@@ -64,6 +64,17 @@ const eqVal = (a: unknown, b: unknown) => JSON.stringify(canon(a)) === JSON.stri
  */
 export const mdocDocTypeFor = (vct: string): string => (vct === "urn:eudi:pid:1" ? "eu.europa.ec.eudi.pid.1" : vct);
 
+/** SD-JWT alanı (noktalı ad iç içe nesneyi izler: `address.country`); yalnız kendi alanlar okunur. */
+function sdJwtValueAt(claims: Record<string, unknown>, name: string): { found: boolean; value?: unknown } {
+  let cur: unknown = claims;
+  for (const part of name.split(".")) {
+    if (!cur || typeof cur !== "object" || Array.isArray(cur) || !Object.prototype.hasOwnProperty.call(cur, part))
+      return { found: false };
+    cur = (cur as Record<string, unknown>)[part];
+  }
+  return { found: true, value: cur };
+}
+
 /**
  * Alınan mdoc'u SD-JWT kopyasıyla çapraz doğrular; tutarsızlıkta hata fırlatır (kopya reddedilir).
  * MD3: aynı issuer sertifikası · issuerAuth imzası · MD2: deviceKey = cnf · MD1: ortak alanlar birebir · status idx aynı.
@@ -91,10 +102,11 @@ export function verifyReceivedMdoc(
   if (nss.length !== 1) throw new Error("mdoc: expected a single namespace");
   const ns = nss[0];
   const el = res.claims![ns];
-  // MD1: aynı veri; ad ve kodlama biçime göre AB PID tablosundan (ADR-0045: mdoc `birth_date` = SD-JWT `birthdate`, full-date)
+  // MD1: aynı veri; ad ve kodlama biçime göre AB PID tablosundan (ADR-0045: mdoc `birth_date` = SD-JWT `birthdate`, full-date).
+  // İç içe SD-JWT alanı noktalı adla (ADR-0094: mdoc `resident_country` = SD-JWT `address.country`)
   for (const [k, v] of Object.entries(el)) {
-    const sd = pidSdJwtName(k);
-    if (sd in ctx.sdjwt.claims && !eqVal(plainElementValue(v), ctx.sdjwt.claims[sd]))
+    const sd = sdJwtValueAt(ctx.sdjwt.claims, pidSdJwtName(k));
+    if (sd.found && !eqVal(plainElementValue(v), sd.value))
       throw new Error(`mdoc: field value differs from the SD-JWT copy: ${k} (MD1)`);
   }
   const sdIdx = ctx.sdjwt.status?.status_list.idx;

@@ -47,6 +47,9 @@ wallet core can receive person identification data (EU PID) from a provider list
   list's anchor certificate and the type must be in the list's scope; otherwise it is refused, and if the list is unavailable the
   wallet says to try again later. `vct#integrity` is optional for such types; the mdoc copy of an EU PID is checked against the
   `eu.europa.ec.eudi.pid.1` document type (`mdocDocTypeFor`).
+- Changed: the wallet core asks for an mdoc copy also when the issuer's mdoc configuration names the type's mdoc document type
+  (`mdocCompanionConfigId`; for EU PID `eu.europa.ec.eudi.pid.1`, same scope), and the mdoc ↔ SD-JWT field check (MD1) follows
+  nested SD-JWT claims (`resident_country` ↔ `address.country`).
 - Added: the wallet core checks a stored external-provider credential's own status against the revocation service certificate in
   the external list (`credentialStatusFrom`; before, such a credential's status stayed unknown).
 - Changed: for an external provider the verification result's `issuer.state_code` is the external list's `territory` (it was the

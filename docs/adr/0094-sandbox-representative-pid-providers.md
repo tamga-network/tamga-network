@@ -151,7 +151,10 @@ listeleri) → belge veren (PID) → doğrulayıcı politikaları → cüzdan (g
   takılmaz).
 - K6: barındırılan belge verende üç sandbox kiracısı (`pid-tr`, `pid-az`, `pid-kz`; yalnız sandbox ağında açılır); kaynak uydurma
   kişiler dosyası, makam yalnız kendi ülkesinin kişisine verir. İptal listesi çapalanmaz; iki PID politikası listeyi doğrulama
-  anında, yalnız sağlayıcı listesindeki iptal sunucusundan çeker. Bugün yalnız SD-JWT VC kopyası verilir; mdoc kopyası (K5) sıradadır.
+  anında, yalnız sağlayıcı listesindeki iptal sunucusundan çeker. K5'in mdoc kopyası da verilir
+  (2026-11-22): aynı belirteçle ikinci yapılandırma (`eu.europa.ec.eudi.pid.1`, kapsam SD-JWT ile aynı), aynı anahtara aynı iptal
+  indeksi, tek kayıt (iptal iki biçimi birlikte kapatır); mdoc kopyaları iptal listesinin CWT gösterimine bağlıdır. Cüzdan
+  çekirdeği mdoc yapılandırmasını türün mdoc adıyla bulur ve iç içe adresi karşılaştırır.
 - K7: istek başına tek kayıt sertifikası gider (ETSI TS 119 472-2) ve bir kayıtlı kullanım tek türdür; bu yüzden seçenek tek
   istekte iki tür değil, doğrulayıcının sayfasında iki senaryodur (Tamga kimlik belgesiyle / PID ile: `bank-account-opening-pid`,
   `hotel-check-in-pid`, kayıtta ayrı kullanım). Doğrulama adımları değişmedi; yalnız sonuçtaki `issuer.state_code` dış kurumda

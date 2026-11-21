@@ -18,6 +18,7 @@ import {
 } from "./attestation-prefs.js";
 import { dpopRequest, newDpopSigner, type DpopSigner } from "./dpop.js";
 import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
+import { mdocDocTypeFor } from "./mdoc.js";
 import { PSEUDONYM_SEED_VCT } from "./pseudonym.js";
 import type { ZkCopyBinding } from "./store.js";
 
@@ -486,13 +487,15 @@ export interface ObtainInput {
 }
 
 /**
- * ADR-0089 K1: SD-JWT yapılandırması `vct` olan belgenin mdoc yapılandırması — `format: mso_mdoc`, `doctype` = vct ve aynı `scope`
- * (tek yetki iki biçimi kapsar). Kimliği servisin ilan ettiği addır; ad sabit kodlanmaz. Yoksa undefined.
+ * ADR-0089 K1: SD-JWT yapılandırması `vct` olan belgenin mdoc yapılandırması — `format: mso_mdoc`, `doctype` = türün mdoc karşılığı
+ * (Tamga türlerinde vct; AB PID'de `eu.europa.ec.eudi.pid.1`, ADR-0094 K5) ve aynı `scope` (tek yetki iki biçimi kapsar). Kimliği
+ * servisin ilan ettiği addır; ad sabit kodlanmaz. Yoksa undefined.
  */
 export function mdocCompanionConfigId(md: IssuerMetadata, vct: string): string | undefined {
   const scope = md.credential_configurations_supported[vct]?.scope ?? vct;
   return Object.entries(md.credential_configurations_supported).find(
-    ([id, c]) => id !== vct && c.format === "mso_mdoc" && c.doctype === vct && (c.scope ?? id) === scope,
+    ([id, c]) =>
+      id !== vct && c.format === "mso_mdoc" && c.doctype === mdocDocTypeFor(vct) && (c.scope ?? id) === scope,
   )?.[0];
 }
 
