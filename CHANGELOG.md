@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.9` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.9.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
@@ -14,6 +14,8 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
   publisher resolves the name to the fingerprint; the published LOTL is unchanged. `cert_ref` stops publication in the real network.
 
 ## 0.9.0 — 2026-11-21
+
+Published on npm on 2026-11-22.
 
 All ten packages move to 0.9.0 together. This test release is **breaking** for callers that build trust lists by hand or rely on
 the policy's state: the issuer identifier now comes from the trust source across several national lists (ADR-0093), and the

@@ -49,8 +49,8 @@ Gereken: Node.js 22 ya da sonrası. `openssl` gerekmez.
 npm install -g @tamga-network/onboard     # ya da: npx -p @tamga-network/onboard tamga-onboard --help
 ```
 
-Paket npm'de 0.8.9 deneme sürümüyle yayımlanır (kararlı 1.0.0 hazır olunca gelir — deneme sürümünde komutlar ve
-seçenekler değişebilir). Bu paket şimdilik elle ve kaynak kanıtı (provenance) olmadan yayımlanıyor (0.8.2–0.8.9); otomatik yayın akışına
+Paket npm'de 0.9.0 deneme sürümüyle yayımlanır (kararlı 1.0.0 hazır olunca gelir — deneme sürümünde komutlar ve
+seçenekler değişebilir). Bu paket şimdilik elle ve kaynak kanıtı (provenance) olmadan yayımlanıyor (0.8.2–0.9.0); otomatik yayın akışına
 geçince sürümler kaynak kanıtı taşıyacak.
 
 ::: tip Kaynak koddan çalıştırma (isteğe bağlı)
