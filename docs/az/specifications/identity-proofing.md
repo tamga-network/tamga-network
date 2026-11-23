@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
@@ -305,6 +305,8 @@ hesablanır. Şəxsiyyətin mdoc nüsxəsi ayrıca standart konfiqurasiya ilə v
 imzalayan cüzdan provayderinin siyahı identifikatorunu yazır və 6 saatlıq vahid yoxlamasında əvvəlcə onun siyahıdakı statusuna
 baxır: `REVOKED` / `RETIRED` / siyahıda yoxdur → qeyd ləğv edilir (`wallet-provider-invalid`); `SUSPENDED` → dayandırma (yeni
 nüsxə, yeniləmə, ZK yoxdur; dayandırma götürüləndə davam edir); siyahı oxunmur → dəyişiklik yoxdur (IR6).
+
+**Versiya qeydi (2026-11-23).** Çip yolunun `/chip/submit` müqaviləsi (bağlı yol; bugünkü davranış dəyişmədi). Cavab `{ result, next }`; `result` dəyəri `verified`, `fallback` və ya `rejected`. `verified` və `fallback`: `next` avtorizasiya serverindədir və brauzer görünüşündə açılır. `rejected`: axın bağlanır, `code` sabit rədd kodudur və cüzdan axını özü bitirir; `next`-ə (öz geri dönüş ünvanına xəta yönləndirməsi) keçmir. Çip oxunmadıqda (imtina, oxuyucu yoxdur, NFC bağlıdır, oxuma xətası, ekran bağlandı) cüzdan eyni cüzdan sübutu ilə (WIA + PoP) və çip məlumatı olmadan `{ handle, fallback: <səbəb> }` göndərir; tutacaq istifadə olunur, cavab `fallback`, kod `wallet_<səbəb>`. Foto yoluna açarsız giriş yoxdur.
 
 **Versiya qeydi (2026-11-13, ikinci; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] K11 və CV7 dəyişdi: çip yolunun kodu
 indi yazılır, lakin standart olaraq bağlı açarın arxasında durur — açar açıq olduqda şəxsiyyət xidməti serverdə (real şəbəkə və

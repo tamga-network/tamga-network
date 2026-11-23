@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -310,6 +310,8 @@ standart yapılandırmayla verilir. Kimlik servisi kayda ihraçtaki WIA'yı imza
 6 saatlik birim denetiminde önce onun listedeki durumuna bakar: `REVOKED` / `RETIRED` / listede yok → kayıt iptal
 (`wallet-provider-invalid`); `SUSPENDED` → askı (yeni kopya, yenileme, ZK yok; askı kalkınca sürer); liste okunamıyor → değişiklik
 yok (IR6).
+
+**Sürüm notu (2026-11-23).** Çip yolu `/chip/submit` sözleşmesi (kapalı yol; bugünkü davranış değişmedi). Yanıt `{ result, next }`; `result` değeri `verified`, `fallback` ya da `rejected`. `verified` ve `fallback`: `next` yetkilendirme sunucusundadır ve tarayıcı görünümünde açılır. `rejected`: akış kapanır, `code` sabit ret kodudur ve cüzdan akışı kendisi bitirir; `next`i (kendi dönüş adresine hata yönlendirmesi) izlemez. Çip okunmadıysa (vazgeçme, okuyucu yok, NFC kapalı, okuma hatası, ekran kapandı) cüzdan aynı cüzdan kanıtıyla (WIA + PoP) ve çip verisi olmadan `{ handle, fallback: <neden> }` gönderir; tutamaç tükenir, yanıt `fallback`, kod `wallet_<neden>`. Fotoğraf yoluna anahtarsız bir giriş yoktur.
 
 **Sürüm notu (2026-11-13, ikinci; proje yönetimi onayıyla).** [[ADR-0083]] K11 ve CV7 değişti: çip yolunun kodu şimdi yazılır,
 ama varsayılanı kapalı bir anahtarın arkasında durur — kimlik servisi anahtar açıkken sunucuda (gerçek ağ ve sandbox) çalışmayı

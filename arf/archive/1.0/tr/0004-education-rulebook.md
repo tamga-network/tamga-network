@@ -327,7 +327,7 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 | Konu | Öğrenci belgesi | Diploma |
 |---|---|---|
 | Geçerlilik | En çok 90 gün; süresi dolmadan cüzdandaki kopyalar yenileme belirteciyle kendiliğinden tazelenir ([[ADR-0023]]), kurum kaydı yeniden okur | Süresiz (`exp` yok) |
-| Kurum askıdaysa | Yeni belge verilmez; mevcut belgeler süreleri dolana kadar geçerlidir | Yeni belge verilmez; eski diplomalar verildikleri tarihe göre geçerlidir |
+| Kurum askıdaysa | Yeni belge verilmez; askı sürdükçe mevcut belgeler kabul edilmez, askı kalkınca yeniden kabul edilir ([[ADR-0088]]) | Yeni belge verilmez; askı sürdükçe kurumun hiçbir diploması kabul edilmez, askı kalkınca askıdan önce verilenler yeniden kabul edilir ([[ADR-0088]]) |
 | Sertifika yenileme | Eski belgeler eski `issuer_id` kaydıyla doğrulanır | aynı |
 
 ## 6.2 İptal

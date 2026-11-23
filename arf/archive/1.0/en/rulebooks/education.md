@@ -329,11 +329,11 @@ At issuance the wallet checks against the same entry that the institution is aut
 
 ### 6.1 Validity policy
 
-| Topic                 | Student certificate                                                                                                                                    | Diploma                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Validity              | At most 90 days; before expiry the copies in the wallet refresh themselves with a refresh token ([[ADR-0023]]) and the institution re-reads its record | No expiry (no `exp`)                                                            |
-| Institution suspended | No new credentials; existing credentials stay valid until they expire                                                                                  | No new credentials; old diplomas stay valid according to their date of issuance |
-| Certificate renewal   | Old credentials are verified with the old `issuer_id` entry                                                                                            | same                                                                            |
+| Topic                 | Student certificate                                                                                                                                    | Diploma                                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Validity              | At most 90 days; before expiry the copies in the wallet refresh themselves with a refresh token ([[ADR-0023]]) and the institution re-reads its record | No expiry (no `exp`)                                                                                                                                                                    |
+| Institution suspended | No new credentials; while the suspension lasts existing credentials are not accepted, and when it is lifted they are accepted again ([[ADR-0088]])     | No new credentials; while the suspension lasts no diploma of the institution is accepted, and when it is lifted diplomas issued before the suspension are accepted again ([[ADR-0088]]) |
+| Certificate renewal   | Old credentials are verified with the old `issuer_id` entry                                                                                            | same                                                                                                                                                                                    |
 
 ### 6.2 Revocation
 

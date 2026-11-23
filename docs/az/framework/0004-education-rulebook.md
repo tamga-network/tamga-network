@@ -328,7 +328,7 @@ Cüzdan sənədi alarkən eyni qeyd vasitəsilə qurumun bu növü verməyə sə
 | Mövzu | Tələbə sənədi | Diplom |
 |---|---|---|
 | Etibarlılıq | Ən çoxu 90 gün; müddəti bitməzdən əvvəl cüzdandakı nüsxələr yeniləmə tokeni ilə avtomatik yenilənir ([[ADR-0023]]), qurum qeydi yenidən oxuyur | Müddətsiz (`exp` yoxdur) |
-| Qurumun fəaliyyəti dayandırılıbsa | Yeni sənəd verilmir; mövcud sənədlər müddəti bitənədək etibarlıdır | Yeni sənəd verilmir; köhnə diplomlar verildikləri tarixə görə etibarlıdır |
+| Qurumun fəaliyyəti dayandırılıbsa | Yeni sənəd verilmir; dayandırma davam etdikcə mövcud sənədlər qəbul edilmir, dayandırma götürüldükdə yenidən qəbul edilir ([[ADR-0088]]) | Yeni sənəd verilmir; dayandırma davam etdikcə qurumun heç bir diplomu qəbul edilmir, dayandırma götürüldükdə dayandırmadan əvvəl verilmiş diplomlar yenidən qəbul edilir ([[ADR-0088]]) |
 | Sertifikatın yenilənməsi | Köhnə sənədlər köhnə `issuer_id` qeydi ilə yoxlanılır | eyni |
 
 ## 6.2 Ləğv

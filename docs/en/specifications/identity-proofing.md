@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -316,6 +316,8 @@ issued through a separate standard configuration. The identity service writes in
 provider that signed the WIA at issuance and, in the 6-hourly unit check, first looks at that provider's status in the list:
 `REVOKED` / `RETIRED` / not in the list → the record is revoked (`wallet-provider-invalid`); `SUSPENDED` → suspension (no new
 copy, no renewal, no ZK; it resumes when the suspension is lifted); the list cannot be read → no change (IR6).
+
+**Version note (2026-11-23).** Chip path `/chip/submit` contract (closed path; no change to today's behaviour). The response is `{ result, next }` with `result` one of `verified`, `fallback`, `rejected`. `verified` and `fallback`: `next` is on the authorization server and is opened in the browser view. `rejected`: the flow is closed, `code` is a fixed reason code and the wallet ends the flow itself; it does not follow `next` (an error redirect to its own callback). When the chip was not read (declined, no reader, NFC unavailable, read failed, screen closed) the wallet sends `{ handle, fallback: <reason> }` with the same wallet proof (WIA + PoP) and no chip data; the handle is consumed and the response is `fallback` with code `wallet_<reason>`. There is no keyless way into the photo path.
 
 **Version note (2026-11-13, second; approved by project management).** [[ADR-0083]] K11 and CV7 changed: the code of the chip
 path is written now, but by default it sits behind a switch that is off — the identity service refuses to run on a server (live

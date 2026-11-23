@@ -10,7 +10,9 @@
  *
  * Akış: kimlik servisi tarayıcı akışında cüzdanı `<yetkilendirme sunucusu>/chip/read?r=<PAR kimliği>.<tutamaç>&c=<sınama>` adresine
  * yönlendirir → cüzdan `chipReadRequestOf` ile adresi denetler → çipi okur (etkin doğrulamada `challenge` 8 baytı çipe imzalatır) →
- * `submitChipRead` ham veriyi `/chip/submit`'e gönderir → yanıttaki `next` (aynı kökende) tarayıcıda açılır.
+ * `submitChipRead` ham veriyi `/chip/submit`'e gönderir → yanıttaki `next` (aynı kökende) tarayıcıda açılır. Çip okunmadıysa
+ * (vazgeçme, NFC kapalı, okuma hatası) `requestChipFallback` aynı tutamaç ve cüzdan kanıtıyla fotoğraf yolunu ister. Sunucu çip
+ * denetiminden sonra reddederse `submitChipRead` `{ result: "rejected", code }` döner; akış biter (sunucu PAR'ı kapattı).
  */
 import { b64u, b64uDecode } from "./b64.js";
 import { WalletError, type Http, readJson } from "./http.js";
@@ -120,11 +122,54 @@ export interface SubmitChipReadInput {
   now?: number;
 }
 
+/** Çip okunmadığında cüzdanın bildirdiği kaba neden (kişisel veri yok; sunucu günlüğüne `wallet_<neden>` kodu yazılır). */
+export type ChipFallbackReason = "declined" | "no_reader" | "nfc_unavailable" | "read_failed" | "closed";
+
+/**
+ * `/chip/submit` sonucu. `verified` ve `fallback`: `next` (yetkilendirme sunucusunun kökeninde) tarayıcıda açılır. `rejected`:
+ * çip denetimi kaldı (ör. kopya denetimi, süresi geçmiş belge); akış biter, `code` sunucunun sabit ret kodudur. Sunucunun ret
+ * yanıtındaki dönüş adresi izlenmez — cüzdan akışı kendisi hata ile kapatır.
+ */
+export type ChipSubmitResult =
+  { result: "verified" | "fallback"; next: string; code?: string } | { result: "rejected"; code: string };
+
+const CODE = /^[a-z0-9_]{1,64}$/;
+
+async function postChip(
+  p: Omit<SubmitChipReadInput, "payload">,
+  body: Record<string, string>,
+): Promise<ChipSubmitResult> {
+  const rq = p.request;
+  const headers = {
+    "content-type": "application/json",
+    ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: rq.aud, now: p.now, randomBytes: p.randomBytes })),
+  };
+  const r = await p.http(rq.submitUrl, { method: "POST", headers, body: JSON.stringify(body) });
+  const res = (await readJson(r, "chip submit").catch(() => ({}))) as {
+    result?: unknown;
+    code?: unknown;
+    next?: unknown;
+    error?: unknown;
+  };
+  if (r.status !== 200) {
+    // yalnız sunucunun hata kodu (kısa, harf/rakam); gönderilen veriden hiçbir şey iletiye girmez
+    const code = typeof res.error === "string" && CODE.test(res.error) ? res.error : String(r.status);
+    throw new WalletError("issuer_error", `chip submit error: ${code}`);
+  }
+  const code = typeof res.code === "string" && CODE.test(res.code) ? res.code : undefined;
+  if (res.result === "rejected") return { result: "rejected", code: code ?? "rejected" };
+  if (res.result !== "verified" && res.result !== "fallback")
+    throw new WalletError("issuer_error", "chip submit: unknown result");
+  if (typeof res.next !== "string" || originOf(res.next) !== originOf(rq.submitUrl))
+    throw new WalletError("issuer_error", "chip submit: next address is not on the authorization server");
+  return { result: res.result, next: res.next, ...(code ? { code } : {}) };
+}
+
 /**
  * Ham çip verisini kimlik servisine gönderir (`POST /chip/submit`, gövde JSON, ikili alanlar base64url). Başlıklarda cüzdan kanıtı
- * (WIA + PoP, aud = yetkilendirme sunucusu). Yanıt 200 `{ next }`: tarayıcıda açılacak adres; aynı kökende değilse hata.
+ * (WIA + PoP, aud = yetkilendirme sunucusu). Sonuç `ChipSubmitResult`; `next` aynı kökende değilse hata.
  */
-export async function submitChipRead(p: SubmitChipReadInput): Promise<{ next: string }> {
+export async function submitChipRead(p: SubmitChipReadInput): Promise<ChipSubmitResult> {
   const { request: rq, payload: d } = p;
   const body: Record<string, string> = {
     handle: rq.handle,
@@ -137,18 +182,18 @@ export async function submitChipRead(p: SubmitChipReadInput): Promise<{ next: st
     ...(d.aaSignature ? { aa_signature: b64u(d.aaSignature) } : {}),
     ...(d.cardAccess ? { card_access: b64u(d.cardAccess) } : {}),
   };
-  const headers = {
-    "content-type": "application/json",
-    ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: rq.aud, now: p.now, randomBytes: p.randomBytes })),
-  };
-  const r = await p.http(rq.submitUrl, { method: "POST", headers, body: JSON.stringify(body) });
-  const res = (await readJson(r, "chip submit").catch(() => ({}))) as { next?: unknown; error?: unknown };
-  if (r.status !== 200) {
-    // yalnız sunucunun hata kodu (kısa, harf/rakam); gönderilen veriden hiçbir şey iletiye girmez
-    const code = typeof res.error === "string" && /^[a-z0-9_]{1,64}$/.test(res.error) ? res.error : String(r.status);
-    throw new WalletError("issuer_error", `chip submit error: ${code}`);
-  }
-  if (typeof res.next !== "string" || originOf(res.next) !== originOf(rq.submitUrl))
-    throw new WalletError("issuer_error", "chip submit: next address is not on the authorization server");
-  return { next: res.next };
+  return postChip(p, body);
+}
+
+/**
+ * Çip okunmadı: veri göndermeden fotoğraf yolunu ister (`POST /chip/submit` gövdesi `{ handle, fallback: <neden> }`, aynı cüzdan
+ * kanıtı). Tutamaç sunucuda tükenir; yanıttaki `next` (aynı kökende) tarayıcıda açılır. Kanıtsız, anahtarsız bir adresle fotoğraf
+ * yoluna geçilmez.
+ */
+export async function requestChipFallback(
+  p: Omit<SubmitChipReadInput, "payload"> & { reason: ChipFallbackReason },
+): Promise<{ next: string }> {
+  const out = await postChip(p, { handle: p.request.handle, fallback: p.reason });
+  if (out.result !== "fallback") throw new WalletError("issuer_error", "chip fallback: unexpected result");
+  return { next: out.next };
 }

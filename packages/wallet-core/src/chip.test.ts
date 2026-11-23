@@ -12,6 +12,7 @@ import {
   CHIP_READER_PARAM,
   chipReadRequestOf,
   submitChipRead,
+  requestChipFallback,
   type ChipReadPayload,
   type ChipReadRequest,
 } from "./chip.js";
@@ -118,7 +119,7 @@ const randomBytes = (n: number) => new Uint8Array(n).map(() => rnd++ & 0xff);
 
 describe("submitChipRead", () => {
   it("POST /chip/submit: JSON + cüzdan kanıtı başlıkları (aud = yetkilendirme sunucusu), gövde base64url", async () => {
-    const s = await setup({ status: 200, body: { next: `${AS}/chip/continue?r=x` } });
+    const s = await setup({ status: 200, body: { result: "verified", next: `${AS}/chip/continue?r=x` } });
     const out = await submitChipRead({
       request: req(),
       payload: fullPayload,
@@ -128,7 +129,7 @@ describe("submitChipRead", () => {
       randomBytes,
       now: 1_800_000_000,
     });
-    expect(out).toEqual({ next: `${AS}/chip/continue?r=x` });
+    expect(out).toEqual({ result: "verified", next: `${AS}/chip/continue?r=x` });
     expect(s.calls).toHaveLength(1);
     const call = s.calls[0];
     expect(call.url).toBe(`${AS}/chip/submit`);
@@ -151,7 +152,10 @@ describe("submitChipRead", () => {
   });
 
   it("isteğe bağlı alanlar yoksa gövdede de yok", async () => {
-    const s = await setup({ status: 200, body: { next: `${AS}/chip/continue` } });
+    const s = await setup({
+      status: 200,
+      body: { result: "fallback", code: "dg11_missing", next: `${AS}/chip/continue` },
+    });
     await submitChipRead({
       request: req(),
       payload: { sod: fullPayload.sod, dg1: fullPayload.dg1, dg2: fullPayload.dg2 },
@@ -185,10 +189,83 @@ describe("submitChipRead", () => {
   });
 
   it("next başka kökende ya da yoksa → hata", async () => {
-    for (const body of [{ next: "https://evil.example/chip/continue" }, { next: 5 }, {}, { next: "/chip/continue" }]) {
+    for (const body of [
+      { result: "verified", next: "https://evil.example/chip/continue" },
+      { result: "verified", next: 5 },
+      { result: "fallback" },
+      { result: "verified", next: "/chip/continue" },
+      { next: `${AS}/chip/continue` }, // sonuç yok
+      { result: "accepted", next: `${AS}/chip/continue` },
+    ]) {
       const s = await setup({ status: 200, body });
       await expect(
         submitChipRead({ request: req(), payload: fullPayload, keys: s.keys, wua: s.wua, http: s.http, randomBytes }),
+      ).rejects.toMatchObject({ code: "issuer_error" });
+    }
+  });
+
+  it("ret: sonuç ve sabit kod döner; sunucunun dönüş adresi (uygulama şeması) izlenmez ve hata sayılmaz", async () => {
+    const s = await setup({
+      status: 200,
+      body: { result: "rejected", code: "aa_failed", next: "tamgawallet://cb?error=access_denied" },
+    });
+    const out = await submitChipRead({
+      request: req(),
+      payload: fullPayload,
+      keys: s.keys,
+      wua: s.wua,
+      http: s.http,
+      randomBytes,
+    });
+    expect(out).toEqual({ result: "rejected", code: "aa_failed" });
+    const odd = await setup({ status: 200, body: { result: "rejected", code: "Bad <x>" } });
+    expect(
+      await submitChipRead({
+        request: req(),
+        payload: fullPayload,
+        keys: odd.keys,
+        wua: odd.wua,
+        http: odd.http,
+        randomBytes,
+      }),
+    ).toEqual({ result: "rejected", code: "rejected" });
+  });
+});
+
+describe("requestChipFallback", () => {
+  it("veri göndermez: gövde yalnız tutamaç + neden, cüzdan kanıtı başlıkları; next aynı kökende", async () => {
+    const next = `${AS}/chip/continue?r=x.y&fallback=1`;
+    const s = await setup({ status: 200, body: { result: "fallback", code: "wallet_declined", next } });
+    const out = await requestChipFallback({
+      request: req(),
+      reason: "declined",
+      keys: s.keys,
+      wua: s.wua,
+      http: s.http,
+      randomBytes,
+    });
+    expect(out).toEqual({ next });
+    expect(s.calls[0].url).toBe(`${AS}/chip/submit`);
+    expect(s.calls[0].headers?.["oauth-client-attestation"]).toBe("wia.jwt");
+    expect(JSON.parse(s.calls[0].body as string)).toEqual({ handle, fallback: "declined" });
+  });
+
+  it("sunucu fallback dışında bir sonuç ya da başka köken verirse → hata", async () => {
+    for (const body of [
+      { result: "verified", next: `${AS}/chip/continue` },
+      { result: "rejected", code: "x" },
+      { result: "fallback", next: "https://evil.example/chip/continue" },
+    ]) {
+      const s = await setup({ status: 200, body });
+      await expect(
+        requestChipFallback({
+          request: req(),
+          reason: "read_failed",
+          keys: s.keys,
+          wua: s.wua,
+          http: s.http,
+          randomBytes,
+        }),
       ).rejects.toMatchObject({ code: "issuer_error" });
     }
   });

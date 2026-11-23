@@ -6,6 +6,10 @@ published on npm as test releases; `0.9.0` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+- Fixed (Tamga ARF, Education Rulebook §6.1, EN/TR/AZ): the "Institution suspended" row now states the suspension rule of
+  [[ADR-0088]] — while the suspension lasts no credential of the institution is accepted; when it is lifted, those issued before
+  it are accepted again. The 1.0 archive is updated in place.
+- Changed (`wallet-core`, chip path, closed): `submitChipRead` returns `{ result, next }` and handles a rejection as `{ result: "rejected", code }` instead of failing on the error redirect; new `requestChipFallback` asks for the photo path with the wallet proof and no chip data when the chip was not read (SPEC-ID-0003 version note 2026-11-23). Breaking for `submitChipRead` callers; the chip path is off everywhere.
 - Added (sandbox, ADR-0095): two fictional source institutions for the contact credentials — Sinyalnet Mobil
   (`issuer.sandbox.tamga.network/sinyalnet`, phone number) and Postakuş (`issuer.sandbox.tamga.network/postakus`, e-mail address)
   — with their sandbox PKI certificates and records in the TR sandbox list (`OTHER`, `I1`). The real network is unchanged.
