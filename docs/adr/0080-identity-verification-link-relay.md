@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-23
 summary: >
   Kimlik servisi kimlik doğrulamayı bir dış kimlik doğrulama sağlayıcısına yönlendirir. Saldırgan akışı kendi cüzdanından başlatıp
   doğrulama bağlantısını bir başkasına iletirse, o kişi kendi kimliğiyle doğrular ve kimlik belgesi saldırganın cüzdanına verilir.
@@ -113,6 +113,15 @@ de tek başına yetmez: uyarılar okunmadan geçilebilir ve sağlayıcının say
 **Kalan risk (bilinçli).** Kurbanı uyarıyı görmezden gelmeye ikna eden kararlı bir saldırgan başarılı olabilir. Bu, kişinin
 kimliğini bilerek başkasına kullandırmasıyla aynı sınıftadır. Ölçek büyürse yukarıdaki iki yol yeniden ele alınır.
 
+**Kalan risk: sağlayıcı bağlantısının iletilmesi (2026-11-23).** Uyarı kimlik servisinin kendi ara sayfasındadır (VL3) ve
+sağlayıcının oturumu yalnız ara sayfada "devam" denince açılır. Saldırgan akışı kendi cüzdanından başlatıp ara sayfayı kendisi
+geçerse, sağlayıcının doğrulama sayfasının bağlantısını kurbana iletebilir; kurban kimlik servisinin uyarısını hiç görmez. Bu
+yolda yalnız son onay katmanı kalır ve son onayı saldırganın kendisi verir; kurbanı koruyan, sağlayıcının sayfasında kendi
+belgesini ve yüzünü göstermesi gerekmesidir (kandırılması gerekir). Bilinçli olarak kabul edilir; tehdit modelindeki saldırganın
+yeteneği içindedir. Kapatma yolu: uyarının sağlayıcının kendi sayfasında, doğrulama başlamadan gösterilmesi (sağlayıcının özelleştirme
+yeteneğine bağlıdır) — kimlik doğrulama sağlayıcısı kesinleşince ele alınır. Uyarı izninin tarayıcıya bağlanması bu yolu kapatmaz
+(sağlayıcı bağlantısı kimlik servisinden geçmez); o ayrı bir karar maddesidir.
+
 # Değişmezler
 
 | Kod | Kural |
@@ -146,3 +155,6 @@ Kod bu depoda değil ağırlıkla kimlik servisinde (operatör deposu) ve cüzda
 
 **Accepted — 2026-11-12.** Proje yönetiminin onayıyla (2026-11-12). DECISIONS: D-ID-15. VL1–VL4 bağlayıcıdır; uygulama kimlik
 doğrulama herkese açılmadan önce yapılır.
+
+> **Ek (2026-11-23):** "Değerlendirilen seçenekler" altındaki kalan risk, sağlayıcı bağlantısının iletilmesi yoluyla genişletildi
+> (kural değişmedi; kalan risk açıkça yazıldı). Proje yönetimi onayıyla.

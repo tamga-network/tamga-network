@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-23
 summary: >
   Şəxsiyyət xidməti şəxsiyyətin yoxlanılmasını kənar şəxsiyyət yoxlama provayderinə yönləndirir. Hücumçu axını öz cüzdanından
   başladıb yoxlama keçidini başqasına ötürərsə, həmin şəxs öz şəxsiyyəti ilə yoxlamadan keçir və şəxsiyyət sənədi hücumçunun
@@ -119,6 +119,15 @@ deyil.
 şəxsiyyətindən bilərəkdən başqasının istifadə etməsinə imkan verməsi ilə eyni sinifdədir. Miqyas böyüyərsə, yuxarıdakı iki yol
 yenidən nəzərdən keçirilir.
 
+**Qalan risk: provayder keçidinin ötürülməsi (2026-11-23).** Xəbərdarlıq şəxsiyyət xidmətinin öz ara səhifəsindədir (VL3) və
+provayderin sessiyası yalnız ara səhifədə "davam" deyildikdə açılır. Hücumçu axını öz cüzdanından başladıb ara səhifəni özü
+keçərsə, provayderin yoxlama səhifəsinin keçidini qurbana ötürə bilər; qurban şəxsiyyət xidmətinin xəbərdarlığını heç görmür. Bu
+yolda yalnız son təsdiq qatı qalır və son təsdiqi hücumçunun özü verir; qurbanı qoruyan, provayderin səhifəsində öz sənədini və
+üzünü göstərməli olmasıdır (aldadılmalıdır). Şüurlu olaraq qəbul edilir; təhdid modelindəki hücumçunun imkanları daxilindədir.
+Bağlama yolu: xəbərdarlığın provayderin öz səhifəsində, yoxlama başlamazdan əvvəl göstərilməsi (provayderin fərdiləşdirmə
+imkanından asılıdır) — şəxsiyyət yoxlaması provayderi dəqiqləşəndə nəzərdən keçirilir. Xəbərdarlıq icazəsinin brauzerə
+bağlanması bu yolu bağlamır (provayder keçidi şəxsiyyət xidmətindən keçmir); bu ayrıca qərar maddəsidir.
+
 # Dəyişməz qaydalar
 
 | Kod | Qayda |
@@ -153,3 +162,6 @@ Kod əsasən bu repozitoriyada deyil, şəxsiyyət xidmətində (operator repozi
 
 **Accepted — 2026-11-12.** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12). DECISIONS: D-ID-15. VL1–VL4 məcburidir; tətbiq
 şəxsiyyətin yoxlanılması hamıya açılmazdan əvvəl həyata keçirilir.
+
+> **Əlavə (2026-11-23):** "Nəzərdən keçirilən seçimlər" altındakı qalan risk provayder keçidinin ötürülməsi yolu ilə genişləndirildi
+> (qayda dəyişmədi; qalan risk açıq yazıldı). Layihə rəhbərliyinin təsdiqi ilə.

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-13
+last_updated: 2026-11-23
 summary: >
   Today the identity service has a person verified entirely by an external remote identity verification provider (document
   photo, liveness, face match). Decision: the chip of the identity card or passport is read over NFC on the person's phone, in the
@@ -249,3 +249,8 @@ binding. [[SPEC-ID-0003]]/IDP3 was narrowed by this decision.
 > server, is not in store builds, runs only in local tests with fake document data); the chip path opens after the legal opinion
 > (unchanged). First version: clone check AA only, no DG11 closes the chip path, DG2 as the reference image for face matching.
 > Approved by project management.
+
+> **Addendum (2026-11-23):** For chips without a clone check, K5 stays as it is (residual risk knowingly accepted): data from a
+> document whose chip has been read once passes passive authentication, leaving face and liveness; the credential is issued with
+> `document_chip_verified: false`, at the same level as the photo path. Sending such documents to the photo path adds no security
+> and loses the state-signed data. Chip Authentication (CA) is added when the chip path opens. Approved by project management.

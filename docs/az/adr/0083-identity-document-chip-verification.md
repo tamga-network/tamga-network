@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-13
+last_updated: 2026-11-23
 summary: >
   Bu gün şəxsiyyət xidməti şəxsi tamamilə kənar uzaqdan şəxsiyyət yoxlaması provayderinə yoxlatdırır (sənəd fotoşəkli, canlılıq,
   üz uyğunluğu). Qərar: şəxsiyyət vəsiqəsinin və ya pasportun çipi şəxsin telefonunda, axını başladan cüzdanda NFC ilə oxunur;
@@ -242,3 +242,8 @@ dəyişdirilə bilən şəkildə; təhlükəsiz e-imza / mobil imza yolu çip yo
 > yığımına daxil olmur, yalnız yerli testdə saxta sənəd məlumatı ilə); çip yolunun açılışı hüquqi rəydən sonra (olduğu kimi).
 > İlk versiya: surət yoxlaması yalnız AA, DG11 yoxdursa çip yolu bağlanır, üz uyğunluğunda DG2 istinad təsviri. Layihə
 > rəhbərliyinin təsdiqi ilə.
+
+> **Əlavə (2026-11-23):** Surət yoxlaması olmayan çip üçün K5 olduğu kimi qalır (qalan risk şüurlu qəbul edildi): çipi bir dəfə
+> oxunmuş sənədin məlumatı passiv yoxlamadan keçir, geriyə üz və canlılıq qalır; sənəd `document_chip_verified: false` ilə, foto
+> yolu ilə eyni səviyyədə verilir. Foto yoluna göndərmək təhlükəsizlik qazandırmır, dövlətin imzalı məlumatını itirdir. Çip
+> autentifikasiyası (CA) çip yolu açılanda əlavə edilir. Layihə rəhbərliyinin təsdiqi ilə.

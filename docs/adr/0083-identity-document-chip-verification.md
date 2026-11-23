@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-13
+last_updated: 2026-11-23
 summary: >
   Bugün kimlik servisi kişiyi tamamen bir dış uzaktan kimlik doğrulama sağlayıcısına doğrulatıyor (belge fotoğrafı, canlılık,
   yüz eşleştirme). Karar: kimlik kartı ya da pasaport çipi kişinin telefonunda, akışı başlatan cüzdanda NFC ile okunur; cüzdan
@@ -232,3 +232,8 @@ değiştirilebilir biçimde; güvenli e-imza / mobil imza yolu çip yolundan son
 > **Değişiklik (2026-11-13):** K11 ve CV7 değişti — kod şimdi, kapalı anahtarın arkasında yazılır (sunucuda çalışmaz, mağaza
 > derlemesine girmez, yalnız yerel testte sahte belge verisiyle); çip yolunun açılışı hukuki görüşten sonra (aynen). İlk sürüm:
 > kopya denetimi yalnız AA, DG11 yoksa çip yolu kapanır, yüz eşleştirmede DG2 referans görüntü. Proje yönetimi onayıyla.
+
+> **Ek (2026-11-23):** Kopya denetimi olmayan çip için K5 olduğu gibi kalır (kalan risk bilinçli kabul edildi): çipi bir kez okunmuş
+> belgenin verisi pasif doğrulamayı geçer, geriye yüz ve canlılık kalır; belge `document_chip_verified: false` ile, fotoğraf yoluyla
+> aynı seviyede verilir. Fotoğraf yoluna göndermek güvenlik kazandırmaz, devletin imzalı verisini kaybettirir. Çip doğrulama (CA)
+> çip yolu açılırken eklenir. Proje yönetimi onayıyla.
