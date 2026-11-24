@@ -75,10 +75,12 @@ yazılmır.
 > **Əlavə (2026-11-24) — AB-nin qeydiyyat dəyərləri (CIR 2025/848 Əlavə I):** (1) Səlahiyyət növləri AB-nin onudur: mövcud beşə
 > ETSI TS 119 475 Əlavə A-nın qalan beşi əlavə edilir — `qcert_for_eseal_provider`, `qcert_for_esig_provider`,
 > `rqsealcds_provider`, `rqsigcds_provider`, `esig_eseal_creation_provider`. Kvalifikasiyalı növlər (`qeaa_provider`, `qcert_*`,
-> `rq*`) və `pid_provider` real şəbəkədə verilə bilməz: nəşr aləti dayanır (Tamga-nın AB statusu yoxdur; TL8); sandbox-da nümunə
+> `rq*`) və `pid_provider` real şəbəkədə verilə bilməz — yoxlayıcı qeydində, attestasiya verəndə (`QUALIFIED` sinfi `qeaa_provider`
+> deməkdir) və qeydiyyat alətində nəşr dayanır (Tamga-nın AB statusu yoxdur; TL8); sandbox-da nümunə
 > üçün sərbəstdir. Zəncir proyeksiyası yeni növləri daşımır (zəncir bağlıdır). (2) Qurum identifikator növləri
-> (`identifiers[].scheme`) icazəli siyahıdan: AB adları `EUID` (AB TS5 defoltu), `EORI`, `LEI`, `VAT`; milli nömrələr
-> `<ÖLKƏ>-<AD>` formatında (bu gün `TR-VKN`, `TR-MERSIS`). Başqa dəyər nəşri dayandırır. Layihə rəhbərliyinin təsdiqi ilə.
+> (`identifiers[].scheme`) icazəli siyahıdan: AB adları AB TS2-nin növ adları ilə eyni — `EUID` (AB TS5 defoltu), `EORI-No`, `LEI`,
+> `VATIN`, `TIN`, `Excise`; milli nömrələr `<ÖLKƏ>-<AD>` formatında (bu gün `TR-VKN`, `TR-MERSIS`). Başqa dəyər nəşri dayandırır.
+> Yalnız EUID / EORI-No / TIN / Excise daşıyan qeydə qeydiyyat sertifikatı verilmir (EN 319 412-1 kodu yoxdur). Layihə rəhbərliyinin təsdiqi ilə.
 
 # Nəzərdən keçirilmiş variantlar
 

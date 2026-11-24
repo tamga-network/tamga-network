@@ -6,10 +6,15 @@ published on npm as test releases; `0.9.0` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+- Changed (`wallet-core`; ADR-0097, WA-ADR-0018 review): registrar CA chain — every CA must carry key usage with `keyCertSign`;
+  unrecognised critical, duplicated or malformed extensions and a negative `pathLen` reject; a listed CA certificate is not accepted
+  as a direct signer. `wiaStatusByList` / `wiaRevokedByList` take optional `providerIds`: the WIA status list signer must then be this
+  wallet's own provider.
 - Added (`trust`, `onboard`, `trust-publisher`; ADR-0024 addendum): the five remaining EU entitlements of ETSI TS 119 475 Annex A
   (`qcert_for_eseal_provider`, `qcert_for_esig_provider`, `rqsealcds_provider`, `rqsigcds_provider`,
-  `esig_eseal_creation_provider`); qualified and PID entitlements are refused on the real network; organisation identifier schemes
-  must be `EUID`, `EORI`, `LEI`, `VAT` or a national `<CC>-<NAME>`.
+  `esig_eseal_creation_provider`); qualified and PID entitlements (including issuer class `QUALIFIED`) are refused on the real
+  network, in the build and in the registry tool; organisation identifier schemes must be an EU TS2 type name (`EUID`, `EORI-No`,
+  `LEI`, `VATIN`, `TIN`, `Excise`) or a national `<CC>-<NAME>`; `VATIN` maps to the EN 319 412-1 `VAT<CC>-` identifier.
 - Changed (`wallet-core`, `trust-publisher`; ADR-0097): the registration certificate carries the service identifier as
   `serviceIdentifier` (EU TS5 name) instead of `service_id`; the wallet accepts a registration certificate (and its status list)
   signed either by a pinned registrar key or by a certificate chaining to a registrar CA listed in the LOTL. New exports

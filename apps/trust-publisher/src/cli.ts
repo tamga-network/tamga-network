@@ -116,8 +116,7 @@ import {
   relyingPartyNameProblems,
   resolveSigningKeyRefs,
   tlSourceFieldProblems,
-  identifierSchemeProblems,
-  entitlementProblems,
+  registrationValueProblems,
 } from "./source-checks.js";
 import { checkTerminalGroups, groupWithdrawalWarnings } from "./terminal-groups.js";
 import { checkProvisionalOperator, isOwn, type ProvisionalOperator } from "./provisional-operator.js";
@@ -1306,15 +1305,11 @@ async function build() {
   const rpNames = relyingPartyNameProblems(tlSrc.relying_parties);
   if (rpNames.length) throw new Error(`ADR-0075 RO5: ${rpNames.join("; ")}`);
   // ADR-0024 K5 eki (2026-11-24): kimlik numarası türleri AB listesinden ya da ulusal biçimde; nitelikli/PID yetkisi gerçek ağda yok
-  const regProblems = [
-    ...(tlSrc.relying_parties as Array<Record<string, unknown>>).flatMap((r) => [
-      ...identifierSchemeProblems(`relying_party ${String(r.dns_name)}`, r.identifiers),
-      ...entitlementProblems(`relying_party ${String(r.dns_name)}`, r.entitlements, ENVIRONMENT),
-    ]),
-    ...(sourceIssuers as Array<Record<string, unknown>>).flatMap((i) =>
-      identifierSchemeProblems(`issuer ${String(i.slug ?? i.legal_name)}`, i.identifiers),
-    ),
-  ];
+  const regProblems = registrationValueProblems(
+    tlSrc.relying_parties as Array<Record<string, unknown>>,
+    sourceIssuers as Array<Record<string, unknown>>,
+    ENVIRONMENT,
+  );
   if (regProblems.length) throw new Error(`ADR-0024 K5: ${regProblems.join("; ")}`);
   const rootCas = buildRootCas(tlSrc, cc);
   const caIdByRef = caIdMap(tlSrc, rootCas);
@@ -2104,6 +2099,11 @@ async function registryWrite(cmd: string, args: string[], p: string) {
   const sourceProblems = [
     ...tlSourceFieldProblems(next),
     ...relyingPartyNameProblems((next.relying_parties ?? []) as Array<Record<string, unknown>>),
+    ...registrationValueProblems(
+      (next.relying_parties ?? []) as Array<Record<string, unknown>>,
+      (next.issuers ?? []) as Array<Record<string, unknown>>,
+      ENVIRONMENT,
+    ),
   ];
   if (sourceProblems.length) throw new RegistryError(sourceProblems);
   if (check) {

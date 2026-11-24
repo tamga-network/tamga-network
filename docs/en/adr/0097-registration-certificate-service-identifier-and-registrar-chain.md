@@ -51,11 +51,13 @@ by pinning each key but also by a chain to a registrar CA in the list. Nothing c
 
 - The wallet (`wallet-core` `registrarSigned`) accepts the signer of a registration certificate (JWT and proximity CWT form) and
   of the registration certificate status list in one of two ways:
-  1. **Pinned:** the leaf's SHA-256 fingerprint is in the country's LOTL `roles.registrar.signing_keys` and `ACTIVE`.
+  1. **Pinned:** the leaf's SHA-256 fingerprint is in the country's LOTL `roles.registrar.signing_keys` and `ACTIVE`. This path
+     keeps today's behaviour: the certificate's validity period is not checked; trust is managed by the list entry (add / remove). Only
+     a listed CA certificate is not accepted directly as the signer (unless it carries `digitalSignature`).
   2. **Chain:** in the x5c (at most 4 certificates) every signature from the leaf up to a listed certificate (the same
      `signing_keys`) verifies and names chain; the leaf is not a CA and, if it has key usage, carries `digitalSignature`; every
-     certificate above the leaf (the listed CA included) has `cA=TRUE`, `keyCertSign` if key usage is present, and respects
-     `pathLen`; every certificate except the anchor is inside its validity period. So a non-CA signer key — an expired signer or
+     certificate above the leaf (the listed CA included) has `cA=TRUE` and `keyCertSign` in key usage (key usage is required), and
+     respects `pathLen`; a chain with an unrecognised critical extension or a duplicated extension is rejected; every certificate except the anchor is inside its validity period. So a non-CA signer key — an expired signer or
      the pinned signer itself — cannot derive new signers.
 - Only registrar keys are anchors; the national list's `root_cas` or any other anchor does not count for registration certificates.
 - No new list field: a listed fingerprint may be the signer itself or the registrar CA that issued the signer.

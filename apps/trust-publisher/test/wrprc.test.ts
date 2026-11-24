@@ -66,6 +66,14 @@ describe("kayıt sertifikası (ADR-0026)", () => {
     expect(semanticIdentifier([{ scheme: "TR-MERSIS", value: "0123" }])).toBe("NTRTR-0123");
     expect(semanticIdentifier([])).toBeNull();
     expect(semanticIdentifier(undefined)).toBeNull();
+    // ADR-0024 K5 eki: VATIN ülke önekiyle VAT<ÜLKE>-…; EN 319 412-1 kodu olmayan türler (EUID, EORI-No) tek başına null
+    expect(semanticIdentifier([{ scheme: "VATIN", value: "DE123456789" }])).toBe("VATDE-123456789");
+    expect(
+      semanticIdentifier([
+        { scheme: "EUID", value: "DEK1101R.HRB116737" },
+        { scheme: "EORI-No", value: "DE1" },
+      ]),
+    ).toBeNull();
   });
 
   it("doğrulayıcı: yalnız geçerli kullanım; alanlar standarttaki adlarla; exp kullanım bitişiyle sınırlı", () => {

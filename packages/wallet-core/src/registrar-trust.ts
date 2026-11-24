@@ -26,7 +26,15 @@ export function registrarSigned(
   const leaf = chain[0];
   if (!leaf || !registrarKeys.length || chain.length > MAX_CHAIN) return false;
   const keys = new Set(registrarKeys.map((k) => k.toLowerCase()));
-  if (keys.has(certFingerprintHex(leaf))) return true;
+  if (keys.has(certFingerprintHex(leaf))) {
+    // Sabit yol: imzacı doğrudan listede. Listedeki bir CA sertifikası doğrudan imzacı olamaz (CA anahtarı imza atmaz).
+    try {
+      const u = certUsage(leaf);
+      return !u.ca || (u.keyUsage !== undefined && (u.keyUsage & KU_DIGITAL_SIGNATURE) !== 0);
+    } catch {
+      return false;
+    }
+  }
   if (chain.length < 2) return false;
   try {
     if (!chain.slice(1).some((c) => keys.has(certFingerprintHex(c)))) return false;
@@ -36,8 +44,8 @@ export function registrarSigned(
     if (lu.ca || (lu.keyUsage !== undefined && !(lu.keyUsage & KU_DIGITAL_SIGNATURE))) return false;
     for (let i = 1; i < path.length; i++) {
       const u = certUsage(path[i]);
-      if (!u.ca) return false;
-      if (u.keyUsage !== undefined && !(u.keyUsage & KU_KEY_CERT_SIGN)) return false;
+      // CA: cA=TRUE VE anahtar kullanımı keyCertSign — anahtar kullanımı yoksa ret (varsayılan ayarlı kendinden imzalı sabit imzacı CA sayılmaz)
+      if (!u.ca || u.keyUsage === undefined || !(u.keyUsage & KU_KEY_CERT_SIGN)) return false;
       if (u.pathLen !== undefined && u.pathLen < i - 1) return false; // altındaki ara CA sayısı
     }
     for (let i = 0; i < path.length - 1; i++) {

@@ -4,7 +4,7 @@ title: "Qoşulma prosesi"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-16
+last_updated: 2026-11-24
 summary: >
   Tamga Network-a qoşulmanın addımları: sənədi verən qurum, yoxlayan tərəf, cüzdan provayderi və dövlət üçün müraciət, tələb olunan sənədlər, baxış, uyğunluq testləri, siyahıya daxil olma; daha sonra qeydiyyat dəyişikliyi, fəaliyyətin dayandırılması və çıxış. Qaydalar Əlavə A §3.2–§3.3 və Əlavə B-də, texniki addımlar isə tərtibatçı sənədlərindədir.
 translation_of: FW-ONB-0001
@@ -61,7 +61,7 @@ yazmır, qeydiyyat qərarı qeydiyyat qurumundadır ([[GUIDE-0014]]).
 | 1. İstifadə hallarını müəyyən edin | Hər istifadə halı üçün məqsəd, tələb olunacaq sahələr və məxfilik siyasəti. Yalnız hüquqi şəxslər qeydiyyatdan keçir. |
 | 2. Müraciət | Aİ ümumi qeydiyyat məlumat dəsti: rəsmi və kommersiya adı, rəsmi identifikasiya nömrəsi, ünvan, əlaqə məlumatları, xidmətin təsviri, dövlət qurumu olub-olmaması, səlahiyyət növü, vasitəçi əlaqəsi, aid olduğu məlumatların qorunması orqanı. |
 | 3. Əhatə dairəsinə baxış | Tələb olunacaq sahələr məlumatların minimallaşdırılması prinsipi əsasında nəzərdən keçirilir; əhatə dairəsi hər istifadə halı üzrə ayrılır (RB-REG-08). |
-| 4. Sertifikatlar | Giriş sertifikatı verilir; qeydiyyat qurumu hər istifadə halı üçün ən çoxu 12 ay etibarlı olan qeydiyyat sertifikatı yaradır. |
+| 4. Sertifikatlar | Qeydiyyat təsdiqlənəndə giriş sertifikatı verilir (§9 Ardıcıllıq); qeydiyyat qurumu hər istifadə halı üçün ən çoxu 12 ay etibarlı olan qeydiyyat sertifikatı yaradır. |
 | 5. Uyğunluq testi | İmzalanmış sorğu, yoxlama zənciri, köhnəlmiş siyahı olduqda "yoxlanıla bilmədi" nəticəsi və əhatə dairəsindən kənar sahələrin tələb olunmaması test edilir. |
 | 6. Siyahıya daxil olma | Yoxlayan tərəf etibar siyahısına əlavə olunur. Host edilən yoxlama xidmətindən istifadə edəcəksə, bu da qeydiyyata yazılır. |
 
@@ -123,6 +123,25 @@ Kritik insidentlərdə (məsələn, imza açarının sızması) qurumun fəaliyy
 
 Heç bir çıxış keçmişi silmir və mövcud rəqəmsal sənədləri etibarsız etmir (RB-REG-07). Yoxlayan tərəf və cüzdan provayderi də eyni
 yollarla çıxır.
+
+# 9. Yoxlayan tərəfin qeydiyyat siyasəti
+
+Aİ-nin yoxlayan tərəflərin qeydiyyatı üzrə icra reqlamenti (CIR 2025/848, 2026/1730 dəyişikliyi ilə) milli qeydiyyat siyasətinin
+yazılı olmasını tələb edir (Md. 4). Tamga-da qeydiyyat qurumu bu qaydalarla işləyir; ⚠️ TƏKLİF etiketli müddətlər layihə
+rəhbərliyinin təsdiqini gözləyir.
+
+| Mövzu | Qayda | Aİ əsası |
+|---|---|---|
+| Səlahiyyətli mənbələr | Hüquqi şəxs statusu və rəsmi ad Türkiyə üçün ticarət reyestri (MERSİS) və ya vergi qeydi (VKN) üzrə; başqa ölkədə həmin ölkənin ticarət reyestri. İdentifikator növləri Əlavə A-nın icazəli siyahısındandır ([[ADR-0024]] K5 əlavəsi). | Md. 4(3)(c), 6(4) |
+| Tələb olunan sənədlər | Hüquqi şəxs statusunun sübutu, müraciət edənin təmsil səlahiyyətinin sübutu, domen adına sahiblik (DNS təsdiqi). Şəxs adı qeydə yazılmır. | Md. 4(3)(b), 6(3)(b) |
+| Ardıcıllıq | Giriş sertifikatı yalnız qeydiyyatı təsdiqlənmiş yoxlayan tərəfə verilir: baxış (§3 addım 2–3) sertifikatdan əvvəl bitir; sertifikat və siyahı qeydi eyni nəşrdə qüvvəyə minir. | Md. 7(2) |
+| İlk müraciətə cavab | ⚠️ TƏKLİF: 10 iş günü ərzində qərar və ya çatışmayanların siyahısı. Dəyişiklik müraciəti 5 iş günü (RB-REG-09). | Md. 6(2) |
+| Dayandırma və ləğv əsasları | Yanlış və ya köhnəlmiş qeydiyyat məlumatı; siyasətin pozulması; **qeydiyyatda olmayan məlumatı tələb etmək**; digər hüquq pozuntuları. Qərar sanksiya pilləkəninə uyğun mütənasib verilir (Əlavə A §4.5) və əsaslandırılır. | Md. 9(2), 9(4) |
+| Bildiriş | Dayandırma və ya ləğv ən geci 24 saat ərzində əsaslandırma və etiraz yolu ilə yoxlayan tərəfə bildirilir; giriş və qeydiyyat sertifikatları eyni nəşrdə ləğv edilir ([[ADR-0087]], [[ADR-0068]]). | Md. 9(5), 9(6) |
+| Etiraz | Yoxlayan tərəf imtinaya, dayandırmaya və ya ləğvə yazılı etiraz edə bilər; etirazı qərarı verməyən şəxs araşdırır. ⚠️ TƏKLİF: etiraz müddəti 30 gün, cavab 15 iş günü. Mübahisə davam edərsə Əlavə A §4.7. | Md. 4(3)(f) |
+| Yoxlayan tərəfin öhdəlikləri | Qeydiyyat məlumatı dəyişəndə gecikmədən bildirir; istifadəni dayandıranda bildirir və sertifikatı gecikmədən ləğv edilir. | Md. 5(3), 6(7) |
+| Saxlama | Qeydiyyat məlumatı, sertifikat verilişləri və dəyişikliklər 10 il saxlanılır; siyahı arxivi və status tarixçəsi silinmir (RB-REG-07). | Md. 10 |
+| Qeydiyyatdan əvvəl əhatə baxışı | **Şüurlu fərq.** Aİ tələb olunan məlumatın və məqsədin yalnız şəffaflıq üçün toplanmasını, ilkin təsdiqin tətbiq edilməməsini istəyir (Md. 6(3a)). Tamga məlumatların minimallaşdırılması prinsipinə görə əhatəni qeydiyyatdan əvvəl yoxlayır (RB-REG-08): şəbəkədə hələ nəzarət orqanı və sonradan sanksiya yolu olmadığı halda ilkin baxış istifadəçini qoruyur. Tamga Aİ qeydiyyat qurumu deyil; üzv dövlət Aİ modelinə keçərsə qayda yenidən qiymətləndirilir. | Md. 6(3a) |
 
 # Status
 

@@ -76,10 +76,14 @@ yazılmaz.
 > **Ek (2026-11-24) — AB'nin kayıt değerleri (CIR 2025/848 Ek I):** (1) Yetki türleri AB'nin onu birden: mevcut beşe ETSI TS 119 475
 > Ek A'nın kalan beşi eklenir — `qcert_for_eseal_provider`, `qcert_for_esig_provider`, `rqsealcds_provider`, `rqsigcds_provider`,
 > `esig_eseal_creation_provider` (kayıt sertifikasında ETSI URI'leriyle). Nitelikli türler (`qeaa_provider`, `qcert_*`, `rq*`) ve
-> `pid_provider` gerçek ağda verilemez: yayın aracı durur (Tamga'da AB statüsü yok; TL8); sandbox'ta örnek için serbesttir. Zincir
+> `pid_provider` gerçek ağda verilemez — doğrulayıcı kaydında, belge verende (`QUALIFIED` sınıfı `qeaa_provider` demektir) ve kayıt
+> aracında yayın durur (Tamga'da AB statüsü yok; TL8); sandbox'ta örnek için serbesttir. Zincir
 > projeksiyonu yeni türleri taşımaz (zincir kapalı). (2) Kurum kimlik numarası türleri (`identifiers[].scheme`) izinli listeden:
-> AB adları `EUID` (AB TS5 varsayılanı), `EORI`, `LEI`, `VAT`; ulusal numaralar (ticaret sicili, vergi, ÖTV ve diğerleri — Ek I
-> (3)(b), (e), (f), (h)) `<ÜLKE>-<AD>` biçiminde (bugün `TR-VKN`, `TR-MERSIS`). Başka değer yayını durdurur. Proje yönetimi onayıyla.
+> AB adları AB TS2'nin tür adlarıyla birebir (`http://data.europa.eu/eudi/id/<ad>`) — `EUID` (AB TS5 varsayılanı), `EORI-No`, `LEI`,
+> `VATIN`, `TIN`, `Excise`; ulusal numaralar (ticaret sicili ve diğerleri — Ek I (3)(b), (h)) `<ÜLKE>-<AD>` biçiminde (bugün `TR-VKN`,
+> `TR-MERSIS`). Başka değer yayını durdurur. Sertifikadaki kurum kimliği (EN 319 412-1) `TR-VKN`, `TR-MERSIS`, `VATIN` ya da `LEI`'den
+> üretilir; yalnız EUID / EORI-No / TIN / Excise taşıyan kayda kayıt sertifikası üretilmez (bu türlerin EN 319 412-1 kodu yok; yayın
+> aracı bildirir). Proje yönetimi onayıyla.
 
 # Değerlendirilen seçenekler
 

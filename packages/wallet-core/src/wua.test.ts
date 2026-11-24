@@ -1,6 +1,11 @@
 /** WIA iptal listesi okuması (ADR-0025 `client_status`): bit genişliğine göre sınır ve bit değeri. */
 import { describe, it, expect } from "vitest";
-import { wiaRevokedInList, wiaStatusInList, wiaValidInList } from "./wua.js";
+import { wiaRevokedInList, wiaStatusByList, wiaStatusInList, wiaValidInList, type WuaRecord } from "./wua.js";
+import type { Http } from "./http.js";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pemIssuerSigner } from "@tamga-network/sd-jwt";
+import { StatusBitstring, signStatusListToken } from "@tamga-network/issuer";
 
 describe("wiaRevokedInList", () => {
   it("1 bitlik listede bayt başına 8 giriş: son yarıdaki iptal okunur, liste dışı giriş iptal değil", () => {
@@ -44,3 +49,38 @@ describe("wiaRevokedInList", () => {
     expect(wiaStatusInList(eight, 2)).toBe("valid"); // liste dışı
   });
 });
+
+// WA-ADR-0018 inceleme A1: WIA durum listesinin imzacısı bu cüzdanın sağlayıcısı olmalı (providerIds verilince)
+describe.skipIf(!existsSync(resolve(import.meta.dirname, "../../../ops/pki/issuer-bilgi-status.pkcs8.pem")))(
+  "wiaStatusByList: imzacı bu cüzdanın sağlayıcısına bağlı",
+  async () => {
+    const PKI = resolve(import.meta.dirname, "../../../ops/pki");
+    const certPem = readFileSync(resolve(PKI, "issuer-bilgi-status.cert.pem"), "utf8");
+    const signer = await pemIssuerSigner(readFileSync(resolve(PKI, "issuer-bilgi-status.pkcs8.pem"), "utf8"), certPem);
+    const URI = "https://provider.example/wia-status";
+    const now = Math.floor(Date.now() / 1000);
+    const token = await signStatusListToken({
+      signer,
+      iss: "https://provider.example",
+      uri: URI,
+      bitstring: new StatusBitstring(),
+      iat: now,
+      ttlSec: 3600,
+    });
+    const b64u = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
+    const wua = {
+      jwt: `${b64u({ alg: "ES256" })}.${b64u({ client_status: { status: { status_list: { uri: URI, idx: 3 } } } })}.x`,
+    } as unknown as WuaRecord;
+    const http = (async () => new Response(token, { status: 200 })) as unknown as Http;
+    const trust = (owner: string) => ({ isWalletProviderKey: () => "YES" as const, walletProviderOfKey: () => owner });
+    it("kendi sağlayıcısının imzası geçer; başka kayıtlı sağlayıcının imzası ret; providerIds verilmezse eski davranış", async () => {
+      await expect(wiaStatusByList({ wua, http, trust: trust("OWN"), providerIds: ["OWN"], now })).resolves.toBe(
+        "valid",
+      );
+      await expect(wiaStatusByList({ wua, http, trust: trust("OTHER"), providerIds: ["OWN"], now })).rejects.toThrow(
+        /this wallet's provider/,
+      );
+      await expect(wiaStatusByList({ wua, http, trust: trust("OTHER"), now })).resolves.toBe("valid");
+    });
+  },
+);

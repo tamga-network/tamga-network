@@ -13,6 +13,7 @@ import {
   accessCertNameProblem,
   entitlementProblems,
   identifierSchemeProblems,
+  registrationValueProblems,
   contactProblems,
   listOperatorProblems,
   lotlSourceFieldProblems,
@@ -259,6 +260,21 @@ describe("ADR-0024 K5 eki: kimlik numarası türleri ve gerçek ağ yetki kapıs
     expect(identifierSchemeProblems("rp", ok)).toEqual([]);
     expect(identifierSchemeProblems("rp", [{ scheme: "vkn", value: "1" }])).toHaveLength(1);
     expect(identifierSchemeProblems("rp", [{ value: "1" }])).toHaveLength(1);
+    // AB TS2 tür adları birebir; kısaltılmış biçimler (EORI, VAT) tanınmaz
+    for (const scheme of ["EORI-No", "VATIN", "TIN", "Excise"])
+      expect(identifierSchemeProblems("rp", [{ scheme, value: "x" }])).toEqual([]);
+    expect(
+      identifierSchemeProblems("rp", [
+        { scheme: "EORI", value: "x" },
+        { scheme: "VAT", value: "x" },
+      ]),
+    ).toHaveLength(2);
+  });
+  it("kapı belge verenlerde de çalışır: QUALIFIED sınıfı gerçek ağda durur; kayıt aracı da aynı denetimi kullanır", () => {
+    const iss = [{ slug: "q", class: "QUALIFIED", identifiers: [{ scheme: "TR-VKN", value: "1" }] }];
+    expect(registrationValueProblems([], iss, "production")).toHaveLength(1);
+    expect(registrationValueProblems([], iss, "sandbox")).toEqual([]);
+    expect(registrationValueProblems([], [{ slug: "e", class: "EAA" }], "production")).toEqual([]);
   });
   it("nitelikli ve PID yetkileri gerçek ağda verilemez, sandbox'ta serbest", () => {
     expect(entitlementProblems("rp", ["service_provider", "non_q_eaa_provider"], "production")).toEqual([]);

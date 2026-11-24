@@ -315,11 +315,11 @@ export const normalizeDnsName = (name: unknown) =>
  * durumu ne olursa olsun bir ad yalnız BİR kayıtta bulunmalı (yeniden kayıt aynı kayda yeni dönem olarak eklenir).
  */
 /**
- * ADR-0024 K5 eki (2026-11-24, CIR 2025/848 Ek I (3)): kurum kimlik numarası türleri. AB adları `EUID` (TS5 varsayılanı), `EORI`,
- * `LEI`, `VAT`; ulusal numaralar (ticaret sicili, vergi, ÖTV ve diğerleri — Ek I (3)(b), (e), (f), (h)) `<ÜLKE>-<AD>` biçiminde
- * (bugün `TR-VKN`, `TR-MERSIS`). Başka değer yayını durdurur.
+ * ADR-0024 K5 eki (2026-11-24, CIR 2025/848 Ek I (3)): kurum kimlik numarası türleri. AB adları AB TS2'nin tür adlarıyla birebir
+ * (`http://data.europa.eu/eudi/id/<ad>`): `EUID` (TS5 varsayılanı), `EORI-No`, `LEI`, `VATIN`, `TIN`, `Excise`; ulusal numaralar
+ * (ticaret sicili ve diğerleri — Ek I (3)(b), (h)) `<ÜLKE>-<AD>` biçiminde (bugün `TR-VKN`, `TR-MERSIS`). Başka değer yayını durdurur.
  */
-export const EU_IDENTIFIER_SCHEMES = ["EUID", "EORI", "LEI", "VAT"] as const;
+export const EU_IDENTIFIER_SCHEMES = ["EUID", "EORI-No", "LEI", "VATIN", "TIN", "Excise"] as const;
 const NATIONAL_SCHEME_RE = /^[A-Z]{2}-[A-Z0-9]{2,20}$/;
 export function identifierSchemeProblems(where: string, identifiers: unknown): string[] {
   if (!Array.isArray(identifiers)) return [];
@@ -351,6 +351,27 @@ export function entitlementProblems(where: string, entitlements: unknown, enviro
   return entitlements
     .filter((e) => (PRODUCTION_FORBIDDEN_ENTITLEMENTS as readonly string[]).includes(String(e)))
     .map((e) => `${where}: yetki "${String(e)}" gerçek ağda verilemez (AB statüsü gerekir; ADR-0024 K5 eki)`);
+}
+
+/**
+ * ADR-0024 K5 eki: kayıt kaynağının AB değerleri denetimi (kimlik numarası türleri + gerçek ağ yetki kapısı) — derlemede ve kayıt
+ * aracında aynı. Belge verenin yetkisi sınıfından da gelir (`QUALIFIED` → `qeaa_provider`, ADR-0024 K2).
+ */
+export function registrationValueProblems(rps: Rec[], issuers: Rec[], environment: string): string[] {
+  const issuerEnts = (i: Rec) => [
+    ...(Array.isArray(i.entitlements) ? (i.entitlements as unknown[]) : []),
+    ...(i.class === "QUALIFIED" ? ["qeaa_provider"] : []),
+  ];
+  return [
+    ...rps.flatMap((r) => [
+      ...identifierSchemeProblems(`relying_party ${String(r.dns_name)}`, r.identifiers),
+      ...entitlementProblems(`relying_party ${String(r.dns_name)}`, r.entitlements, environment),
+    ]),
+    ...issuers.flatMap((i) => [
+      ...identifierSchemeProblems(`issuer ${String(i.slug ?? i.legal_name)}`, i.identifiers),
+      ...entitlementProblems(`issuer ${String(i.slug ?? i.legal_name)}`, issuerEnts(i), environment),
+    ]),
+  ];
 }
 
 export function relyingPartyNameProblems(rps: Rec[]): string[] {

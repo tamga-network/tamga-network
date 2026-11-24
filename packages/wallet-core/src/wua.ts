@@ -72,7 +72,8 @@ export function wiaStatusRef(wua: WuaRecord): { uri: string; idx: number } | und
 export async function wiaRevokedByList(p: {
   wua: WuaRecord;
   http: Http;
-  trust: Pick<TrustSource, "isWalletProviderKey">;
+  trust: Pick<TrustSource, "isWalletProviderKey" | "walletProviderOfKey">;
+  providerIds?: readonly string[];
   now?: number;
 }): Promise<boolean> {
   return (await wiaStatusByList(p)) === "revoked";
@@ -82,7 +83,9 @@ export async function wiaRevokedByList(p: {
 export async function wiaStatusByList(p: {
   wua: WuaRecord;
   http: Http;
-  trust: Pick<TrustSource, "isWalletProviderKey">;
+  trust: Pick<TrustSource, "isWalletProviderKey" | "walletProviderOfKey">;
+  /** Bu cüzdanın sağlayıcı kimlikleri (WIA'nın listedeki kaydı). Verilirse liste imzacısı bunlardan birinin anahtarı olmalı. */
+  providerIds?: readonly string[];
   now?: number;
 }): Promise<WiaListStatus> {
   const ref = wiaStatusRef(p.wua);
@@ -92,6 +95,12 @@ export async function wiaStatusByList(p: {
   const list = parseStatusToken((await r.text()).trim(), ref.uri, p.now ?? Math.floor(Date.now() / 1000));
   if (p.trust.isWalletProviderKey(list.signerFingerprint) !== "YES")
     throw new WalletError("trust_error", "wallet status list: signer is not a registered wallet provider");
+  // Başka bir kayıtlı sağlayıcının anahtarı bu cüzdanın durumunu söyleyemez (WA-ADR-0018 inceleme A1)
+  if (p.providerIds) {
+    const of = p.trust.walletProviderOfKey?.(list.signerFingerprint) ?? null;
+    if (!of || !p.providerIds.includes(of))
+      throw new WalletError("trust_error", "wallet status list: signer is not this wallet's provider");
+  }
   return wiaStatusInList(list, ref.idx);
 }
 

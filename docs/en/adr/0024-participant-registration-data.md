@@ -83,11 +83,15 @@ organisational e-mail/phone); no personal names are written.
 > **Addendum (2026-11-24) — the EU registration values (CIR 2025/848 Annex I):** (1) Entitlements are the EU's ten: the remaining
 > five of ETSI TS 119 475 Annex A are added to the existing five — `qcert_for_eseal_provider`, `qcert_for_esig_provider`,
 > `rqsealcds_provider`, `rqsigcds_provider`, `esig_eseal_creation_provider` (with the ETSI URIs in the registration certificate).
-> The qualified types (`qeaa_provider`, `qcert_*`, `rq*`) and `pid_provider` cannot be granted on the real network: the publisher
-> stops (Tamga holds no EU status; TL8); in the sandbox they are allowed as examples. The chain projection does not carry the new
-> types (the chain is off). (2) Organisation identifier types (`identifiers[].scheme`) come from an allowed list: the EU names
-> `EUID` (EU TS5 default), `EORI`, `LEI`, `VAT`; national numbers (business register, tax, excise and others — Annex I (3)(b), (e),
-> (f), (h)) as `<COUNTRY>-<NAME>` (today `TR-VKN`, `TR-MERSIS`). Any other value stops publication. Approved by project management.
+> The qualified types (`qeaa_provider`, `qcert_*`, `rq*`) and `pid_provider` cannot be granted on the real network — publication stops
+> for relying party entries, for issuers (class `QUALIFIED` means `qeaa_provider`) and in the registry tool (Tamga holds no EU status;
+> TL8); in the sandbox they are allowed as examples. The chain projection does not carry the new
+> types (the chain is off). (2) Organisation identifier types (`identifiers[].scheme`) come from an allowed list: the EU names exactly
+> as the EU TS2 type names (`http://data.europa.eu/eudi/id/<name>`) — `EUID` (EU TS5 default), `EORI-No`, `LEI`, `VATIN`, `TIN`,
+> `Excise`; national numbers (business register and others — Annex I (3)(b), (h)) as `<COUNTRY>-<NAME>` (today `TR-VKN`, `TR-MERSIS`).
+> Any other value stops publication. The organisation identifier in certificates (EN 319 412-1) is derived from `TR-VKN`, `TR-MERSIS`,
+> `VATIN` or `LEI`; an entry carrying only EUID / EORI-No / TIN / Excise gets no registration certificate (these types have no
+> EN 319 412-1 code; the publisher reports it). Approved by project management.
 
 # Options considered
 

@@ -106,6 +106,18 @@ export function certValidity(der: Uint8Array): { notBefore: number; notAfter: nu
 
 const OID_BASIC_CONSTRAINTS = [0x55, 0x1d, 0x13]; // 2.5.29.19
 const OID_KEY_USAGE = [0x55, 0x1d, 0x0f]; // 2.5.29.15
+/** Kritik işaretli olsa da işlenen ya da bu yolda kısıt getirmeyen uzantılar (BC, KU, EKU, SAN, SKI, AKI, CRL DP, politika, AIA). */
+const KNOWN_EXTENSIONS = [
+  [0x55, 0x1d, 0x13],
+  [0x55, 0x1d, 0x0f],
+  [0x55, 0x1d, 0x25],
+  [0x55, 0x1d, 0x11],
+  [0x55, 0x1d, 0x0e],
+  [0x55, 0x1d, 0x23],
+  [0x55, 0x1d, 0x1f],
+  [0x55, 0x1d, 0x20],
+  [0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x01, 0x01],
+];
 /** keyUsage ilk baytındaki bitler (RFC 5280 §4.2.1.3; BIT STRING en anlamlı bitten) */
 export const KU_DIGITAL_SIGNATURE = 0x80;
 export const KU_KEY_CERT_SIGN = 0x04;
@@ -121,11 +133,19 @@ export function certUsage(der: Uint8Array): { ca: boolean; pathLen?: number; key
   if (!extWrap) return out;
   const exts = children(der, extWrap)[0];
   if (!exts || exts.tag !== 0x30) throw new Error("X.509: extensions is not a SEQUENCE");
+  const seen = new Set<string>();
   for (const ext of children(der, exts)) {
     const parts = children(der, ext);
     const oid = parts[0];
     const val = parts[parts.length - 1];
-    if (!oid || oid.tag !== 0x06 || !val || val.tag !== 0x04) continue;
+    if (!oid || oid.tag !== 0x06 || !val || val.tag !== 0x04) throw new Error("X.509: extension malformed");
+    const key = Array.from(der.subarray(oid.start, oid.end)).join(".");
+    if (seen.has(key)) throw new Error("X.509: duplicate extension"); // RFC 5280 §4.2
+    seen.add(key);
+    // RFC 5280 §4.2: tanınmayan kritik uzantı → ret (çapanın koyduğu kısıt yok sayılmaz)
+    const critical = parts.length === 3 && parts[1]!.tag === 0x01 && der[parts[1]!.start] !== 0;
+    if (critical && !KNOWN_EXTENSIONS.some((k) => eq(der, oid, k)))
+      throw new Error("X.509: unrecognised critical extension");
     if (eq(der, oid, OID_BASIC_CONSTRAINTS)) {
       const seq = readTlv(der, val.start);
       if (seq.tag !== 0x30 || seq.end !== val.end) throw new Error("X.509: basicConstraints malformed");
@@ -133,6 +153,7 @@ export function certUsage(der: Uint8Array): { ca: boolean; pathLen?: number; key
         if (c.tag === 0x01) out.ca = c.end - c.start === 1 && der[c.start] !== 0;
         else if (c.tag === 0x02) {
           if (c.end - c.start > 4) throw new Error("X.509: pathLen too large");
+          if (der[c.start]! & 0x80) throw new Error("X.509: pathLen negative");
           let n = 0;
           for (let i = c.start; i < c.end; i++) n = n * 256 + der[i];
           out.pathLen = n;

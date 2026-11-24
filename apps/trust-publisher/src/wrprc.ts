@@ -27,10 +27,21 @@ export const ENTITLEMENT_URI: Record<string, string> = {
   esig_eseal_creation_provider: "https://uri.etsi.org/19475/Entitlement/ESig_ESeal_Creation_Provider",
 };
 
-/** ETSI EN 319 412-1 semantik tanımlayıcı (tüzel kişi, Tablo 2): TR-VKN → VATTR-…, TR-MERSIS → NTRTR-… */
+/**
+ * ETSI EN 319 412-1 semantik tanımlayıcı (tüzel kişi, Tablo 2): TR-VKN → VATTR-…, TR-MERSIS → NTRTR-…, VATIN (ülke önekli) →
+ * VAT<ÜLKE>-…, LEI → LEIXG-…. EUID, EORI-No, TIN ve Excise'ın EN 319 412-1'de kodu yok: yalnız onları taşıyan kayda kayıt
+ * sertifikası üretilmez, yayın aracı "kimlik numarası yok" diye bildirir (ADR-0024 K5 eki).
+ */
 export function semanticIdentifier(identifiers: Rec[] | undefined): string | null {
   const map: Record<string, string> = { "TR-VKN": "VAT", "TR-MERSIS": "NTR", LEI: "LEI" };
-  for (const scheme of ["TR-VKN", "TR-MERSIS", "LEI"]) {
+  const vatin = identifiers?.find((i) => i.scheme === "VATIN");
+  const vm = /^([A-Z]{2})\s*([A-Z0-9]+)$/i.exec(String(vatin?.value ?? "").trim());
+  for (const scheme of ["TR-VKN", "TR-MERSIS", "VATIN", "LEI"]) {
+    if (scheme === "VATIN") {
+      if (vm && !identifiers?.some((i) => i.scheme === "TR-VKN" || i.scheme === "TR-MERSIS"))
+        return `VAT${vm[1]!.toUpperCase()}-${vm[2]}`;
+      continue;
+    }
     const id = identifiers?.find((i) => i.scheme === scheme);
     if (!id?.value) continue;
     const digits = String(id.value).replace(/^TR/i, "").trim();

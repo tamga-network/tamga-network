@@ -46,10 +46,13 @@ sabitleyerek değil, listedeki kayıt kurumu CA'sına giden zincirle de tanısı
 
 - Cüzdan (`wallet-core` `registrarSigned`) kayıt sertifikasının (JWT ve yakın alan CWT biçimi) ve kayıt sertifikası durum
   listesinin imzacısını şu iki yoldan biriyle kabul eder:
-  1. **Sabit:** yaprağın SHA-256 parmak izi LOTL'de ülkenin `roles.registrar.signing_keys`'inde ve `ACTIVE`.
+  1. **Sabit:** yaprağın SHA-256 parmak izi LOTL'de ülkenin `roles.registrar.signing_keys`'inde ve `ACTIVE`. Bu yol
+     bugünkü davranışı korur: sertifikanın süresine bakılmaz, güven listedeki kayıtla (ekleme / çıkarma) yönetilir. Yalnız listedeki
+     bir CA sertifikası doğrudan imzacı olarak kabul edilmez (`digitalSignature` taşımıyorsa).
   2. **Zincir:** x5c'de (en çok 4 sertifika) yapraktan listedeki (aynı `signing_keys`) bir sertifikaya kadar her imza doğrulanıyor
      ve adlar zincirleniyor; yaprak CA değil ve anahtar kullanımı varsa `digitalSignature` taşıyor; yaprağın üstündeki her sertifika
-     (listedeki CA dahil) `cA=TRUE`, anahtar kullanımı varsa `keyCertSign`, `pathLen`'e uyuyor; çapa dışındaki her sertifika
+     (listedeki CA dahil) `cA=TRUE` ve anahtar kullanımında `keyCertSign` taşıyor (anahtar kullanımı zorunlu), `pathLen`'e uyuyor;
+     tanınmayan kritik uzantı ya da yinelenen uzantı varsa zincir reddedilir; çapa dışındaki her sertifika
      geçerlilik süresi içinde. Böylece CA olmayan bir imzacı anahtarı — süresi dolmuş bir imzacı ya da sabit imzacının kendisi —
      yeni imzacı türetemez.
 - Çapa yalnız kayıt kurumu anahtarlarıdır; ulusal listenin `root_cas`'ı ya da başka bir çapa kayıt sertifikası için sayılmaz.
