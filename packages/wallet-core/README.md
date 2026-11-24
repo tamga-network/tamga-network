@@ -140,7 +140,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.9.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.10.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

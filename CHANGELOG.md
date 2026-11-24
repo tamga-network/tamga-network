@@ -1,10 +1,20 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.9.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.10.0` is the next one (prepared 2026-11-24; `0.9.0` is the current one on npm) (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
+
+## 0.10.0 — 2026-11-24
+
+Prepared on 2026-11-24; not yet published on npm.
+
+All ten packages move to 0.10.0 together. This test release is **breaking** for code that reads the registration certificate
+payload: the service identifier is now `serviceIdentifier` (EU TS5 name; ADR-0097) and `service_id` is no longer read. The live
+lists already publish the new name, so wallets on 0.9.0 no longer match a relying party's service in an embedded disclosure
+policy. `submitChipRead` (chip path, closed) also changed its return shape. Code in `core`, `sd-jwt`, `mdoc`, `issuer`, `schemas`,
+`verifier` (except its version string) and `zk` is unchanged.
 
 - Changed (`wallet-core`; ADR-0097, WA-ADR-0018 review): registrar CA chain — every CA must carry key usage with `keyCertSign`;
   unrecognised critical, duplicated or malformed extensions and a negative `pathLen` reject; a listed CA certificate is not accepted
