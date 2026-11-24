@@ -127,17 +127,17 @@ yollarla çıkar.
 # 9. Doğrulayıcı kayıt politikası
 
 AB'nin doğrulayıcı kaydı uygulama tüzüğü (CIR 2025/848, 2026/1730 değişikliğiyle) ulusal kayıt politikasının yazılı olmasını ister
-(Md. 4). Tamga'da kayıt kurumu bu kurallara göre çalışır; ⚠️ ÖNERİ etiketli süreler proje yönetiminin onayını bekler.
+(Md. 4). Tamga'da kayıt kurumu bu kurallara göre çalışır; süreler proje yönetimince onaylandı (2026-11-24).
 
 | Konu | Kural | AB dayanağı |
 |---|---|---|
 | Yetkili kaynaklar | Tüzel kişilik ve resmî ad, Türkiye için ticaret sicili (MERSİS) ya da vergi kaydı (VKN) üzerinden; başka ülkede o ülkenin ticaret sicili. Kimlik numarası türleri Ek A'nın izinli listesindendir ([[ADR-0024]] K5 eki). | Md. 4(3)(c), 6(4) |
 | İstenen belgeler | Tüzel kişilik kanıtı (sicil kaydı ya da faaliyet belgesi), başvuruyu yapanın temsil yetkisi kanıtı (imza sirküleri ya da yetki belgesi), alan adı sahipliği (DNS teyidi). Kişi adı kayda yazılmaz. | Md. 4(3)(b), 6(3)(b) |
 | Sıra | Erişim sertifikası yalnız kaydı onaylanan doğrulayıcıya verilir: inceleme (§3 adım 2–3) sertifikadan önce biter; sertifika ve liste kaydı aynı yayında yürürlüğe girer. | Md. 7(2) |
-| İlk başvuruya yanıt | ⚠️ ÖNERİ: 10 iş günü içinde karar ya da eksik listesi. Değişiklik başvurusu 5 iş günü (RB-REG-09). | Md. 6(2) |
+| İlk başvuruya yanıt | 10 iş günü içinde karar ya da eksik listesi. Değişiklik başvurusu 5 iş günü (RB-REG-09). | Md. 6(2) |
 | Askı ve iptal gerekçeleri | Yanlış ya da eskimiş kayıt bilgisi; politikaya aykırılık; **kayıtta olmayan veriyi istemek**; başka hukuka aykırılık. Karar yaptırım merdiveniyle orantılı verilir (Ek A §4.5) ve gerekçesi yazılır. | Md. 9(2), 9(4) |
 | Bildirim | Askı ya da iptal, en geç 24 saat içinde doğrulayıcıya gerekçesi ve itiraz yoluyla bildirilir; erişim ve kayıt sertifikaları aynı yayında iptal edilir ([[ADR-0087]], [[ADR-0068]]). | Md. 9(5), 9(6) |
-| İtiraz | Doğrulayıcı kayıt reddine, askıya ya da iptale yazılı olarak itiraz edebilir; itirazı kararı vermeyen bir kişi inceler. ⚠️ ÖNERİ: başvuru süresi 30 gün, yanıt 15 iş günü. Uyuşmazlık sürerse Ek A §4.7. | Md. 4(3)(f) |
+| İtiraz | Doğrulayıcı kayıt reddine, askıya ya da iptale yazılı olarak itiraz edebilir; itirazı kararı vermeyen bir kişi inceler. Başvuru süresi 30 gün, yanıt 15 iş günü. Uyuşmazlık sürerse Ek A §4.7. | Md. 4(3)(f) |
 | Doğrulayıcının yükümlülükleri | Kayıt bilgisi değişince gecikmeden bildirir; bir kullanımı bırakınca bildirir ve sertifikası gecikmeden iptal edilir. | Md. 5(3), 6(7) |
 | Saklama | Kayıt bilgisi, sertifika verilişleri ve değişiklikler 10 yıl saklanır; liste arşivi ve durum geçmişi silinmez (RB-REG-07). | Md. 10 |
 | Kayıttan önce kapsam incelemesi | **Bilinçli ayrışma.** AB, istenen veri ve amacın yalnız şeffaflık için toplanmasını, ön onay uygulanmamasını ister (Md. 6(3a)). Tamga veri azaltma ilkesi gereği kapsamı kayıttan önce inceler (RB-REG-08): ağda henüz denetim kurumu ve sonradan yaptırım yolu yokken önceden inceleme kullanıcıyı korur. Tamga bir AB kayıt kuruluşu değildir; bir üye devlet AB modeline geçerse kural yeniden değerlendirilir. | Md. 6(3a) |
