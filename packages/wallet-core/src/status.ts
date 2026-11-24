@@ -24,6 +24,8 @@ export interface StatusList {
   bits: number;
   bytes: Uint8Array;
   signerFingerprint: string;
+  /** İmzacı zinciri (x5c, yaprak ilk; ADR-0097 K2 kayıt kurumu zincir denetimi için). */
+  signerChainDer?: Uint8Array[];
   iss: string;
   /** Belirtecin yayın anı (sn); iki kopyadan yenisini seçmek için (kayıt sertifikası durumu, K4). */
   iat?: number;
@@ -89,6 +91,7 @@ export function parseStatusToken(
     bits,
     bytes: unzlibCapped(b64uDecode(p.status_list.lst), MAX_STATUS_LIST_BYTES),
     signerFingerprint: certFingerprintHex(leaf),
+    signerChainDer: header.x5c.map((c) => b64Decode(c)),
     iss: String(p.iss ?? ""),
     ...(typeof p.iat === "number" ? { iat: p.iat } : {}),
   };

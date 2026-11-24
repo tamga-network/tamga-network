@@ -21,6 +21,7 @@ import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
 import { mdocDocTypeFor } from "./mdoc.js";
 import { PSEUDONYM_SEED_VCT } from "./pseudonym.js";
 import type { ZkCopyBinding } from "./store.js";
+import { reuseMethodOf } from "./reuse-policy.js";
 
 export const PRE_AUTH_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
 export const PROOF_TYP = "openid4vci-proof+jwt";
@@ -297,8 +298,12 @@ export async function fetchIssuerMetadata(
   checkIssuerEndpoints(credentialIssuer, md);
   return md;
 }
-/** Kopya sayısı: istenen (varsayılan 10) ile issuer'ın batch_size'ının küçüğü; en az 1. */
-const batchOf = (want: number | undefined, md: IssuerMetadata) => {
+/**
+ * Kopya sayısı: istenen (varsayılan 10) ile issuer'ın batch_size'ının küçüğü; en az 1. Kopya yöntemi `limited_time` (yöntem B,
+ * ARF ISSU_48) ise tek kopya istenir (ADR-0089 eki, 2026-11-24).
+ */
+const batchOf = (want: number | undefined, md: IssuerMetadata, vct: string) => {
+  if (reuseMethodOf(md, vct) === "limited_time") return 1;
   const n = Math.min(want ?? DEFAULT_BATCH, md.batch_credential_issuance?.batch_size ?? DEFAULT_BATCH);
   return Number.isInteger(n) && n >= 1 ? n : 1;
 };
@@ -380,7 +385,7 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
   const md = p.metadata ?? (await fetchIssuerMetadata(issuer, p.http));
   const cfg = md.credential_configurations_supported[vct];
   if (!cfg || cfg.format !== "dc+sd-jwt") throw new WalletError("unsupported", `tip desteklenmiyor: ${vct}`);
-  const batch = batchOf(p.batch, md);
+  const batch = batchOf(p.batch, md, vct);
   const now = p.now ?? Math.floor(Date.now() / 1000);
   // AB TS3 §2.4.2: WIA kurumun bakım süresi tercihini karşılamıyorsa yenisi (WUA_32)
   const wua = p.wua
@@ -509,7 +514,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
   const md = p.metadata;
   const issuer = p.issuer;
   const vct = p.vct;
-  const batch = batchOf(p.batch, md);
+  const batch = batchOf(p.batch, md, vct);
   const now = p.now ?? Math.floor(Date.now() / 1000);
   // nonce: yalnız nonce ucundan (OpenID4VCI 1.0 Final §7; token yanıtı c_nonce taşımaz). Tamga profilinde uç zorunlu
   // (SPEC-PROTO-0001 §2.1)

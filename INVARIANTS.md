@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-21
+last_updated: 2026-11-24
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 530 kodlanmış değişmez, 97 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 534 kodlanmış değişmez, 98 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -1006,6 +1006,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0095/CS3` | Kaynak kurumun belgesi ADR-0021'in biçim, süre, iptal ve gizlilik kurallarına (CT2, CT3) uyar. |
 
 
+## ADR-0097
+
+*"Kayıt sertifikası: hizmet kimliğinin AB adı (serviceIdentifier) ve kayıt kurumuna zincirle güven"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0097/RG1` | Kayıt sertifikası ve durum listesi imzacısı yalnız LOTL'deki ülkenin etkin kayıt kurumu anahtarlarına bağlanır (sabit ya da zincir); başka çapa sayılmaz. |
+| `ADR-0097/RG2` | Zincir yolunda yaprağın üstündeki her sertifika CA'dır (`cA=TRUE`, `keyCertSign`, `pathLen`); çapa dışındaki her sertifika süresi içindedir; zincir en çok 4 sertifikadır. |
+| `ADR-0097/RG4` | Listeye kayıt kurumu CA'sı olarak yalnız kayıt kurumu imzacılarına ayrılmış bir CA girer (başka sertifika veren CA girmez). |
+| `ADR-0097/RG3` | Kayıt sertifikasındaki hizmet kimliği `serviceIdentifier` adıyla taşınır. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1358,12 +1370,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 530 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 534 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CS, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PP, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, UL, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CS, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PP, PR, PS, PV, R, RG, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, UL, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-21 (`scripts/sync-invariants.mjs`). Toplam 530 kodlanmış değişmez, 97 dokümanda.
+**Üretilen dosya** — 2026-11-24 (`scripts/sync-invariants.mjs`). Toplam 534 kodlanmış değişmez, 98 dokümanda.

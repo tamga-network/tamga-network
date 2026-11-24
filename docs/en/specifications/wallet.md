@@ -456,7 +456,7 @@ arrives in the signed Credential Issuer metadata as `credential_metadata.embedde
   requests the intermediated verifier counts: `rp_id` is the registration certificate `sub`, and the access certificate subject
   name (the intermediary's name) is not a match. Without a registration certificate (proximity, wallet-to-wallet) the evaluation
   cannot be performed and counts as failed.
-- **Comparison details:** the service identifier is the registration certificate's `service_id` member (ARF RPRC_17a; the list
+- **Comparison details:** the service identifier is the registration certificate's `serviceIdentifier` member (ARF RPRC_17a, EU TS5 name, [[ADR-0097]]; the list
   publisher writes the use's `service_id`, or its `scope_id`); an item without `service_id` covers all uses of the verifier.
   Name comparison maps attribute types to OIDs (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` = serialNumber),
   ignores case and extra spaces in values and ignores RDN order; all attributes must be identical. A root of trust item matches

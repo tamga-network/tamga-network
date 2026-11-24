@@ -4,7 +4,7 @@ title: "Katılımcı kayıt verisi"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-24
 summary: >
   Güven listesindeki doğrulayıcı (RP) ve belge veren kayıtları, AB'nin ortak kayıt veri setini (CIR 2025/848 Ek I, CIR 2026/1730
   değişikliğiyle; AB teknik şartnameleri TS5/TS6) taşır: resmî ad ve ticari ad, resmî kimlik numarası, adres, iletişim, hizmet
@@ -72,6 +72,14 @@ yazılmaz.
 - Liste biçiminde yeni alanlar **isteğe bağlı** eklenir; eski kayıtlar bozulmaz.
 - Yayıncı, yeni ya da güncellenen her kayıtta K1/K2'nin zorunlu alanlarını ister. Pilot öncesinde bütün kayıtlar tamamlanır.
 - Kayıt sertifikası ([[t:WRPRC]], `verifier_info`) ve kayıt API'si (TS5) sonraki adımdır.
+
+> **Ek (2026-11-24) — AB'nin kayıt değerleri (CIR 2025/848 Ek I):** (1) Yetki türleri AB'nin onu birden: mevcut beşe ETSI TS 119 475
+> Ek A'nın kalan beşi eklenir — `qcert_for_eseal_provider`, `qcert_for_esig_provider`, `rqsealcds_provider`, `rqsigcds_provider`,
+> `esig_eseal_creation_provider` (kayıt sertifikasında ETSI URI'leriyle). Nitelikli türler (`qeaa_provider`, `qcert_*`, `rq*`) ve
+> `pid_provider` gerçek ağda verilemez: yayın aracı durur (Tamga'da AB statüsü yok; TL8); sandbox'ta örnek için serbesttir. Zincir
+> projeksiyonu yeni türleri taşımaz (zincir kapalı). (2) Kurum kimlik numarası türleri (`identifiers[].scheme`) izinli listeden:
+> AB adları `EUID` (AB TS5 varsayılanı), `EORI`, `LEI`, `VAT`; ulusal numaralar (ticaret sicili, vergi, ÖTV ve diğerleri — Ek I
+> (3)(b), (e), (f), (h)) `<ÜLKE>-<AD>` biçiminde (bugün `TR-VKN`, `TR-MERSIS`). Başka değer yayını durdurur. Proje yönetimi onayıyla.
 
 # Değerlendirilen seçenekler
 

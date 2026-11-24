@@ -83,6 +83,71 @@ export function certSanDnsNames(der: Uint8Array): string[] {
   return out;
 }
 
+/** Sertifikanın geçerlilik aralığı (`notBefore`, `notAfter`; Unix saniye). UTCTime ve GeneralizedTime (yalnız `Z` biçimi). */
+export function certValidity(der: Uint8Array): { notBefore: number; notAfter: number } {
+  const f = tbsFields(der);
+  const off = f[0]?.tag === 0xa0 ? 1 : 0;
+  const validity = f[off + 3]; // serial, sigAlg, issuer → validity
+  if (!validity || validity.tag !== 0x30) throw new Error("X.509: validity missing");
+  const [nb, na] = children(der, validity);
+  const time = (t: Tlv | undefined): number => {
+    if (!t || (t.tag !== 0x17 && t.tag !== 0x18)) throw new Error("X.509: validity time");
+    const s = String.fromCharCode(...der.subarray(t.start, t.end));
+    const m = (
+      t.tag === 0x17 ? /^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z$/ : /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z$/
+    ).exec(s);
+    if (!m) throw new Error("X.509: validity time format");
+    let y = Number(m[1]);
+    if (t.tag === 0x17) y += y < 50 ? 2000 : 1900; // RFC 5280 §4.1.2.5.1
+    return Date.UTC(y, Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6])) / 1000;
+  };
+  return { notBefore: time(nb), notAfter: time(na) };
+}
+
+const OID_BASIC_CONSTRAINTS = [0x55, 0x1d, 0x13]; // 2.5.29.19
+const OID_KEY_USAGE = [0x55, 0x1d, 0x0f]; // 2.5.29.15
+/** keyUsage ilk baytındaki bitler (RFC 5280 §4.2.1.3; BIT STRING en anlamlı bitten) */
+export const KU_DIGITAL_SIGNATURE = 0x80;
+export const KU_KEY_CERT_SIGN = 0x04;
+
+/**
+ * basicConstraints ve keyUsage (ADR-0097 zincir denetimi). `ca`: basicConstraints cA (uzantı yoksa false); `pathLen` varsa;
+ * `keyUsage`: uzantı varsa ilk bayt (bit maskesi), yoksa undefined. Bozuk uzantı → hata.
+ */
+export function certUsage(der: Uint8Array): { ca: boolean; pathLen?: number; keyUsage?: number } {
+  const f = tbsFields(der);
+  const extWrap = f.find((t) => t.tag === 0xa3);
+  const out: { ca: boolean; pathLen?: number; keyUsage?: number } = { ca: false };
+  if (!extWrap) return out;
+  const exts = children(der, extWrap)[0];
+  if (!exts || exts.tag !== 0x30) throw new Error("X.509: extensions is not a SEQUENCE");
+  for (const ext of children(der, exts)) {
+    const parts = children(der, ext);
+    const oid = parts[0];
+    const val = parts[parts.length - 1];
+    if (!oid || oid.tag !== 0x06 || !val || val.tag !== 0x04) continue;
+    if (eq(der, oid, OID_BASIC_CONSTRAINTS)) {
+      const seq = readTlv(der, val.start);
+      if (seq.tag !== 0x30 || seq.end !== val.end) throw new Error("X.509: basicConstraints malformed");
+      for (const c of children(der, seq)) {
+        if (c.tag === 0x01) out.ca = c.end - c.start === 1 && der[c.start] !== 0;
+        else if (c.tag === 0x02) {
+          if (c.end - c.start > 4) throw new Error("X.509: pathLen too large");
+          let n = 0;
+          for (let i = c.start; i < c.end; i++) n = n * 256 + der[i];
+          out.pathLen = n;
+        }
+      }
+    } else if (eq(der, oid, OID_KEY_USAGE)) {
+      const bits = readTlv(der, val.start);
+      if (bits.tag !== 0x03 || bits.end !== val.end || bits.end - bits.start < 2)
+        throw new Error("X.509: keyUsage malformed");
+      out.keyUsage = der[bits.start + 1];
+    }
+  }
+  return out;
+}
+
 /** SubjectPublicKeyInfo → P-256 uncompressed nokta (65 bayt). Eğri P-256 değilse hata (C1). */
 export function certP256Point(der: Uint8Array): Uint8Array {
   const f = tbsFields(der);

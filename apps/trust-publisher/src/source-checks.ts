@@ -314,6 +314,45 @@ export const normalizeDnsName = (name: unknown) =>
  * ADR-0075 RO5 — kaynaktaki doğrulayıcı adları: liste biçiminde yazılmış olmalı (küçük harfli etiketler, sonda nokta yok) ve
  * durumu ne olursa olsun bir ad yalnız BİR kayıtta bulunmalı (yeniden kayıt aynı kayda yeni dönem olarak eklenir).
  */
+/**
+ * ADR-0024 K5 eki (2026-11-24, CIR 2025/848 Ek I (3)): kurum kimlik numarası türleri. AB adları `EUID` (TS5 varsayılanı), `EORI`,
+ * `LEI`, `VAT`; ulusal numaralar (ticaret sicili, vergi, ÖTV ve diğerleri — Ek I (3)(b), (e), (f), (h)) `<ÜLKE>-<AD>` biçiminde
+ * (bugün `TR-VKN`, `TR-MERSIS`). Başka değer yayını durdurur.
+ */
+export const EU_IDENTIFIER_SCHEMES = ["EUID", "EORI", "LEI", "VAT"] as const;
+const NATIONAL_SCHEME_RE = /^[A-Z]{2}-[A-Z0-9]{2,20}$/;
+export function identifierSchemeProblems(where: string, identifiers: unknown): string[] {
+  if (!Array.isArray(identifiers)) return [];
+  return identifiers.flatMap((i, n) => {
+    const scheme = String((i as Rec | null)?.scheme ?? "");
+    return (EU_IDENTIFIER_SCHEMES as readonly string[]).includes(scheme) || NATIONAL_SCHEME_RE.test(scheme)
+      ? []
+      : [
+          `${where}.identifiers[${n}]: scheme "${scheme}" tanınmıyor — AB türleri ${EU_IDENTIFIER_SCHEMES.join(", ")} ya da ulusal ` +
+            "numara <ÜLKE>-<AD> (ör. TR-VKN, TR-MERSIS) (ADR-0024 K5 eki)",
+        ];
+  });
+}
+
+/**
+ * ADR-0024 K5 eki: nitelikli güven hizmeti ve PID sağlayıcısı yetkileri gerçek ağda verilemez (Tamga'da QTSP / PID sağlayıcısı
+ * statüsü yok; TL8). Sandbox'ta örnek için serbest.
+ */
+export const PRODUCTION_FORBIDDEN_ENTITLEMENTS = [
+  "qeaa_provider",
+  "pid_provider",
+  "qcert_for_eseal_provider",
+  "qcert_for_esig_provider",
+  "rqsealcds_provider",
+  "rqsigcds_provider",
+] as const;
+export function entitlementProblems(where: string, entitlements: unknown, environment: string): string[] {
+  if (environment === "sandbox" || !Array.isArray(entitlements)) return [];
+  return entitlements
+    .filter((e) => (PRODUCTION_FORBIDDEN_ENTITLEMENTS as readonly string[]).includes(String(e)))
+    .map((e) => `${where}: yetki "${String(e)}" gerçek ağda verilemez (AB statüsü gerekir; ADR-0024 K5 eki)`);
+}
+
 export function relyingPartyNameProblems(rps: Rec[]): string[] {
   const out: string[] = [];
   const seen = new Map<string, number>();
@@ -335,6 +374,20 @@ export function relyingPartyNameProblems(rps: Rec[]): string[] {
     else seen.set(key, i);
   });
   return out;
+}
+
+/**
+ * AU23 (AB uyum turu 2026-11-19): AB cüzdanları doğrulayıcının yasal adını erişim sertifikasının konu alanındaki O'dan okur
+ * (openid4vp-swift 0.44.3); Tamga Wallet kayıttaki `legal_name`'i gösterir. İkisi ayrışırsa aynı doğrulayıcı iki cüzdanda iki
+ * farklı adla görünür. O değerlerinden biri `legal_name`'e birebir eşit değilse sorun metni döner (yoksa null).
+ */
+export function accessCertNameProblem(dns: string, legalName: unknown, subjectO: readonly string[]): string | null {
+  const name = String(legalName ?? "");
+  if (!name || subjectO.includes(name)) return null;
+  return (
+    `${dns}: erişim sertifikasının konu alanındaki O (${subjectO.length ? subjectO.map((o) => `"${o}"`).join(", ") : "yok"}) ` +
+    `kayıttaki legal_name ("${name}") ile aynı değil — AB cüzdanları adı sertifikadan okur; sertifikayı O = legal_name ile yeniden verin (AU23)`
+  );
 }
 
 /**

@@ -110,7 +110,7 @@ You send this certificate in your presentation request inside `verifier_info` (`
 signature, the validity period, the identifier match and that the requested fields fit the scope in the certificate
 ([[ADR-0026]]).
 
-The certificate also carries the use's **service identifier** (`service_id`; ARF RPRC_17a). If you give a use a
+The certificate also carries the use's **service identifier** (`serviceIdentifier` in the certificate; ARF RPRC_17a). If you give a use a
 `"service_id"` in your application it is written (it groups several uses of the same service under one name); otherwise the
 `scope_id`. Issuers can limit a credential type to specific verifiers and services ([[GUIDE-0003]], sharing rules;
 [[ADR-0046]]): if you are not allowed, the wallet warns the person and "Don't share" is the default.

@@ -4,7 +4,7 @@ title: "İştirakçı qeydiyyat məlumatları"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-24
 summary: >
   Etibar siyahısındakı yoxlayan tərəf (RP) və sənədi verən qurum qeydləri Avropa İttifaqının (Aİ) ümumi qeydiyyat məlumat dəstini (CIR 2026/1730 dəyişikliyi ilə CIR 2025/848 Əlavə I; Aİ texniki spesifikasiyaları TS5/TS6) daşıyır: rəsmi ad və kommersiya adı, rəsmi identifikasiya nömrəsi, ünvan, əlaqə məlumatları, xidmətin təsviri, hər istifadə üçün məqsəd + məxfilik siyasəti, dövlət qurumu əlaməti, səlahiyyət növü, vasitəçi əlaqələri və məlumatların mühafizəsi orqanı. Rəqəmsal cüzdan bunları təsdiq ekranında göstərir; silinmə tələbi və şikayət axınları bunlara əsaslanır.
 domain: Trust
@@ -71,6 +71,14 @@ yazılmır.
 - Siyahı formatına yeni sahələr **könüllü** olaraq əlavə edilir; köhnə qeydlər pozulmur.
 - Nəşr edən tərəf hər yeni və ya yenilənən qeyddə K1/K2-nin məcburi sahələrini tələb edir. Pilotdan əvvəl bütün qeydlər tamamlanır.
 - Qeydiyyat sertifikatı ([[t:WRPRC]], `verifier_info`) və qeydiyyat API-si (TS5) növbəti addımdır.
+
+> **Əlavə (2026-11-24) — AB-nin qeydiyyat dəyərləri (CIR 2025/848 Əlavə I):** (1) Səlahiyyət növləri AB-nin onudur: mövcud beşə
+> ETSI TS 119 475 Əlavə A-nın qalan beşi əlavə edilir — `qcert_for_eseal_provider`, `qcert_for_esig_provider`,
+> `rqsealcds_provider`, `rqsigcds_provider`, `esig_eseal_creation_provider`. Kvalifikasiyalı növlər (`qeaa_provider`, `qcert_*`,
+> `rq*`) və `pid_provider` real şəbəkədə verilə bilməz: nəşr aləti dayanır (Tamga-nın AB statusu yoxdur; TL8); sandbox-da nümunə
+> üçün sərbəstdir. Zəncir proyeksiyası yeni növləri daşımır (zəncir bağlıdır). (2) Qurum identifikator növləri
+> (`identifiers[].scheme`) icazəli siyahıdan: AB adları `EUID` (AB TS5 defoltu), `EORI`, `LEI`, `VAT`; milli nömrələr
+> `<ÖLKƏ>-<AD>` formatında (bu gün `TR-VKN`, `TR-MERSIS`). Başqa dəyər nəşri dayandırır. Layihə rəhbərliyinin təsdiqi ilə.
 
 # Nəzərdən keçirilmiş variantlar
 

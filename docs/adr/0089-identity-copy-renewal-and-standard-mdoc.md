@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-16
-last_updated: 2026-11-16
+last_updated: 2026-11-24
 summary: >
   Kimlik servisinin kimlik belgesi için üç değişiklik. (1) Belgenin mdoc kopyası artık metadata'da ilan edilen ayrı bir `mso_mdoc`
   yapılandırmasıyla, standart belge isteğinden verilir; aynı yetki ve aynı erişim belirteci iki biçimi kapsar, belge yanıtındaki
@@ -117,6 +117,17 @@ yapar.
 - Ayar kapalıysa ya da kopyaların hepsinin süresi dolmuşsa cüzdan kişiye "kimlik belgesini yenile" seçeneğini gösterir; yenileme
   aynı yoldan kişinin dokunuşuyla yapılır.
 - Kayıt iptal edilmişse ya da idari süresi dolmuşsa yenileme yoktur; kişi yeniden kimlik doğrulaması yapar.
+
+> **Ek (2026-11-24) — kopya kullanım yöntemi (ARF ISSU_37):** Cüzdan, belge verenin `credential_reuse_policy`'sinde
+> (`id: "arf_annex_ii"`) `details` dizisinde ilk gelen ve desteklediği yöntemi uygular (ETSI TS 119 472-3 §4.2.4.2 -05/-06).
+> Desteklenenler: **A** `once_only` — her kopya bir kez gösterilir (aynı doğrulayıcıya da yeni kopya); kullanılmamış kopya eşiğe
+> inince yeni paket istenir; istenemiyorsa (çevrimdışı) kişi uyarılır; kopyalar tükenince kullanılmış bir kopya yeniden gösterilir
+> (yöntem B'ye düşüş, ISSU_47) ve çevrimiçi olunca A'ya dönülür. **B** `limited_time` — tek kopya istenir, her doğrulayıcıya o
+> gösterilir, yenileme yalnız süreye bağlıdır (ISSU_48–50; kopya eşiği uygulanmaz). **D** `per-relying-party` — her doğrulayıcıya
+> kendi kopyası, aynı doğrulayıcıya hep aynısı (bugünkü davranış). C `rotating-batch` desteklenmez. Politika yoksa ya da desteklenen
+> yöntem yoksa D sürer. Tamga belge verenleri D'yi ilk sırada ilan etmeyi sürdürür (`["per-relying-party", "once_only"]`); bu
+> yüzden Tamga belgelerinde davranış değişmez. Kod: `wallet-core` `reuseMethodOf`, `selectCopy` / `planCopy` / `copiesLow`.
+> Proje yönetimi onayıyla.
 
 ## K5 — Cüzdan sağlayıcısı listede askıda ya da iptal edilmiş
 

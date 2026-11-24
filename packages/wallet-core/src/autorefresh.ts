@@ -53,7 +53,7 @@ export function refreshThresholdReached(c: StoredCredential, now: number): boole
   const r = c.refresh;
   // ADR-0089: kimlik belgesi kendi yolundan yenilenir (`renewIdentityCredential` — kopya sunumu gerekir)
   if (!r || c.revokedLocally || c.status?.value === "revoked" || c.vct === IDENTITY_VCT) return false;
-  if (r.unusedTrigger !== undefined && unused(c) <= r.unusedTrigger) return true;
+  if (r.unusedTrigger !== undefined && c.reuse !== "limited_time" && unused(c) <= r.unusedTrigger) return true;
   if (r.lifetimeTrigger !== undefined && c.exp !== undefined && c.exp - now <= r.lifetimeTrigger) return true;
   return false;
 }

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-19 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-24 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -372,11 +372,16 @@ for matching, once one exists, is opened by a separate decision.
 
 ### 4.3 Identity proofing before issuance
 
-| Route                                        | Level                                | Note                                                             |
-| -------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| Remote: document, liveness and face matching | **T2** (ETSI TS 119 461 Substantial) | `verification_method: remote-document-liveness-face`             |
-| Remote with NFC chip                         | T2; `document_chip_verified: true`   | Technically high; legally T3 is a qualified electronic signature |
-| In person                                    | T2                                   | `in-person`                                                      |
+| Route                                        | Level                              | Note                                                                                                                                                                                                    |
+| -------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Remote: document, liveness and face matching | **T2**                             | `verification_method: remote-document-liveness-face`; a non-standard fallback path under ETSI TS 119 461 (documents without a chip, phones without NFC); no TS 119 461 level is claimed                 |
+| Remote with NFC chip                         | T2; `document_chip_verified: true` | The TS 119 461 conformance target (fully automated use case with chip verification, TS 119 461 §9.2.3.4; ADR-0083, opened only after the legal opinion); legally T3 is a qualified electronic signature |
+| In person                                    | T2                                 | `in-person`                                                                                                                                                                                             |
+
+ETSI TS 119 461 V2.1.1 defines only the Baseline and Extended levels of identity proofing; Implementing Regulation (EU) 2026/798
+draws no equivalence between them and the eIDAS assurance levels. The T levels are therefore not mapped to any TS 119 461 level.
+The document photo path fits none of the standard's use cases; the conformance target is the chip path (ADR-0083 addendum,
+2026-11-24).
 
 Rules: identity proofing happens only in the identity service; institutional [[t:issuer|issuers]], wallets and verifiers do not talk
 to the remote identity proofing provider (RB-AP-ID-01); a wallet may only read the identity document chip and relay the raw

@@ -10,6 +10,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  accessCertNameProblem,
+  entitlementProblems,
+  identifierSchemeProblems,
   contactProblems,
   listOperatorProblems,
   lotlSourceFieldProblems,
@@ -227,5 +230,39 @@ describe("ADR-0094: kendi imzalanan dış listede imzacı sertifika adından", (
     expect(() => resolveSigningKeyRefs(ptr, "production", fp)).toThrow(/PP1/);
     const pinned = { list_id: "x", signing_keys: [{ fingerprint_sha256: "c".repeat(64), status: "ACTIVE" }] };
     expect(resolveSigningKeyRefs(pinned, "production", fp)).toBe(pinned);
+  });
+});
+
+describe("AU23: erişim sertifikasının O'su = kayıttaki legal_name", () => {
+  it("eşitse sorun yok; O birden çoksa biri eşit olmalı", () => {
+    expect(accessCertNameProblem("shop.example", "Shop A.Ş.", ["Shop A.Ş."])).toBeNull();
+    expect(accessCertNameProblem("shop.example", "Shop A.Ş.", ["Başka", "Shop A.Ş."])).toBeNull();
+  });
+  it("farklıysa, O yoksa ya da yalnız harf/aksan farkı varsa sorun döner", () => {
+    expect(accessCertNameProblem("shop.example", "Shop A.Ş.", ["Shop AS"])).toMatch(/AU23/);
+    expect(accessCertNameProblem("shop.example", "Shop A.Ş.", [])).toMatch(/O \(yok\)/);
+    expect(accessCertNameProblem("shop.example", "Doğrulama", ["Dogrulama"])).toMatch(/legal_name/);
+  });
+  it("legal_name yoksa bu denetim susar (eksik alan ADR-0024 denetiminde)", () => {
+    expect(accessCertNameProblem("shop.example", undefined, ["X"])).toBeNull();
+  });
+});
+
+describe("ADR-0024 K5 eki: kimlik numarası türleri ve gerçek ağ yetki kapısı", () => {
+  it("AB türleri ve ulusal <ÜLKE>-<AD> geçer; başkası durdurur", () => {
+    const ok = [
+      { scheme: "EUID", value: "x" },
+      { scheme: "LEI", value: "x" },
+      { scheme: "TR-VKN", value: "1" },
+      { scheme: "TR-MERSIS", value: "2" },
+    ];
+    expect(identifierSchemeProblems("rp", ok)).toEqual([]);
+    expect(identifierSchemeProblems("rp", [{ scheme: "vkn", value: "1" }])).toHaveLength(1);
+    expect(identifierSchemeProblems("rp", [{ value: "1" }])).toHaveLength(1);
+  });
+  it("nitelikli ve PID yetkileri gerçek ağda verilemez, sandbox'ta serbest", () => {
+    expect(entitlementProblems("rp", ["service_provider", "non_q_eaa_provider"], "production")).toEqual([]);
+    expect(entitlementProblems("rp", ["qcert_for_esig_provider", "pid_provider"], "production")).toHaveLength(2);
+    expect(entitlementProblems("rp", ["qcert_for_esig_provider"], "sandbox")).toEqual([]);
   });
 });

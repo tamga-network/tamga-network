@@ -67,7 +67,8 @@ export function identityRenewalDue(c: StoredCredential, now: number): boolean {
   const unusedTrigger = c.refresh?.unusedTrigger ?? IDENTITY_RENEW_UNUSED_DEFAULT;
   const lifetimeTrigger = c.refresh?.lifetimeTrigger ?? IDENTITY_RENEW_LIFETIME_DEFAULT;
   if (c.exp !== undefined && c.exp - now <= lifetimeTrigger) return true;
-  return c.copies.filter((k) => !k.usedBy.length).length <= unusedTrigger;
+  // ADR-0089 eki: yöntem B'de (tek kopya) yenileme yalnız süreye bağlı (ARF ISSU_50)
+  return c.reuse !== "limited_time" && c.copies.filter((k) => !k.usedBy.length).length <= unusedTrigger;
 }
 
 /** Eşiği aşan, zamanlanmamış kimlik belgelerine rastgele `renewDueAt` atar; zamanı gelenleri döndürür. */

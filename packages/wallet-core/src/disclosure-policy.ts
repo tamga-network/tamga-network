@@ -3,7 +3,7 @@
  *  K2: politika belge alınırken imzalı Credential Issuer metadata'sından okunur, biçimi denetlenir ve belge kaydının yanında saklanır
  *      (politika + özet). Bozuk politika belge almayı durdurmaz; "değerlendirilemez" olarak saklanır.
  *  K3: sunumda, kayıt sertifikası (WRPRC) ADR-0026 K5'e göre doğrulandıktan sonra, ağ isteği olmadan değerlendirilir:
- *      (a) WRPRC `sub` = `rp_id` (+ öğede `service_id` varsa WRPRC `service_id` de) · (b) erişim sertifikasının konu adı = `subject_dns`
+ *      (a) WRPRC `sub` = `rp_id` (+ öğede `service_id` varsa WRPRC `serviceIdentifier` de; ADR-0097 K1) · (b) erişim sertifikasının konu adı = `subject_dns`
  *      öğesi · (c) WRPRC `entitlements` ∋ `entitlements` öğesi · güven kökü: WRPRC'yi ya da erişim sertifikasını imzalayan zincirde
  *      listelenen (veren adı, seri no) — yalnız imza zinciri doğrulanmış VE güvene bağlanmış sertifikalar sayılır
  *      (`anchoredChainCerts`); ad/seri yalnız doğrulanamayan bir sertifikada tutuyorsa değerlendirilemez, hiçbir zaman "geçti"
@@ -162,7 +162,8 @@ export function evaluateDisclosurePolicy(
       // (a) ARF EDP_02 ikilisi — aracılı istekte de `sub` aracılanan (asıl) doğrulayıcıdır
       if (
         p.relying_parties?.some(
-          (rp) => rp.rp_id === payload.sub && (rp.service_id === undefined || rp.service_id === payload.service_id),
+          (rp) =>
+            rp.rp_id === payload.sub && (rp.service_id === undefined || rp.service_id === payload.serviceIdentifier),
         )
       )
         return pass("rp");
@@ -178,7 +179,7 @@ export function evaluateDisclosurePolicy(
   }
   // specific_roots_of_trust: WRPRC zinciri (ARF EDP_03) ya da erişim sertifikası zinciri (Tüzük Ek III, ETSI -08). Ad ve seri
   // numarası kopyalanabilir, x5c'ye istenen sertifika eklenebilir: yalnız imza zinciri yapraktan o sertifikaya kadar doğrulanmış ve
-  // güvene bağlanmış sertifikalar sayılır. WRPRC yaprağı imzalı listedeki kayıt kurumu anahtarıdır (verifyWrprc); erişim
+  // güvene bağlanmış sertifikalar sayılır. WRPRC yaprağı imzalı listedeki kayıt kurumu anahtarıdır ya da ona zincirlenir (verifyWrprc, ADR-0097); erişim
   // sertifikası zinciri yalnız `trustAnchors`'tan birine bağlanırsa sayılır.
   const anchors = anchorOpts(ctx.trustAnchors);
   const chains = [

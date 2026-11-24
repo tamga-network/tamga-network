@@ -251,12 +251,21 @@ export const SupervisoryAuthority = z
   })
   .passthrough();
 /** TS6 madde 12 yetki türleri (ETSI TS 119 475 URI eşlemesi dışa aktarımda) */
+/**
+ * ETSI TS 119 475 Ek A / CIR 2025/848 Ek I (12): AB'nin on yetki türü (ADR-0024 K5 eki, 2026-11-24). Nitelikli türler ve PID
+ * sağlayıcısı gerçek ağda verilemez (yayın aracı kapısı; Tamga'da AB statüsü yok).
+ */
 export const Entitlement = z.enum([
   "service_provider",
   "qeaa_provider",
   "non_q_eaa_provider",
   "pub_eaa_provider",
   "pid_provider",
+  "qcert_for_eseal_provider",
+  "qcert_for_esig_provider",
+  "rqsealcds_provider",
+  "rqsigcds_provider",
+  "esig_eseal_creation_provider",
 ]);
 const RegistrationData = {
   trade_name: z.string().optional(),

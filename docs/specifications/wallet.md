@@ -478,7 +478,7 @@ Issuer metadata'sında `credential_metadata.embedded_disclosure_policy` olarak g
   (veren adı, seri numarası) çifti listedeyse geçer. Aracılı istekte aracılanan doğrulayıcı esas alınır: `rp_id` kayıt
   sertifikasının `sub`'ıdır ve erişim sertifikasının konu adı (aracının adı) eşleşme sayılmaz. Kayıt sertifikası yoksa
   (yakın alan, cüzdandan cüzdana) değerlendirme yapılamaz ve başarısız sayılır.
-- **Karşılaştırma ayrıntısı:** hizmet kimliği kayıt sertifikasının `service_id` üyesidir (ARF RPRC_17a; liste yayıncısı
+- **Karşılaştırma ayrıntısı:** hizmet kimliği kayıt sertifikasının `serviceIdentifier` üyesidir (ARF RPRC_17a, AB TS5 adı, [[ADR-0097]]; liste yayıncısı
   kullanımın `service_id`'sini, yoksa `scope_id`'sini yazar); `service_id`'siz öğe doğrulayıcının bütün kullanımlarını kapsar. Ad
   karşılaştırmasında öznitelik türleri OID'e çevrilir (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` =
   serialNumber), değerlerde büyük-küçük harf ve fazla boşluk gözetilmez, RDN sırası gözetilmez; bütün öznitelikler birebir aynı

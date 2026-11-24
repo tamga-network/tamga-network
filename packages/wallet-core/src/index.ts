@@ -38,3 +38,4 @@ export * from "./disclosure-policy.js";
 export * from "./w2w.js";
 export * from "./log.js";
 export * from "./validity.js";
+export * from "./reuse-policy.js";

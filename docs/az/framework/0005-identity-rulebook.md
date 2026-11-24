@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-19
+last_updated: 2026-11-24
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -368,9 +368,14 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 
 | Yol | Səviyyə | Qeyd |
 |---|---|---|
-| Məsafədən: sənəd, canlılıq yoxlaması və üz uyğunlaşdırması | **T2** (ETSI TS 119 461 Substantial) | `verification_method: remote-document-liveness-face` |
-| Məsafədən və NFC çip | T2; `document_chip_verified: true` | Texniki cəhətdən yüksəkdir; hüquqi baxımdan T3 kvalifikasiyalı elektron imzadır |
+| Məsafədən: sənəd, canlılıq yoxlaması və üz uyğunlaşdırması | **T2** | `verification_method: remote-document-liveness-face`; ETSI TS 119 461-ə görə standartdan kənar ehtiyat yol (çipsiz sənədlər, NFC-si olmayan telefonlar); TS 119 461 səviyyəsi iddia edilmir |
+| Məsafədən və NFC çip | T2; `document_chip_verified: true` | TS 119 461 uyğunluq hədəfi (tam avtomatik, çip yoxlamalı istifadə halı, TS 119 461 §9.2.3.4; ADR-0083, hüquqi rəydən sonra açılır); hüquqi baxımdan T3 kvalifikasiyalı elektron imzadır |
 | Üz-üzə | T2 | `in-person` |
+
+ETSI TS 119 461 V2.1.1 şəxsiyyətin yoxlanılmasının yalnız Baseline və Extended səviyyələrini müəyyən edir; İcra Reqlamenti (Aİ)
+2026/798 bunlarla eIDAS təminat səviyyələri arasında bərabərlik qurmur. Buna görə T səviyyələri heç bir TS 119 461 səviyyəsinə
+uyğunlaşdırılmır. Sənəd fotoşəkli yolu standartın heç bir istifadə halına uyğun gəlmir; uyğunluq hədəfi çip yoludur (ADR-0083
+əlavəsi, 2026-11-24).
 
 Qaydalar: şəxsiyyətin doğrulanması yalnız şəxsiyyət xidmətində aparılır; qurum [[t:issuer|sənədi verənləri]], rəqəmsal cüzdan və yoxlayan tərəflər məsafədən
 şəxsiyyət doğrulama provayderi ilə əlaqə qurmur (RB-AP-ID-01); cüzdan yalnız şəxsiyyət sənədinin çipini oxuyub xam məlumatı

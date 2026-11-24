@@ -103,7 +103,7 @@ imzalı listedeki kaydınızdan gelir; ayrı bir kayıt kurumu anahtarıyla imza
 Sunum isteğinizde bu sertifikayı `verifier_info` içinde (`registration_cert`) gönderirsiniz. Cüzdan imzayı, süreyi, kimlik
 numarası eşleşmesini ve istenen alanların sertifikadaki kapsamla uyumunu denetler ([[ADR-0026]]).
 
-Sertifika kullanımın **hizmet kimliğini** de taşır (`service_id`; ARF RPRC_17a). Başvuruda bir kullanıma `"service_id"`
+Sertifika kullanımın **hizmet kimliğini** de taşır (sertifikada `serviceIdentifier`; ARF RPRC_17a). Başvuruda bir kullanıma `"service_id"`
 verirseniz o yazılır (aynı hizmetin birden çok kullanımını tek adla toplar), vermezseniz `scope_id`. Belge verenler bir belge
 türünü yalnız belirli doğrulayıcı ve hizmetlere gösterilmek üzere sınırlayabilir ([[GUIDE-0003]], paylaşım kuralı;
 [[ADR-0046]]): izinli değilseniz cüzdan kişiyi uyarır ve varsayılan seçim "Paylaşma"dır.

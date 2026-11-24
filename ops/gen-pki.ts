@@ -481,7 +481,8 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         // ADR-0026 K3: kurum kimlik no (organizationIdentifier) = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN
         // TR0000000004). Yoksa cüzdan kayıt sertifikasını bu sertifikaya bağlayamaz ve isteği reddeder (2026-10-09, --reissue).
         // ADR-0058 K1/K2 (2026-10-21, --reissue): CN ticari ad; SAN alan adı + kayıttaki destek adresi + kurumsal e-posta
-        "CN=Tamga Sandbox Verify (TEST), O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
+        // CL67 (2026-11-24, AU23): O = kayıttaki legal_name (AB cüzdanları adı O'dan okur; --reissue)
+        "CN=Tamga Sandbox Verify (TEST), O=Tamga Sandbox Verification (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
         async () => [
           new SubjectAlternativeNameExtension([
             { type: "dns", value: "verify.sandbox.tamga.network" },
@@ -541,7 +542,8 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       signedByRoot(
         2022,
         // ADR-0026 K3: organizationIdentifier = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN TR0000000005)
-        "CN=issuer.sandbox.tamga.network, O=Ulubilim Üniversitesi - kimlik eşleme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
+        // CL67 (2026-11-24, AU23): O = kayıttaki legal_name (--reissue)
+        "CN=issuer.sandbox.tamga.network, O=Ulubilim Üniversitesi — identity matching at issuance (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
         san("issuer.sandbox.tamga.network"),
       ),
     ),

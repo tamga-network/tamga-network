@@ -22,6 +22,12 @@ export const ENTITLEMENTS = [
   "non_q_eaa_provider",
   "pub_eaa_provider",
   "pid_provider",
+  // ADR-0024 K5 eki (2026-11-24): ETSI TS 119 475 Ek A'nın kalan beş türü (nitelikli olanlar gerçek ağda verilmez)
+  "qcert_for_eseal_provider",
+  "qcert_for_esig_provider",
+  "rqsealcds_provider",
+  "rqsigcds_provider",
+  "esig_eseal_creation_provider",
 ];
 export const SCOPE_FORMATS = ["dc+sd-jwt", "mso_mdoc", "mso_mdoc_zk"];
 /** Katalogdaki belge türleri (vct). */

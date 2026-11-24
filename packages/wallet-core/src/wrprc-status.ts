@@ -13,6 +13,7 @@
  */
 import { parseStatusToken, statusBitAt, type StatusList } from "./status.js";
 import type { Http } from "./http.js";
+import { registrarSigned } from "./registrar-trust.js";
 import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 
 export type RegistrationStatus = "valid" | "revoked" | "unknown";
@@ -64,7 +65,10 @@ function verifiedList(token: string, uri: string, nowSec: number, registrarKeys:
   try {
     // ADR-0068 K3: kayıt sertifikası durum listesi `exp` taşımak zorunda (süresiz liste reddedilir → "unknown")
     const l = parseStatusToken(token.trim(), uri, nowSec, { requireExp: true });
-    return registrarKeys.includes(l.signerFingerprint) ? l : null;
+    // ADR-0097 K2: imzacı sabit kayıt kurumu anahtarı ya da listedeki kayıt kurumu CA'sına zincirli
+    return registrarKeys.includes(l.signerFingerprint) || registrarSigned(l.signerChainDer ?? [], registrarKeys, nowSec)
+      ? l
+      : null;
   } catch {
     return null;
   }

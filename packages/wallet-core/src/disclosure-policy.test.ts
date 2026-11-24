@@ -150,8 +150,8 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
 
   it("(a) rp_id + service_id: hizmet kimliği eşleşirse geçer, başka hizmet geçmez", async () => {
     const p = ARP({ relying_parties: [{ rp_id: "VATTR-1234567890", service_id: "hiring" }] });
-    const hiring = await wrprc({ sub: "VATTR-1234567890", service_id: "hiring" });
-    const other = await wrprc({ sub: "VATTR-1234567890", service_id: "newsletter" });
+    const hiring = await wrprc({ sub: "VATTR-1234567890", serviceIdentifier: "hiring" });
+    const other = await wrprc({ sub: "VATTR-1234567890", serviceIdentifier: "newsletter" });
     const legacy = await wrprc({ sub: "VATTR-1234567890" }); // hizmet kimliği yok → service_id'li öğe eşleşmez (K3)
     expect(await check(p, [hiring])).toMatchObject({ outcome: "passed", matchedBy: "rp", restricted: true });
     expect(await check(p, [other])).toMatchObject({
@@ -165,7 +165,7 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
 
   it("(a) service_id'siz öğe doğrulayıcının bütün kullanımlarını kapsar; başka rp_id geçmez", async () => {
     const p = ARP({ relying_parties: [{ rp_id: "VATTR-1234567890" }] });
-    expect(await check(p, [await wrprc({ sub: "VATTR-1234567890", service_id: "x" })])).toMatchObject({
+    expect(await check(p, [await wrprc({ sub: "VATTR-1234567890", serviceIdentifier: "x" })])).toMatchObject({
       outcome: "passed",
     });
     const q = ARP({ relying_parties: [{ rp_id: "VATTR-9999999999" }] });
@@ -186,7 +186,7 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
     // aracı = hr (isteği imzalayan); aracılanan = VATTR-5555555555
     const via = await wrprc({
       sub: "VATTR-5555555555",
-      service_id: "hiring",
+      serviceIdentifier: "hiring",
       intermediary: { sub: "VATTR-1234567890" },
     });
     const byDn = ARP({ subject_dns: ["CN=hr.example, O=HR Ltd, ORGID=VATTR-1234567890, C=TR"] });

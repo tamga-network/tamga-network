@@ -52,7 +52,8 @@ state.
 - Tamga operates an **identity attestation service** at `id.tamga.network`; in the trust list under `issuers[]`
   (`category: IDENTITY`, `class: QUALIFIED` → **`class: EAA`, `assurance: I2`** by [[ADR-0022]], 2026-09-29;
   `assurance_basis: "provisional-operator; ETSI TS 119 461 Substantial (remote) / High (NFC)"`,
-  `operator.status: provisional`).
+  `operator.status: provisional`). *(2026-11-24, [[ADR-0083]] addendum: TS 119 461 only defines Baseline / Extended; the
+  conformity target is the chip path and the photo path is a non-standard fallback — the list's `assurance_basis` was updated.)*
 - `pid_providers[]` **stays empty** (TL8 kept): when a state PID arrives, the Tamga attestation is superseded (`successor`
   field), and institutions' matching code does not change (same claim set).
 - In legal texts the document is called **"Tamga Identity Attestation (provisional)"**; it is not called "PID" or "identity

@@ -424,7 +424,7 @@ Issuer metadata-sında `credential_metadata.embedded_disclosure_policy` kimi gə
   (verənin adı, seriya nömrəsi) cütü siyahıdadırsa, keçir. Vasitəçi sorğuda vasitəçilik edilən yoxlayan tərəf əsas götürülür: `rp_id` qeydiyyat
   sertifikatının `sub`-idir və giriş sertifikatının subyekt adı (vasitəçinin adı) uyğunluq sayılmır. Qeydiyyat sertifikatı yoxdursa
   (yaxın məsafə, cüzdandan cüzdana) qiymətləndirmə aparıla bilmir və uğursuz sayılır.
-- **Müqayisə təfərrüatı:** xidmət identifikatoru qeydiyyat sertifikatının `service_id` üzvüdür (ARF RPRC_17a; siyahı dərcçisi
+- **Müqayisə təfərrüatı:** xidmət identifikatoru qeydiyyat sertifikatının `serviceIdentifier` üzvüdür (ARF RPRC_17a, AB TS5 adı, [[ADR-0097]]; siyahı dərcçisi
   istifadənin `service_id`-ni, yoxdursa `scope_id`-nu yazır); `service_id` olmayan element yoxlayan tərəfin bütün istifadələrini əhatə edir. Ad
   müqayisəsində atribut növləri OID-ə çevrilir (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` =
   serialNumber), dəyərlərdə böyük-kiçik hərf və artıq boşluqlar nəzərə alınmır, RDN sırası nəzərə alınmır; bütün atributlar tam eyni

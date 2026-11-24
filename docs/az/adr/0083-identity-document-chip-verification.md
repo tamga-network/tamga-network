@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 summary: >
   Bu gün şəxsiyyət xidməti şəxsi tamamilə kənar uzaqdan şəxsiyyət yoxlaması provayderinə yoxlatdırır (sənəd fotoşəkli, canlılıq,
   üz uyğunluğu). Qərar: şəxsiyyət vəsiqəsinin və ya pasportun çipi şəxsin telefonunda, axını başladan cüzdanda NFC ilə oxunur;
@@ -247,3 +247,11 @@ dəyişdirilə bilən şəkildə; təhlükəsiz e-imza / mobil imza yolu çip yo
 > oxunmuş sənədin məlumatı passiv yoxlamadan keçir, geriyə üz və canlılıq qalır; sənəd `document_chip_verified: false` ilə, foto
 > yolu ilə eyni səviyyədə verilir. Foto yoluna göndərmək təhlükəsizlik qazandırmır, dövlətin imzalı məlumatını itirdir. Çip
 > autentifikasiyası (CA) çip yolu açılanda əlavə edilir. Layihə rəhbərliyinin təsdiqi ilə.
+
+> **Əlavə (2026-11-24):** ETSI TS 119 461 V2.1.1 uyğunluq hədəfi şəxsiyyət sənədinin çip yoludur: standartın tam avtomatik, çip
+> yoxlamalı istifadə halı (§9.2.3.4). Bugünkü sənəd fotoşəkli yolu standartın heç bir istifadə halına uyğun gəlmir (çipsiz sənədlə
+> tam avtomatik proses müəyyən edilməyib; qarışıq proses insan yoxlaması tələb edir); açıq şəkildə **standartdan kənar ehtiyat yol**
+> kimi yazılır və çipsiz sənədlər və NFC-si olmayan telefonlar üçün qalır. Foto yolu üçün TS 119 461 səviyyəsi (Baseline / Extended)
+> iddia edilmir. Standart yalnız bu iki səviyyəni tanıyır və İcra Reqlamenti (AB) 2026/798 bunlarla eIDAS təminat səviyyələri
+> arasında bərabərlik qurmur; [[SPEC-ID-0003]] və Identity Rulebook-dakı "TS 119 461 Substantial / High" ifadələri buna uyğun
+> düzəldildi. T1–T3 səviyyələri dəyişmir. Layihə rəhbərliyinin təsdiqi ilə.

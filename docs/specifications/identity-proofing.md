@@ -4,16 +4,16 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
-  tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
+  tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 karşısındaki durumu,
   hangi belge tipinin hangi seviyeyi gerektirdiği, sonucun nerede tutulacağı (belge verenin
   denetim kaydı; belgede asla) ve uzaktan kimlik doğrulama sağlayıcısı (referans
   adaptör) entegrasyonunun protokol düzeyi kuralları: oturum oluşturma, sonuç
   alma, webhook doğrulama, veri minimizasyonu, hata ve zaman aşımı davranışı.
-  D-ID-2'nin uygulamasıdır. Seviye tablosu ve ETSI 119 461 eşlemesi D-ASSUR-2 ile
-  karara bağlandı (2026-09-26).
+  D-ID-2'nin uygulamasıdır. Seviye tablosu D-ASSUR-2 ile karara bağlandı (2026-09-26);
+  ETSI TS 119 461 notu 2026-11-24'te düzeltildi (ADR-0083 eki).
 ---
 
 # Kısaca
@@ -53,12 +53,19 @@ yolunu **denetim kaydına** yazar ([[SPEC-PROTO-0001]]/PR7).
 
 # 1. Seviyeler ve yollar
 
-| Seviye | eIDAS LoA | ETSI TS 119 461 (D-ASSUR-2) | Yol | Nerede |
+| Seviye | eIDAS LoA | ETSI TS 119 461 | Yol | Nerede |
 |---|---|---|---|---|
 | **T0** | — | — | Cihaz anahtarı + e-posta/telefon OTP; kimlik iddiası yok | Anonim / takma adlı senaryolar (beta'da kullanılmaz) |
-| **T1** | Low | Baseline | (a) e-postayla teklif + **farklı kanaldan** SMS `tx_code`; (b) OBS ekranında teklif (tek faktör); (c) banka mikro-transfer / GSM hat sahipliği | Belge veren / portal |
-| **T2** | Substantial | Substantial (belge + canlılık **veya** yüz yüze) | (a) **Lisanslı uzaktan kimlik doğrulama** (kimlik belgesi OCR/NFC + canlılık + yüz eşleştirme) — bu belgede "IDV sağlayıcı"; (b) OBS + MFA ekranında teklif; (c) kurum **kayıt masası** (yüz yüze, personel onayı) | IDV sağlayıcı / portal / masa |
-| **T3** | High | High | NES / Mobil İmza ile nonce imzalama (ilk aşamadan itibaren); devlet aşamasında PID | Yalnızca authorization code veya yüz yüze; **pre-authorized ile yasak** (ETSI TS 119 472-3 GEN-REQ-4.1) |
+| **T1** | Low | — | (a) e-postayla teklif + **farklı kanaldan** SMS `tx_code`; (b) OBS ekranında teklif (tek faktör); (c) banka mikro-transfer / GSM hat sahipliği | Belge veren / portal |
+| **T2** | Substantial | — (aşağıdaki nota bakın) | (a) **Lisanslı uzaktan kimlik doğrulama** (kimlik belgesi OCR/NFC + canlılık + yüz eşleştirme) — bu belgede "IDV sağlayıcı"; (b) OBS + MFA ekranında teklif; (c) kurum **kayıt masası** (yüz yüze, personel onayı) | IDV sağlayıcı / portal / masa |
+| **T3** | High | — | NES / Mobil İmza ile nonce imzalama (ilk aşamadan itibaren); devlet aşamasında PID | Yalnızca authorization code veya yüz yüze; **pre-authorized ile yasak** (ETSI TS 119 472-3 GEN-REQ-4.1) |
+
+> **ETSI TS 119 461 notu (2026-11-24, [[ADR-0083]] eki).** ETSI TS 119 461 V2.1.1 yalnız iki kimlik doğrulama düzeyi tanımlar:
+> Baseline ve Extended; "Substantial" ya da "High" adlı bir düzeyi yoktur. Uygulama Tüzüğü (AB) 2026/798 bu düzeylerle eIDAS
+> güvence düzeyleri arasında denklik kurmaz; bu yüzden tablo T1–T3 için TS 119 461 düzeyi yazmaz. Kimlik servisinde TS 119 461
+> uyum hedefi kimlik belgesi çipi yoludur (standardın tam otomatik, çip doğrulamalı kullanım durumu, TS 119 461 §9.2.3.4; [[ADR-0083]], açılışı
+> hukuki görüşten sonra). Bugünkü belge fotoğrafı yolu standardın hiçbir kullanım durumuna oturmaz: **standart dışı yedek yoldur**
+> (çipsiz belgeler ve NFC'si olmayan telefonlar için) ve bu yol için TS 119 461 düzeyi (Baseline / Extended) iddia edilmez.
 
 **Tip ↔ asgari seviye** [[t:rulebook]]'larda: Education Rulebook — öğrenci belgesi T1, diploma T2
 ([[FW-RB-0002]] §4.4). Kurum, tipin seviyesini sağlayamıyorsa teklif **üretmez** (belge verme durur; tahmin/yükseltme yok).
@@ -212,7 +219,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Süre / status | `exp` kopyanın teknik geçerliliğidir (≤ 30 gün); idari bitiş `date_of_expiry` = kimlik kaydının bitişi (belge verme + ≤ 730 gün), her kopyada aynı ([[ADR-0089]]; 2026-11-19); Token Status List (`https://id.tamga.network/status/{listId}`); aynı belge yeniden doğrulanınca eskisi iptal (K6) |
 | Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (referans adaptör; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |
-| Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve çipteki fotoğrafla canlı yüz eşleşmesi birlikte başarılıysa ([[ADR-0083]]/CV2; High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
+| Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI TS 119 461'e göre standart dışı yedek yol; TS 119 461 düzeyi iddia edilmez — §1 notu); NFC çip = `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve çipteki fotoğrafla canlı yüz eşleşmesi birlikte başarılıysa ([[ADR-0083]]/CV2; TS 119 461 uyum hedefi bu yoldur, TS 119 461 §9.2.3.4; hukuken T3 = NES/Mobil İmza, IDP7) |
 | Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda oturumun silinmesi istenir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama hedefi. **Zaman temelli imha (2026-10-28):** süresi dolan ya da iptal edilen kayıt en geç 30 gün sonra sağlayıcı oturumuyla, olay günlüğü satırları 365 gün sonra kendiliğinden silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; süreler politika seçimi, hukuki teyit bekliyor) |
 | Webhook | Tek hedef `https://id.tamga.network/idv/webhook`, olay `status.updated`; kurum başına webhook yoktur |
 | Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |

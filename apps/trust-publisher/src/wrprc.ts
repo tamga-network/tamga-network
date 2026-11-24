@@ -19,6 +19,12 @@ export const ENTITLEMENT_URI: Record<string, string> = {
   non_q_eaa_provider: "https://uri.etsi.org/19475/Entitlement/Non_Q_EAA_Provider",
   pub_eaa_provider: "https://uri.etsi.org/19475/Entitlement/PUB_EAA_Provider",
   pid_provider: "https://uri.etsi.org/19475/Entitlement/PID_Provider",
+  // ADR-0024 K5 eki (2026-11-24): ETSI TS 119 475 Ek A'nın kalan beş türü
+  qcert_for_eseal_provider: "https://uri.etsi.org/19475/Entitlement/QCert_for_ESeal_Provider",
+  qcert_for_esig_provider: "https://uri.etsi.org/19475/Entitlement/QCert_for_ESig_Provider",
+  rqsealcds_provider: "https://uri.etsi.org/19475/Entitlement/rQSealCDs_Provider",
+  rqsigcds_provider: "https://uri.etsi.org/19475/Entitlement/rQSigCDs_Provider",
+  esig_eseal_creation_provider: "https://uri.etsi.org/19475/Entitlement/ESig_ESeal_Creation_Provider",
 };
 
 /** ETSI EN 319 412-1 semantik tanımlayıcı (tüzel kişi, Tablo 2): TR-VKN → VATTR-…, TR-MERSIS → NTRTR-… */
@@ -138,8 +144,9 @@ export function buildWrprcPayloads(
         purpose: langs(s.purpose_localized, s.purpose),
         credentials: [registeredCredential(s)],
         intended_use_id: s.scope_id,
-        // ADR-0046 / ARF RPRC_17a: hizmet kimliği (gömülü açıklama politikasının `(rp_id, service_id)` ikilisi; EDP_02)
-        service_id: s.service_id ?? s.scope_id,
+        // ADR-0046 / ARF RPRC_17a: hizmet kimliği (gömülü açıklama politikasının `(rp_id, service_id)` ikilisi; EDP_02).
+        // ADR-0097 K1: sertifikadaki ad AB'ninki (TS5 `serviceIdentifier`); kaynak kayıttaki alan `service_id` kalır
+        serviceIdentifier: s.service_id ?? s.scope_id,
         exp: expOf(now, until),
       };
       // ADR-0017: aracı doğrulayıcı (bu RP'nin kullandığı ilk aracı)

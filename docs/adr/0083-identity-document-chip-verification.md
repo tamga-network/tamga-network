@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 summary: >
   Bugün kimlik servisi kişiyi tamamen bir dış uzaktan kimlik doğrulama sağlayıcısına doğrulatıyor (belge fotoğrafı, canlılık,
   yüz eşleştirme). Karar: kimlik kartı ya da pasaport çipi kişinin telefonunda, akışı başlatan cüzdanda NFC ile okunur; cüzdan
@@ -237,3 +237,11 @@ değiştirilebilir biçimde; güvenli e-imza / mobil imza yolu çip yolundan son
 > belgenin verisi pasif doğrulamayı geçer, geriye yüz ve canlılık kalır; belge `document_chip_verified: false` ile, fotoğraf yoluyla
 > aynı seviyede verilir. Fotoğraf yoluna göndermek güvenlik kazandırmaz, devletin imzalı verisini kaybettirir. Çip doğrulama (CA)
 > çip yolu açılırken eklenir. Proje yönetimi onayıyla.
+
+> **Ek (2026-11-24):** ETSI TS 119 461 V2.1.1 uyum hedefi kimlik belgesi çipi yoludur: standardın tam otomatik, çip doğrulamalı
+> kullanım durumu (§9.2.3.4). Bugünkü belge fotoğrafı yolu standardın hiçbir kullanım durumuna oturmaz (çipsiz belgeyle tam otomatik
+> süreç tanımlı değildir; karma süreç insan doğrulaması ister); açıkça **standart dışı yedek yol** olarak yazılır ve çipsiz belgeler
+> ile NFC'si olmayan telefonlar için kalır. Fotoğraf yolu için TS 119 461 düzeyi (Baseline / Extended) iddia edilmez. Standart yalnız
+> bu iki düzeyi tanır ve Uygulama Tüzüğü (AB) 2026/798 bunlarla eIDAS güvence düzeyleri arasında denklik kurmaz; [[SPEC-ID-0003]] ve
+> Identity Rulebook'taki "TS 119 461 Substantial / High" ifadeleri buna göre düzeltildi. T1–T3 seviyeleri değişmez. Proje yönetimi
+> onayıyla.

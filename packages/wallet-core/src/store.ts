@@ -12,6 +12,7 @@ import { stableJson } from "./stable-json.js";
 import { anchoredChainCerts, type TrustSource } from "@tamga-network/trust/core";
 import { b64Decode } from "./b64.js";
 import { disclosurePolicyFromMetadata, type StoredDisclosurePolicy } from "./disclosure-policy.js";
+import { reuseMethodOf, type ReuseMethod } from "./reuse-policy.js";
 
 export interface StoredCopy {
   keyRef: string;
@@ -80,6 +81,11 @@ export interface StoredCredential {
    * (`zk.token`) ya da yoksa `refresh` bağındadır — tek yerde.
    */
   renewDueAt?: number;
+  /**
+   * ADR-0089 eki (ARF ISSU_37): belge verenin kopya politikasından seçilen yöntem (`reuseMethodOf`); yoksa doğrulayıcı başına kopya.
+   * `selectCopy` / `planCopy` / `remainingCopies` buna göre davranır.
+   */
+  reuse?: ReuseMethod;
   /**
    * ADR-0046 K2 (EDP_10): kurumun gömülü açıklama politikası — belge alınırken imzalı metadata'dan; sunumda ağsız değerlendirilir
    * (`checkDisclosurePolicy`). Yoksa belge kısıt taşımaz.
@@ -396,6 +402,7 @@ export function receiveCredentials(
   const display = displays?.find((d) => d.locale?.startsWith("tr")) ?? displays?.[0];
   // ADR-0046 K2 (EDP_10): politika belgeyle birlikte saklanır; sunumda kuruma ya da başka sunucuya sorulmaz
   const disclosurePolicy = disclosurePolicyFromMetadata(out.metadata, out.vct);
+  const reuse = reuseMethodOf(out.metadata, out.vct);
   const credential: StoredCredential = {
     id: `${first.issuerId.slice(2, 10)}-${first.iat.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     vct: out.vct,
@@ -415,6 +422,7 @@ export function receiveCredentials(
     ...(out.refresh ? { refresh: out.refresh } : {}),
     ...(out.zk ? { zk: { ...out.zk, copies: [] } } : {}),
     ...(disclosurePolicy ? { disclosurePolicy } : {}),
+    ...(reuse ? { reuse } : {}),
   };
   return { state: { ...state, credentials: [...state.credentials, credential] }, credential, verified: first };
 }
@@ -427,6 +435,9 @@ export function receiveCredentials(
  * başka doğrulayıcıya "kullanılmamış" diye verir.
  */
 export function selectCopy(cred: StoredCredential, clientId: string): StoredCopy | null {
+  // ADR-0089 eki (ISSU_37): yöntem B — tek kopya her doğrulayıcıya; yöntem A — her kopya bir kez (aynı doğrulayıcıya da yeni kopya)
+  if (cred.reuse === "limited_time") return cred.copies[0] ?? null;
+  if (cred.reuse === "once_only") return cred.copies.find((c) => c.usedBy.length === 0) ?? null;
   return cred.copies.find((c) => c.usedBy.includes(clientId)) ?? cred.copies.find((c) => c.usedBy.length === 0) ?? null;
 }
 export function markCopyUsed(state: WalletState, credId: string, keyRef: string, clientId: string): WalletState {
@@ -448,8 +459,19 @@ export function markCopyUsed(state: WalletState, credId: string, keyRef: string,
 /** §4.3: kalan kopya bu sayıya inince kullanıcıya bildirilir ("2 kullanım kaldı"). */
 export const LOW_COPIES = 2;
 
-/** Henüz hiçbir doğrulayıcıya gösterilmemiş kopya sayısı (yeni doğrulayıcılar için kalan hak). */
-export const remainingCopies = (cred: StoredCredential) => cred.copies.filter((c) => c.usedBy.length === 0).length;
+/**
+ * Henüz hiçbir doğrulayıcıya gösterilmemiş kopya sayısı (yeni doğrulayıcılar için kalan hak). Yöntem B'de (`limited_time`) kopya
+ * yeniden kullanılır, tükenmez: kopya sayısı döner (yenileme süreye bağlıdır, "az kopya" uyarısı çıkmaz).
+ */
+export const remainingCopies = (cred: StoredCredential) =>
+  cred.reuse === "limited_time" ? cred.copies.length : cred.copies.filter((c) => c.usedBy.length === 0).length;
+
+/**
+ * Kullanılmamış kopya eşiğe indi mi (yeni paket / "az kopya" uyarısı; ARF ISSU_45)? Yöntem B'de (`limited_time`) hiçbir zaman:
+ * orada yenileme yalnız süreye bağlıdır (ISSU_50).
+ */
+export const copiesLow = (cred: StoredCredential, limit: number = LOW_COPIES) =>
+  cred.reuse !== "limited_time" && remainingCopies(cred) <= limit;
 
 /**
  * Bu doğrulayıcıya hangi kopya gider? sticky: daha önce gösterilen (WL5) · fresh: kullanılmamış · exhausted: yeni doğrulayıcı ve
@@ -460,7 +482,18 @@ export type CopyPlan =
   | { kind: "sticky" | "fresh"; keyRef: string; remaining: number }
   | { kind: "exhausted"; remaining: 0; reuse: { keyRef: string; seenBy: string[] } | null };
 export function planCopy(cred: StoredCredential, clientId: string): CopyPlan {
-  const sticky = cred.copies.find((c) => c.usedBy.includes(clientId));
+  // ADR-0089 eki (ISSU_37): yöntem B — tek kopya; yöntem A — yapışkan kopya yok, her gösterim yeni kopya (tükenince ISSU_47 yedeği:
+  // kişinin onayıyla en az gösterilmiş kopya)
+  if (cred.reuse === "limited_time") {
+    const only = cred.copies[0];
+    if (only)
+      return {
+        kind: only.usedBy.includes(clientId) ? "sticky" : "fresh",
+        keyRef: only.keyRef,
+        remaining: remainingCopies(cred),
+      };
+  }
+  const sticky = cred.reuse === "once_only" ? undefined : cred.copies.find((c) => c.usedBy.includes(clientId));
   if (sticky) return { kind: "sticky", keyRef: sticky.keyRef, remaining: remainingCopies(cred) };
   const fresh = cred.copies.find((c) => c.usedBy.length === 0);
   if (fresh) return { kind: "fresh", keyRef: fresh.keyRef, remaining: remainingCopies(cred) };

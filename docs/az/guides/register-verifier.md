@@ -104,7 +104,7 @@ imzalanmış siyahıdakı qeydinizdən gəlir; ayrıca qeydiyyat qurumu açarı 
 Təqdimat sorğunuzda bu sertifikatı `verifier_info` daxilində (`registration_cert`) göndərirsiniz. Rəqəmsal cüzdan imzanı, müddəti, identifikasiya
 nömrəsinin uyğunluğunu və tələb olunan sahələrin sertifikatdakı əhatəyə uyğunluğunu yoxlayır ([[ADR-0026]]).
 
-Sertifikat istifadənin **xidmət identifikatorunu** da daşıyır (`service_id`; ARF RPRC_17a). Müraciətdə istifadəyə `"service_id"`
+Sertifikat istifadənin **xidmət identifikatorunu** da daşıyır (sertifikatda `serviceIdentifier`; ARF RPRC_17a). Müraciətdə istifadəyə `"service_id"`
 versəniz, o yazılır (eyni xidmətin bir neçə istifadəsini vahid ad altında birləşdirir), verməsəniz `scope_id`. Sənədi verən qurumlar bir rəqəmsal sənəd
 növünü yalnız müəyyən yoxlayan tərəflərə və xidmətlərə göstərilmək üçün məhdudlaşdıra bilər ([[GUIDE-0003]], paylaşım qaydası;
 [[ADR-0046]]): icazəniz yoxdursa, rəqəmsal cüzdan şəxsi xəbərdar edir və standart seçim "Paylaşma"dır.

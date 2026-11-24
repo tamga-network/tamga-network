@@ -40,7 +40,8 @@ PID-i dövlətin deyil, müvəqqəti olaraq Tamga-nın verməsidir.
 ## K1 — Rol: "Provisional Identity Attestation Provider", PID Provider deyil
 - Tamga `id.tamga.network` üzərində **şəxsiyyət attestasiyası xidməti** idarə edir; [[t:trust-list|etibar siyahısında]] `issuers[]` altında
   (`category: IDENTITY`, `class: QUALIFIED` → **`class: EAA`, `assurance: I2`** [[ADR-0022]] ilə, 2026-09-29; `assurance_basis: "provisional-operator; ETSI TS 119 461 Substantial (uzaktan)
-  / High (NFC)"`, `operator.status: provisional`).
+  / High (NFC)"`, `operator.status: provisional`). *(2026-11-24, [[ADR-0083]] əlavəsi: TS 119 461-də yalnız Baseline / Extended
+  səviyyəsi var; uyğunluq hədəfi çip yoludur, foto yolu standartdan kənar ehtiyat yoldur — siyahıdakı `assurance_basis` buna görə yeniləndi.)*
 - `pid_providers[]` **boş qalır** (TL8 qorunur): dövlət PID-i gəldikdə Tamga attestasiyası onunla əvəz olunur (`successor` sahəsi),
   qurumların uyğunlaşdırma kodu dəyişmir (eyni claim dəsti).
 - Rəqəmsal sənədin hüquqi mətnlərdəki adı **"Tamga Şəxsiyyət Attestasiyası (müvəqqəti)"**dır; "PID" və ya "şəxsiyyət vəsiqəsi" deyilmir. Məhsul adı

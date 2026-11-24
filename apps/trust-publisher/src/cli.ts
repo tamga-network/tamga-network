@@ -112,9 +112,12 @@ import {
   listOperatorProblems,
   lotlSourceFieldProblems,
   missingOperatorConfigProblems,
+  accessCertNameProblem,
   relyingPartyNameProblems,
   resolveSigningKeyRefs,
   tlSourceFieldProblems,
+  identifierSchemeProblems,
+  entitlementProblems,
 } from "./source-checks.js";
 import { checkTerminalGroups, groupWithdrawalWarnings } from "./terminal-groups.js";
 import { checkProvisionalOperator, isOwn, type ProvisionalOperator } from "./provisional-operator.js";
@@ -1302,6 +1305,17 @@ async function build() {
   // ADR-0075 RO5: `dns_name` kaynakta tek ve liste biçiminde (harf büyüklüğü ve sondaki nokta sayılmadan yinelenemez)
   const rpNames = relyingPartyNameProblems(tlSrc.relying_parties);
   if (rpNames.length) throw new Error(`ADR-0075 RO5: ${rpNames.join("; ")}`);
+  // ADR-0024 K5 eki (2026-11-24): kimlik numarası türleri AB listesinden ya da ulusal biçimde; nitelikli/PID yetkisi gerçek ağda yok
+  const regProblems = [
+    ...(tlSrc.relying_parties as Array<Record<string, unknown>>).flatMap((r) => [
+      ...identifierSchemeProblems(`relying_party ${String(r.dns_name)}`, r.identifiers),
+      ...entitlementProblems(`relying_party ${String(r.dns_name)}`, r.entitlements, ENVIRONMENT),
+    ]),
+    ...(sourceIssuers as Array<Record<string, unknown>>).flatMap((i) =>
+      identifierSchemeProblems(`issuer ${String(i.slug ?? i.legal_name)}`, i.identifiers),
+    ),
+  ];
+  if (regProblems.length) throw new Error(`ADR-0024 K5: ${regProblems.join("; ")}`);
   const rootCas = buildRootCas(tlSrc, cc);
   const caIdByRef = caIdMap(tlSrc, rootCas);
   const issuers = buildIssuers(sourceIssuers, cc, caIdByRef);
@@ -1325,6 +1339,13 @@ async function build() {
       console.warn(
         `[uyarı] ADR-0058 AC1: ${dns} erişim sertifikasının SAN'ında iletişim bilgisi yok (pki-issue --contact-uri ile yeniden verin)`,
       );
+    // AU23: AB cüzdanları yasal adı sertifikanın O'sundan okur — kayıttaki legal_name ile aynı olmalı (uyarı; yayın durmaz)
+    const nameProblem = accessCertNameProblem(
+      dns,
+      r.legal_name,
+      new PecX509(Buffer.from(c.der)).subjectName.getField("O"),
+    );
+    if (nameProblem) console.warn(`[uyarı] ${nameProblem}`);
     // ADR-0026 K3: kayıt sertifikası erişim sertifikasındaki kurum kimlik numarasına bağlanır (writeWrprcs denetler)
     orgIdByDns.set(dns, certOrgIdentifier(c.der));
     // ADR-0034 CI3: `client_id` (ve `rp_id`) yayıncının sertifikadan hesapladığı değerdir — kaynak kaydındaki aynı adlı alan
@@ -1619,6 +1640,10 @@ async function build() {
     ...(tlSrc.root_cas as Array<{ cert: string }>).map((r) => r.cert),
     ...(tlSrc.relying_parties as Array<{ access_cert: string }>).map((r) => r.access_cert),
     ...(lotlSrc.wallet_providers as Array<{ wua_signing_certs?: string[] }>).flatMap((w) => w.wua_signing_certs ?? []),
+    // ADR-0097 K3: kayıt kurumu imzacı sertifikaları da ilan edilir (LOTL'de parmak izleri var; sertifika `keys/` altında)
+    ...((lotlSrc.national_lists ?? []) as Array<{ roles?: { registrar?: { signing_certs?: string[] } } }>).flatMap(
+      (n) => n.roles?.registrar?.signing_certs ?? [],
+    ),
   ]);
   for (const f of readdirSync(resolve(DIST, "keys")))
     if (f.endsWith(".cert.pem") && !published.has(f.slice(0, -".cert.pem".length)))

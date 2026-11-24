@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-20
+last_updated: 2026-11-24
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -370,9 +370,13 @@ kişiyi eşleştirmek için PID'i de kabul etmesi ayrı bir kararla açılır.
 
 | Yol | Seviye | Not |
 |---|---|---|
-| Uzaktan: belge, canlılık ve yüz eşleştirmesi | **T2** (ETSI TS 119 461 Substantial) | `verification_method: remote-document-liveness-face` |
-| Uzaktan ve NFC çip | T2; `document_chip_verified: true` | Teknik olarak yüksek; hukuken T3 nitelikli elektronik imzadır |
+| Uzaktan: belge, canlılık ve yüz eşleştirmesi | **T2** | `verification_method: remote-document-liveness-face`; ETSI TS 119 461'e göre standart dışı yedek yol (çipsiz belgeler, NFC'si olmayan telefonlar); TS 119 461 düzeyi iddia edilmez |
+| Uzaktan ve NFC çip | T2; `document_chip_verified: true` | TS 119 461 uyum hedefi (tam otomatik, çip doğrulamalı kullanım durumu, TS 119 461 §9.2.3.4; ADR-0083, açılışı hukuki görüşten sonra); hukuken T3 nitelikli elektronik imzadır |
 | Yüz yüze | T2 | `in-person` |
+
+ETSI TS 119 461 V2.1.1 yalnız Baseline ve Extended kimlik doğrulama düzeylerini tanımlar; Uygulama Tüzüğü (AB) 2026/798 bunlarla
+eIDAS güvence düzeyleri arasında denklik kurmaz. Bu yüzden T düzeyleri bir TS 119 461 düzeyine eşlenmez. Belge fotoğrafı yolu
+standardın hiçbir kullanım durumuna oturmaz; uyum hedefi çip yoludur (ADR-0083 eki, 2026-11-24).
 
 Kurallar: kimlik doğrulama yalnız kimlik servisinde yapılır; kurum [[t:issuer|belge verenleri]], cüzdan ve doğrulayıcılar uzaktan
 kimlik doğrulama sağlayıcısıyla konuşmaz (RB-AP-ID-01); cüzdan yalnız kimlik belgesi çipini okuyup ham veriyi değiştirmeden kimlik

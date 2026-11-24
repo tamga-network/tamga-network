@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 summary: >
   Today the identity service has a person verified entirely by an external remote identity verification provider (document
   photo, liveness, face match). Decision: the chip of the identity card or passport is read over NFC on the person's phone, in the
@@ -254,3 +254,12 @@ binding. [[SPEC-ID-0003]]/IDP3 was narrowed by this decision.
 > document whose chip has been read once passes passive authentication, leaving face and liveness; the credential is issued with
 > `document_chip_verified: false`, at the same level as the photo path. Sending such documents to the photo path adds no security
 > and loses the state-signed data. Chip Authentication (CA) is added when the chip path opens. Approved by project management.
+
+> **Addendum (2026-11-24):** The ETSI TS 119 461 V2.1.1 conformance target is the identity document chip path: the standard's
+> fully automated use case with chip verification (§9.2.3.4). Today's document photo path fits none of the standard's use cases
+> (no fully automated process is defined for a document without a chip; the hybrid process requires manual verification); it is
+> stated explicitly as a **non-standard fallback path** and remains for documents without a chip and phones without NFC. No
+> TS 119 461 level (Baseline / Extended) is claimed for the photo path. The standard knows only these two levels, and Implementing
+> Regulation (EU) 2026/798 draws no equivalence between them and the eIDAS assurance levels; the "TS 119 461 Substantial / High"
+> wording in [[SPEC-ID-0003]] and the Identity Rulebook was corrected accordingly. The T1–T3 levels do not change. Approved by
+> project management.

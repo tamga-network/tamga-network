@@ -46,7 +46,8 @@ PID'i devlet değil geçici olarak Tamga verir.
 ## K1 — Rol: "Provisional Identity Attestation Provider", PID Provider değil
 - Tamga, `id.tamga.network` üzerinde bir **kimlik attestation servisi** işletir; [[t:trust-list|güven listesinde]] `issuers[]` altında
   (`category: IDENTITY`, `class: QUALIFIED` → **`class: EAA`, `assurance: I2`** [[ADR-0022]] ile, 2026-09-29; `assurance_basis: "provisional-operator; ETSI TS 119 461 Substantial (uzaktan)
-  / High (NFC)"`, `operator.status: provisional`).
+  / High (NFC)"`, `operator.status: provisional`). *(2026-11-24, [[ADR-0083]] eki: TS 119 461'de yalnız Baseline / Extended düzeyi
+  var; uyum hedefi çip yoludur, fotoğraf yolu standart dışı yedek yoldur — listedeki `assurance_basis` buna göre güncellendi.)*
 - `pid_providers[]` **boş kalır** (TL8 korunur): devlet PID'i gelince Tamga attestation'ı süpersede edilir (`successor` alanı),
   kurumların eşleştirme kodu değişmez (aynı claim seti).
 - Belgenin adı hukuki metinlerde **"Tamga Kimlik Attestation'ı (geçici)"**dır; "PID" veya "kimlik kartı" denmez. Ürün adı

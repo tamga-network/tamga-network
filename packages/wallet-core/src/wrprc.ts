@@ -22,6 +22,7 @@ import { b64Decode } from "./b64.js";
 import { decodeJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import { certOrganizationIdentifier } from "./asn1.js";
+import { registrarSigned } from "./registrar-trust.js";
 import { chainAnchored, type TrustAnchor } from "./anchors.js";
 import { fetchTrustSource, type TrustPins, type VerifiedTrust } from "./trustlist.js";
 import type { Http } from "./http.js";
@@ -35,6 +36,7 @@ import {
   type WrprcStatusRef,
 } from "./wrprc-status.js";
 
+export { registrarSigned };
 export const WRPRC_TYP = "rc-wrp+jwt";
 const SKEW_SEC = 60;
 
@@ -94,8 +96,11 @@ export interface RegistrationCertCheck {
 export interface Wrprc {
   name?: string;
   sub?: string;
-  /** ADR-0046 / ARF RPRC_17a: hizmet kimliği */
-  service_id?: string;
+  /**
+   * ADR-0046 / ARF RPRC_17a: hizmet kimliği. ADR-0097 K1 (2026-11-24): AB adı `serviceIdentifier` (TS5 kayıt veri modeli
+   * `services[].serviceIdentifier`); eski `service_id` adı yazılmaz ve okunmaz (geliştirme evresi, ADR-0029).
+   */
+  serviceIdentifier?: string;
   /** ETSI TS 119 475 Ek A yetki türü URI'leri */
   entitlements?: string[];
   iat?: number;
@@ -163,7 +168,7 @@ function base64urlText(v: string): string | null {
   }
 }
 
-/** WRPRC ortak denetimi (K5 1–2): typ, imza, imzacı LOTL'deki kayıt kurumu anahtarı, iat/exp. */
+/** WRPRC ortak denetimi (K5 1–2): typ, imza, imzacı LOTL'deki kayıt kurumu anahtarı (ADR-0097 K2: sabit ya da zincir), iat/exp. */
 export function verifyWrprc(
   data: unknown,
   registrarKeys: string[],
@@ -191,7 +196,7 @@ export function verifyWrprc(
     if (!x5c?.length) return { ok: false, reason: "registration certificate without x5c" };
     chain = x5c.map((c) => b64Decode(c));
     der = chain[0];
-    if (!registrarKeys.includes(certFingerprintHex(der)))
+    if (!registrarSigned(chain, registrarKeys, nowSec))
       return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
     verifyJwt(jwt, p256PointFromCertDer(der));
     payload = d.payload as Wrprc;
@@ -501,9 +506,9 @@ export function verifyWrprcCwt(
       reason: /typ/.test(m) ? "registration certificate typ" : "registration certificate signature invalid",
     };
   }
-  if (!registrarKeys.includes(certFingerprintHex(chain[0])))
-    return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
   const nowSec = Math.floor(now / 1000);
+  if (!registrarSigned(chain, registrarKeys, nowSec))
+    return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
   if (typeof payload.iat !== "number" || payload.iat > nowSec + SKEW_SEC)
     return { ok: false, reason: "registration certificate not yet valid" };
   // ADR-0026 K4: `iat` ≤ şimdi < `exp` — `exp` taşımayan (ya da sayı olmayan) sertifika süresiz sayılmaz, reddedilir (0.8.3)

@@ -4,10 +4,10 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
-  mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
+  status against ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
   record; never in the credential), and the protocol-level rules for integrating a remote identity verification provider
   (reference adapter): creating a session, fetching the result, verifying webhooks, data minimisation, error and
   timeout behaviour.
@@ -53,12 +53,20 @@ the binding path into its **audit record** ([[SPEC-PROTO-0001]]/PR7).
 
 # 1. Levels and paths
 
-| Level | eIDAS LoA | ETSI TS 119 461 (D-ASSUR-2) | Path | Where |
+| Level | eIDAS LoA | ETSI TS 119 461 | Path | Where |
 |---|---|---|---|---|
 | **T0** | — | — | Device key + e-mail/phone OTP; no identity claim | Anonymous/pseudonym scenarios (not used in beta) |
-| **T1** | Low | Baseline | (a) e-mail offer + SMS `tx_code` **over a different channel**; (b) offer on the student information system screen (single factor); (c) bank micro-transfer / mobile line ownership | Issuer/portal |
-| **T2** | Substantial | Substantial (document + liveness **or** in person) | (a) **Licensed remote identity verification** (identity document OCR/NFC + liveness + face match) — "IDV provider" in this document; (b) offer on the student information system screen with MFA; (c) the institution's **registration desk** (in person, staff confirmation) | IDV provider / portal / desk |
-| **T3** | High | High | Signing a nonce with a qualified e-signature / mobile signature (from the initial stage on); PID in the state stage | Only authorization code or in person; **forbidden with pre-authorized** (ETSI TS 119 472-3 GEN-REQ-4.1) |
+| **T1** | Low | — | (a) e-mail offer + SMS `tx_code` **over a different channel**; (b) offer on the student information system screen (single factor); (c) bank micro-transfer / mobile line ownership | Issuer/portal |
+| **T2** | Substantial | — (see the note below) | (a) **Licensed remote identity verification** (identity document OCR/NFC + liveness + face match) — "IDV provider" in this document; (b) offer on the student information system screen with MFA; (c) the institution's **registration desk** (in person, staff confirmation) | IDV provider / portal / desk |
+| **T3** | High | — | Signing a nonce with a qualified e-signature / mobile signature (from the initial stage on); PID in the state stage | Only authorization code or in person; **forbidden with pre-authorized** (ETSI TS 119 472-3 GEN-REQ-4.1) |
+
+> **ETSI TS 119 461 note (2026-11-24, [[ADR-0083]] addendum).** ETSI TS 119 461 V2.1.1 defines only two levels of identity
+> proofing: Baseline and Extended; it has no level called "Substantial" or "High". Implementing Regulation (EU) 2026/798 draws
+> no equivalence between these levels and the eIDAS assurance levels, so the table gives no TS 119 461 level for T1–T3. For the
+> identity service, the TS 119 461 conformance target is the identity document chip path (the standard's fully automated use case
+> with chip verification, TS 119 461 §9.2.3.4; [[ADR-0083]], opened only after the legal opinion). Today's document photo path fits none of
+> the standard's use cases: it is a **non-standard fallback path** (for documents without a chip and phones without NFC), and no
+> TS 119 461 level (Baseline / Extended) is claimed for it.
 
 **Type ↔ minimum level** is set in the [[t:rulebook|rulebooks]]: Education Rulebook — student certificate T1, diploma T2
 ([[FW-RB-0002]] §4.4). If the institution cannot reach the level a type requires, it **does not produce** an offer (issuance
@@ -214,7 +222,7 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | Validity / status | `exp` is the copy's technical validity (≤ 30 days); the administrative expiry `date_of_expiry` = the end of the identity record (issuance + ≤ 730 days), the same in every copy ([[ADR-0089]]; 2026-11-19); Token Status List (`https://id.tamga.network/status/{listId}`); when the same document is verified again, the previous one is revoked (K6) |
 | Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (reference adapter; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
 | Use at an institution | The institution's issuing service requests a **presentation** of the identity credential when issuing (DCQL: Turkish ID number, date of birth, given name, family name), verifies T0 + A–E and matches it with its records (Turkish ID number + date of birth; a warning on normalised names) — [[SPEC-PROTO-0001]] §11.2 |
-| Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` only when passive authentication, the clone check (AA or CA) and the match of the live face with the chip photo all succeed ([[ADR-0083]]/CV2; technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
+| Level | Remote document + liveness + face = **T2** (a non-standard fallback path under ETSI TS 119 461; no TS 119 461 level is claimed — §1 note); NFC chip = `document_chip_verified: true` only when passive authentication, the clone check (AA or CA) and the match of the live face with the chip photo all succeed ([[ADR-0083]]/CV2; this path is the TS 119 461 conformance target, TS 119 461 §9.2.3.4; legally T3 = qualified e-signature/mobile signature, IDP7) |
 | Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, deletion of the session at the provider is requested); the provider contract targets ≤ 30 days of image retention. **Time-based purge (2026-10-28):** an expired or revoked record is deleted automatically at the latest 30 days later together with its provider session, event-log rows after 365 days (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; the periods are a policy choice pending legal confirmation) |
 | Webhook | A single target `https://id.tamga.network/idv/webhook`, event `status.updated`; there is no per-institution webhook |
 | Age | No minimum age (2026-10-08, [[ADR-0043]]); the condition is identity verification with a valid identity document. A guardian-consent flow and the provider's limit for minors are open items |

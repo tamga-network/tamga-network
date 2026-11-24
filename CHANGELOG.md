@@ -6,6 +6,21 @@ published on npm as test releases; `0.9.0` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+- Added (`trust`, `onboard`, `trust-publisher`; ADR-0024 addendum): the five remaining EU entitlements of ETSI TS 119 475 Annex A
+  (`qcert_for_eseal_provider`, `qcert_for_esig_provider`, `rqsealcds_provider`, `rqsigcds_provider`,
+  `esig_eseal_creation_provider`); qualified and PID entitlements are refused on the real network; organisation identifier schemes
+  must be `EUID`, `EORI`, `LEI`, `VAT` or a national `<CC>-<NAME>`.
+- Changed (`wallet-core`, `trust-publisher`; ADR-0097): the registration certificate carries the service identifier as
+  `serviceIdentifier` (EU TS5 name) instead of `service_id`; the wallet accepts a registration certificate (and its status list)
+  signed either by a pinned registrar key or by a certificate chaining to a registrar CA listed in the LOTL. New exports
+  `registrarSigned`, `certValidity`, `certUsage`; the publisher also publishes registrar signer certificates under `keys/`.
+- Changed (docs): ADR-0083 addendum (TS 119 461 target = chip path); level names corrected in SPEC-ID-0003, Identity Rulebook.
+- Added (`wallet-core`): the wallet follows the issuer's `credential_reuse_policy` (ETSI TS 119 472-3 §4.2.4.2, ARF ISSU_37) —
+  the first supported method in `details` is applied: `once_only` (each copy shown once), `limited_time` (a single copy, renewed
+  by lifetime only) or `per-relying-party` (one copy per verifier, the previous behaviour and still the default). New exports
+  `reuseMethodOf`, `copiesLow`; `StoredCredential.reuse`.
+- Added (`trust-publisher`): every publication warns when a verifier's access certificate carries a subject O different from
+  its registered `legal_name` (EU wallets read the legal name from the certificate). Warning only; publication continues.
 - Fixed (Tamga ARF, Education Rulebook §6.1, EN/TR/AZ): the "Institution suspended" row now states the suspension rule of
   [[ADR-0088]] — while the suspension lasts no credential of the institution is accepted; when it is lifted, those issued before
   it are accepted again. The 1.0 archive is updated in place.

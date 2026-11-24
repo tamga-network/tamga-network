@@ -41,7 +41,7 @@
       "category": "IDENTITY",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "ADR-0011 K1, ADR-0022: provisional operator, non-qualified EAA (no independent conformity assessment yet); remote identity proofing at ETSI TS 119 461 Substantial (document + liveness + face), High with NFC. This is NOT a PID; superseded via successor once a state PID provider is designated (TL8).",
+      "assurance_basis": "ADR-0011 K1, ADR-0022: provisional operator, non-qualified EAA (no independent conformity assessment yet); remote identity proofing; ETSI TS 119 461 conformity target is the identity-document chip path (NFC, ADR-0083), the photo-based path (document + liveness + face) is a non-standard fallback with no TS 119 461 level claimed. This is NOT a PID; superseded via successor once a state PID provider is designated (TL8).",
       "issuer_url": "https://id.tamga.network",
       "status_list_base": "https://id.tamga.network/status/",
       "status": "ACTIVE",

@@ -4,7 +4,7 @@ title: "Participant registration data"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-24
 summary: >
   The relying party (RP) and issuer entries in the trust list carry the EU common registration data set (CIR 2025/848
   Annex I, as amended by CIR 2026/1730; EU technical specifications TS5/TS6): legal and trade name, official identifier,
@@ -79,6 +79,15 @@ organisational e-mail/phone); no personal names are written.
 - The publisher requires the mandatory K1/K2 fields for every new or updated entry. All entries are completed before the
   pilot.
 - The registration certificate ([[t:WRPRC]], `verifier_info`) and the registration API (TS5) are the next step.
+
+> **Addendum (2026-11-24) — the EU registration values (CIR 2025/848 Annex I):** (1) Entitlements are the EU's ten: the remaining
+> five of ETSI TS 119 475 Annex A are added to the existing five — `qcert_for_eseal_provider`, `qcert_for_esig_provider`,
+> `rqsealcds_provider`, `rqsigcds_provider`, `esig_eseal_creation_provider` (with the ETSI URIs in the registration certificate).
+> The qualified types (`qeaa_provider`, `qcert_*`, `rq*`) and `pid_provider` cannot be granted on the real network: the publisher
+> stops (Tamga holds no EU status; TL8); in the sandbox they are allowed as examples. The chain projection does not carry the new
+> types (the chain is off). (2) Organisation identifier types (`identifiers[].scheme`) come from an allowed list: the EU names
+> `EUID` (EU TS5 default), `EORI`, `LEI`, `VAT`; national numbers (business register, tax, excise and others — Annex I (3)(b), (e),
+> (f), (h)) as `<COUNTRY>-<NAME>` (today `TR-VKN`, `TR-MERSIS`). Any other value stops publication. Approved by project management.
 
 # Options considered
 
