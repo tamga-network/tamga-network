@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 qarşısındakı vəziyyəti, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli D-ASSUR-2 ilə qərara alınıb (2026-09-26); ETSI TS 119 461 qeydi 2026-11-24-də düzəldilib (ADR-0083 əlavəsi).
 translation_of: SPEC-ID-0003
@@ -13,6 +13,12 @@ source_version: "1.0.0"
 
 # Qısaca
 
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** Tamga şəxsiyyət xidmətinin kommersiya məqsədli məsafədən şəxsiyyət yoxlaması provayderi
+> ilə işləyən yolu çıxarıldı. Real şəbəkədə bu gün şəxsiyyət sənədi, təxəllüs toxumu və sürücülük vəsiqəsi məlumatları verilmir;
+> real şəxsiyyət yolu (dövlətin PID-i, ixtisaslaşdırılmış e-imza sertifikatı ilə şəxsiyyət və ya şəxsiyyət vəsiqəsinin çipi) ayrıca
+> qərarla açılana qədər. Sandbox-da şəxsiyyət addımı nümunə şəxslə aparılır. §3-ün ümumi qaydaları provayderdən istifadə edən hər
+> sənəd verən üçün qüvvədə qalır; §4–§5 tarixidir.
 Bu sənəd qurumun rəqəmsal sənədi verməzdən əvvəl şəxsin həqiqətən həmin şəxs olduğunu necə yoxladığını ([[t:identity-proofing|şəxsiyyətin yoxlanılması]])
 izah edir. Oxucuları [[t:issuer|sənədi verən]] qurumlar və şəxsiyyət yoxlama provayderi ilə inteqrasiya quran tərtibatçılardır.
 
@@ -109,6 +115,8 @@ qaydaları qüvvədədir ([[PM-ASSUR-0001]] §Decay).
 
 # 4. İstinad provayderi — protokol uyğunlaşdırması
 
+> **Tarixi (2026-11-25, [[ADR-0098]]):** istinad provayderi adapteri çıxarıldı; bu bölmə məlumat üçün qalır.
+
 İstinad adapteri uzaqdan şəxsiyyət yoxlaması provayderinin yerləşdirilmiş yoxlama axınından istifadə edir. Provayderin adı, API
 ünvanları və parametr adları operatorun konfiqurasiya sənədindədir; bu spesifikasiya yalnız provayderdən asılı olmayan qaydaları
 saxlayır. Provayder dəyişsə, adapter dəyişir; aşağıdakı qaydalar dəyişmir.
@@ -203,6 +211,11 @@ Saxlanılan qeyd (sənədi verən qurumun xidməti `data/<slug>/state.json › p
 ---
 
 # 9. Tamga şəxsiyyət sənədi xidməti
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** real şəbəkədə bu xidmət bu gün şəxsiyyət sənədi, təxəllüs toxumu və sürücülük vəsiqəsi
+> məlumatları vermir; bu növlər üçün sorğu aydın xəta ilə rədd edilir (`ADR-0098/IDR2`). Əlaqə sənədləri və mağaza yoxlama kodu
+> yolu (§9.2) təsirlənmir. Əvvəl verilmiş şəxsiyyət sənədləri müddəti bitənə qədər etibarlıdır; yenilənmir. Sandbox-da xidmət
+> nümunə şəxslərlə işləyir.
 
 Dövlət PID provayderi təyin edilənədək məsafədən şəxsiyyətin yoxlanılması **Tamga-nın şəxsiyyət xidmətində** (yoxlayan tərəf qismində) aparılır və nəticəsi
 rəqəmsal sənəd kimi rəqəmsal cüzdana verilir. Bu rəqəmsal sənəd PID deyil, Tamga-nın sənədi verən qurum kimi (`category: IDENTITY`, `class: EAA`,

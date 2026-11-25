@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -659,7 +659,8 @@ kriptoqrafik olaraq həll etmir ([[SPEC-CRED-0001]] §3, əhatə hüdudu). Üz-�
 bağlama ən güclüsüdür, çünki **prosedur** yoxlamasını rəqəmsal sənədin verilməsi anına keçirir.
 
 **Uzaqdan [[t:identity-proofing]] (T2):** lisenziyalı provayderlə sənəd + canlılıq + üz uyğunlaşdırması; profil və provayder
-inteqrasiyası [[SPEC-ID-0003]]. Tip ↔ minimum səviyyə [[FW-RB-0002]] §4.4 (tələbə sənədi T1, diplom T2).
+inteqrasiyası [[SPEC-ID-0003]]. Tip ↔ minimum səviyyə [[FW-RB-0002]] §4.4 (tələbə sənədi T1, diplom T2). Tamga şəxsiyyət
+xidmətində bu yol bu gün yoxdur: provayder çıxarıldı, real şəbəkədə şəxsiyyət sənədi verilmir, sandbox-da nümunə şəxs ([[ADR-0098]]).
 
 ## 11.1 Wallet unit yoxlanışı (D-CRED-6 — ETSI TS 119 471 REQ-EAASP-4.2.1.2-02/03)
 
@@ -733,7 +734,7 @@ tərəf beləliklə qurbanın tokenlərini bağlaya bilər (xidmətdən imtina; 
 kodu istifadə etməsinin qarşısını almaqdan əvvəl gəlir; rəqəmsal cüzdan yeni PAR ilə axını yenidən başladır.
 
 Tamga şəxsiyyət xidməti (`id.tamga.network`) eyni axını **brauzer** ilə işə salır: `/authorize` KVKK üzrə məlumatlandırma + açıq razılıq →
-uzaqdan yoxlama provayderi → `/idv/return` (qərar sorğusu) → `redirect_uri?code`. ETSI 472-3-ə əsasən T3 yalnız bu yolla
+şəxsiyyət yoxlaması addımı (bu gün yalnız sandbox-da, nümunə şəxslə — [[ADR-0098]]) → `/idv/return` (qərar sorğusu) → `redirect_uri?code`. ETSI 472-3-ə əsasən T3 yalnız bu yolla
 verilə bilər (pre-authorized ilə heç vaxt, IDP7). Metadata: `pushed_authorization_request_endpoint`, `authorization_endpoint`,
 `require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`; `grant_types_supported` qurum sənəd
 verənində hər iki grant, **şəxsiyyət xidmətində yalnız `authorization_code`** (və ZK nüsxəsi üçün `refresh_token`): şəxsiyyət xidməti
@@ -797,7 +798,7 @@ qalanları 400.
 |---|---|---|---|
 | `invalid_proof` | 400 | Sübut etibarsızdır (imza, `typ`, `aud`, `iat`, açar attestasiyası); açar saxlanması minimumdan aşağıdır; bir sorğuda **eyni açarla iki sübut** (PR6, sorğu başına); provayderin ləğv xidməti müddəti bitib (ISSU_12c) | **Eyni sübutla təkrar cəhd edilmir** — xəta bildirilir |
 | `invalid_nonce` | 400 | Sübutdakı `c_nonce` naməlumdur, müddəti bitib və ya **artıq istifadə olunub** — nonce ilk `await`-dən əvvəl atomik istifadə olunur (PR4) və sübut sonra rədd edilsə də geri qaytarılmır | Yeni `c_nonce` alınır, sübutlar yenidən imzalanır |
-| `invalid_credential_request` | 400 | Struktur səhvdir; istənilən konfiqurasiya bu tokenin əhatəsində deyil; ön şərt düşüb (dəvət kodu ləğv edilib, bağlı şəxsiyyət sənədi aktiv deyil, toxum şəxsiyyət sənədindən əvvəl istənib) | **Təkrar cəhd edilmir** — xəta bildirilir |
+| `invalid_credential_request` | 400 | Struktur səhvdir; istənilən konfiqurasiya bu tokenin əhatəsində deyil; ön şərt düşüb (bağlı şəxsiyyət sənədi aktiv deyil, toxum şəxsiyyət sənədindən əvvəl istənib) | **Təkrar cəhd edilmir** — xəta bildirilir |
 | `unknown_credential_configuration` | 400 | Sənədi verən qurum bu konfiqurasiyanı ümumiyyətlə təqdim etmir | Metadata yenilənir |
 | `unknown_credential_identifier` | 400 | `credential_identifier` göndərilib — Tamga token cavabında identifikator vermir | `credential_configuration_id` istifadə edilir |
 | `credential_request_denied` | 400 | Səlahiyyət yoxdur / sxem səlahiyyəti etibar siyahısından çıxarılıb; **qeyd sənəd verilməsinə uyğun deyil** (məzun qeydi yoxdur, bilet artıq verilib, qeyd tapılmadı, ZK nüsxəsi üçün əsas sənəd ləğvdədir) | **Təkrar cəhd edilmir**; quruma müraciət edilir |

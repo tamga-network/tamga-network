@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-24 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-25 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -31,6 +31,11 @@ a [[t:PID]]; it is a non-qualified EAA that uses the EU PID attribute names and 
 ## 1. Introduction
 
 ### 1.1 Scope and purpose
+
+> **Note (2026-11-25, [[ADR-0098]]):** no identity credential, pseudonym seed or driving licence data is issued on the real
+> network today; the commercial remote identity verification provider was removed. This rulebook applies once a real identity
+> path (the state PID, identity from a qualified e-signature certificate, or the ID card chip) is opened by a separate decision;
+> in the sandbox the identity step uses a sample person (treated as if the PID was issued and identity verified).
 
 This rulebook defines the four personal credential types issued by the Tamga Network identity service (`id.tamga.network`):
 
@@ -372,6 +377,11 @@ for matching, once one exists, is opened by a separate decision.
 
 ### 4.3 Identity proofing before issuance
 
+> **Note (2026-11-25, [[ADR-0098]]):** the provider that ran the document photo + liveness + face path was removed; the first
+> row below is not used today (the value `remote-document-liveness-face` appears only in credentials issued earlier and for the
+> sandbox's sample persons). The chip path is closed; opening it depends on the legal opinion and a chosen face matching method
+> (`ADR-0098/IDR4`).
+
 | Route                                        | Level                              | Note                                                                                                                                                                                                    |
 | -------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Remote: document, liveness and face matching | **T2**                             | `verification_method: remote-document-liveness-face`; a non-standard fallback path under ETSI TS 119 461 (documents without a chip, phones without NFC); no TS 119 461 level is claimed                 |
@@ -479,6 +489,9 @@ are issued; credentials already issued remain valid until they expire (RB-AP-ID-
 state PID; this type becomes `DEPRECATED` but stays verifiable.
 
 ### 4.8 Driving licence information — additional rules
+
+> **Note (2026-11-25, [[ADR-0098]]):** the provider flow that inspected the card was removed; this credential is not issued on the
+> real network and is tried in the sandbox with the fake provider's sample data.
 
 The person's physical driving licence card is inspected remotely (document + liveness + face matching) and the categories and dates
 on the card are issued as a credential ([[ADR-0039]]). **It is not an official driving licence and not an mDL;** it is not used in

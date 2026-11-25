@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 karşısındaki durumu,
@@ -18,6 +18,11 @@ summary: >
 
 # Kısaca
 
+
+> **Not (2026-11-25, [[ADR-0098]]):** Tamga kimlik servisinin ticari uzaktan kimlik doğrulama sağlayıcısıyla çalışan yolu
+> kaldırıldı. Gerçek ağda bugün kimlik belgesi, takma ad tohumu ve sürücü belgesi bilgisi verilmez; gerçek bir kimlik yolu
+> (devletin PID'i, nitelikli e-imza sertifikasıyla kimlik ya da kimlik kartı çipi) ayrı bir kararla açılana kadar. Sandbox'ta kimlik
+> adımı örnek kişiyle yapılır. §3'ün genel kuralları bir sağlayıcı kullanan her belge veren için geçerli kalır; §4–§5 tarihseldir.
 Bu belge, bir kurumun belge vermeden önce kişinin gerçekten o kişi olduğunu nasıl doğruladığını ([[t:identity-proofing|kimlik doğrulama]])
 anlatır. Okuru [[t:issuer|belge veren]] kurumlar ve kimlik doğrulama sağlayıcısıyla bağlantı kuran geliştiricilerdir.
 
@@ -113,6 +118,8 @@ kuralları geçerlidir ([[PM-ASSUR-0001]] §Decay).
 
 # 4. Referans sağlayıcı — protokol eşlemesi
 
+> **Tarihsel (2026-11-25, [[ADR-0098]]):** referans sağlayıcı bağdaştırıcısı kaldırıldı; bu bölüm bilgi için kalır.
+
 Referans adaptör, bir uzaktan kimlik doğrulama sağlayıcısının barındırılan doğrulama akışını kullanır. Sağlayıcının adı, API
 adresleri ve ayar adları işletmecinin yapılandırma belgesindedir; bu şartname yalnız sağlayıcıdan bağımsız kuralları tutar.
 Sağlayıcı değişirse adaptör değişir, aşağıdaki kurallar değişmez.
@@ -207,6 +214,11 @@ Saklanan kayıt (belge veren servis `data/<slug>/state.json › proofing[subject
 ---
 
 # 9. Tamga kimlik belgesi servisi
+
+> **Not (2026-11-25, [[ADR-0098]]):** gerçek ağda bu servis bugün kimlik belgesi, takma ad tohumu ve sürücü belgesi bilgisi
+> vermez; bu türlerin isteği açık bir hatayla reddedilir (`ADR-0098/IDR2`). İletişim belgeleri ve mağaza inceleme kodu yolu (§9.2)
+> etkilenmez. Daha önce verilmiş kimlik belgeleri süreleri dolana kadar geçerlidir; yenilenmez. Sandbox'ta servis örnek kişilerle
+> çalışır.
 
 Devlet PID sağlayıcısı atanana kadar uzaktan kimlik doğrulama **Tamga'nın kimlik servisinde** yapılır ve sonucu bir
 belge olarak cüzdana verilir. Bu belge PID değil, Tamga'nın belge veren olarak (`category: IDENTITY`, `class: EAA`,

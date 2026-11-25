@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-19 · **Licence** CC BY 4.0
+**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-25 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -161,6 +161,9 @@ Today: operated by a provisional operator on behalf of Tamga Network (foundation
 
 ### 4.4 Remote identity verification providers
 
+> **Note (2026-11-25, [[ADR-0098]]):** the Tamga identity service does not use a remote identity verification provider today.
+> The rules below apply to issuers that use such a provider and to a method chosen later by a separate decision.
+
 | #        | Rule                                                                                                                                                                                                                                                            |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | RB-AP-23 | If a remote identity verification provider is used, the issuer **MUST** store only the result summary (level, session identifier, time, provider); document images, face data and raw OCR data **MUST NOT** be kept in the issuer's system.                     |
@@ -168,6 +171,9 @@ Today: operated by a provisional operator on behalf of Tamga Network (foundation
 | RB-AP-25 | An institution using the hosted service **MUST** keep its API key on its own server (not in a browser, wallet or code); the key is renewed every 90 days (two keys are valid together for a while); on suspicion of a leak the institution requests revocation. |
 
 ### 4.5 RB-AP-ID — Identity credential provider
+
+> **Note (2026-11-25, [[ADR-0098]]):** no identity credential is issued on the real network today; the rules below apply once a
+> real identity path opens, and in the sandbox (with sample persons).
 
 | #           | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 534 kodlanmış değişmez, 98 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 538 kodlanmış değişmez, 99 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -1018,6 +1018,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0097/RG3` | Kayıt sertifikasındaki hizmet kimliği `serviceIdentifier` adıyla taşınır. |
 
 
+## ADR-0098
+
+*"Ticari uzaktan kimlik doğrulama sağlayıcısı kaldırılır; gerçek ağda kimlik belgesi verilmez"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0098/IDR1` | Kimlik servisi ticari bir uzaktan kimlik doğrulama sağlayıcısıyla konuşmaz; yeniden bağlamak ADR ister. |
+| `ADR-0098/IDR2` | Gerçek ağda kimlik servisi `IdentityAttestation`, `PseudonymSeed` ve sürücü belgesi bilgisi vermez; açılış yalnız gerçek bir kimlik yolu ADR'siyle. |
+| `ADR-0098/IDR3` | Sandbox'ta kimlik akışı yalnız sahte sağlayıcıyla çalışır; gerçek kişinin belgesi ya da yüzü işlenmez. |
+| `ADR-0098/IDR4` | Çip yolu, hukuki görüş ve seçilmiş bir yüz eşleştirme yöntemi olmadan açılmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1370,12 +1382,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 534 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 538 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CS, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PP, PR, PS, PV, R, RG, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, UL, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CS, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IDR, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PP, PR, PS, PV, R, RG, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, UL, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-24 (`scripts/sync-invariants.mjs`). Toplam 534 kodlanmış değişmez, 98 dokümanda.
+**Üretilen dosya** — 2026-11-25 (`scripts/sync-invariants.mjs`). Toplam 538 kodlanmış değişmez, 99 dokümanda.

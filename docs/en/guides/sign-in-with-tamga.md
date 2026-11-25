@@ -4,7 +4,7 @@ title: "Add “Sign in with Tamga”"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 summary: >
   Adding sign-up and sign-in with Tamga to a website: the `@tamga-network/verifier/web` kit on the page (QR code / open the
   wallet on the phone), fetching the result from the verifier on the server and opening a session, and passkey sign-in without
@@ -24,6 +24,8 @@ first. If you would rather do the whole verification on your own server, go to [
 
 **To try it:** the working sample site is on the test network: `https://verify.sandbox.tamga.network/sample-site` (once the
 sandbox is live; addresses and the test wallet setting are in [[GUIDE-0013]]). Tamga Verify on the real network has no sample site.
+The pseudonym seed is not issued on the real network today (it is derived from the person's identity, [[ADR-0098]]); sign-in is
+tried in the sandbox until a real identity path opens.
 
 ## How it works
 

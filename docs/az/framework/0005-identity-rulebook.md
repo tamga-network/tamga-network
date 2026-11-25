@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -22,6 +22,11 @@ source_version: "1.0.0"
 # 1. Giriş
 
 ## 1.1 Əhatə dairəsi və məqsəd
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** real şəbəkədə bu gün şəxsiyyət sənədi, təxəllüs toxumu və sürücülük vəsiqəsi məlumatları
+> verilmir; kommersiya məqsədli məsafədən şəxsiyyət yoxlaması provayderi çıxarıldı. Bu qaydalar kitabı real şəxsiyyət yolu
+> (dövlətin PID-i, ixtisaslaşdırılmış e-imza sertifikatı ilə şəxsiyyət və ya şəxsiyyət vəsiqəsinin çipi) ayrıca qərarla açıldıqda
+> tətbiq edilir; sandbox-da şəxsiyyət addımı nümunə şəxslə aparılır (PID verilmiş və şəxsiyyət təsdiqlənmiş sayılır).
 
 Bu [[t:rulebook]] Tamga Network şəxsiyyət xidmətinin (`id.tamga.network`) verdiyi dörd növ şəxsi rəqəmsal sənədi müəyyən edir:
 
@@ -366,6 +371,10 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 
 ## 4.3 Rəqəmsal sənəd verilməzdən əvvəl şəxsiyyətin yoxlanılması (yoxlayan tərəf — sənədi verən qurum)
 
+> **Qeyd (2026-11-25, [[ADR-0098]]):** sənəd fotoşəkli + canlılıq + üz yolunu aparan provayder çıxarıldı; aşağıdakı ilk sətir bu
+> gün istifadə edilmir (`remote-document-liveness-face` dəyəri yalnız əvvəl verilmiş sənədlərdə və sandbox-un nümunə şəxslərində
+> görünür). Çip yolu bağlıdır; onun açılması hüquqi rəydən və seçilmiş üz uyğunlaşdırma üsulundan asılıdır (`ADR-0098/IDR4`).
+
 | Yol | Səviyyə | Qeyd |
 |---|---|---|
 | Məsafədən: sənəd, canlılıq yoxlaması və üz uyğunlaşdırması | **T2** | `verification_method: remote-document-liveness-face`; ETSI TS 119 461-ə görə standartdan kənar ehtiyat yol (çipsiz sənədlər, NFC-si olmayan telefonlar); TS 119 461 səviyyəsi iddia edilmir |
@@ -463,6 +472,9 @@ müddəti bitənədək etibarlı qalır (RB-AP-ID-06). Yoxlayan tərəf siyasət
 `DEPRECATED` olur, lakin yoxlanıla bilən qalır.
 
 ## 4.8 Sürücülük vəsiqəsi məlumatları rəqəmsal sənədi — əlavə qaydalar
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** vəsiqəni yoxlayan provayder axını çıxarıldı; real şəbəkədə bu sənəd verilmir, sandbox-da
+> saxta provayderin nümunə məlumatları ilə sınanır.
 
 Şəxsin fiziki sürücülük vəsiqəsi kartı məsafədən yoxlanılır (sənəd + canlılıq + üz uyğunlaşdırması) və kartdakı kateqoriyalar və tarixlər
 rəqəmsal sənəd kimi verilir ([[ADR-0039]]). **Rəsmi sürücülük vəsiqəsi deyil, mDL deyil;** yol hərəkəti nəzarətində və rəsmi işlərdə

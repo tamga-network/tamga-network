@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Cüzdanın anahtar, depo, cihaz değişimi ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -635,8 +635,8 @@ Ayarlar → **Cüzdanı sıfırla ve verilerimi sil** (mağaza kuralları: uygul
 
 1. **Kimlik servisi** — kimlik servisinden alınmış her belge için alan açmadan sunum (SD-JWT VC + KB-JWT; aud = servis,
    nonce = servisin `/nonce`'ı) → `POST {id}/erasure`. Servis belgeyi kendi imzasından ve sahipliği `cnf` anahtarından
-   tanır; kaydı ve olay satırlarını siler, bütün kopyaları iptal eder, uzaktan kimlik doğrulama sağlayıcısındaki oturumu ve
-   görüntüleri sildirir ([[SPEC-ID-0003]] §9.1).
+   tanır; kaydı ve olay satırlarını siler, bütün kopyaları iptal eder; bir uzaktan kimlik doğrulama sağlayıcısı
+   kullanıldıysa oradaki oturumu ve görüntüleri sildirir ([[SPEC-ID-0003]] §9.1; bugün sağlayıcı yok, [[ADR-0098]]).
 2. **Cüzdan sağlayıcısı** — birim anahtarıyla imzalı `POST {wp}/units/delete`: birim iptal (WIA bitleri), sonra kayıt
    (açık anahtar, sürüm, cihaz kanıtı bilgisi) silinir ([[ADR-0025]]).
 3. **Cihaz** — bütün belgeler ve anahtarlar, takma ad tohumu, günlük, PIN (WL1: kurtarma yok).

@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -154,6 +154,9 @@ Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci iş
 
 ## 4.4 Uzaktan kimlik doğrulama sağlayıcıları
 
+> **Not (2026-11-25, [[ADR-0098]]):** Tamga kimlik servisi bugün bir uzaktan kimlik doğrulama sağlayıcısı kullanmaz. Aşağıdaki
+> kurallar böyle bir sağlayıcı kullanan belge verenler ve ileride ayrı bir kararla seçilecek yöntem için geçerlidir.
+
 | # | Kural |
 |---|---|
 | RB-AP-23 | Uzaktan kimlik doğrulama sağlayıcısı kullanılıyorsa belge veren **MUST** yalnızca sonuç özetini (seviye, oturum kimliği, zaman, sağlayıcı) saklamak; belge görüntüleri, yüz verisi ve OCR ham verisi belge verenin sisteminde **MUST NOT** tutulmak. |
@@ -161,6 +164,9 @@ Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci iş
 | RB-AP-25 | Barındırılan servisi kullanan kurum API anahtarını **MUST** kendi sunucusunda tutmak (tarayıcıya, cüzdana, koda koymamak); anahtar 90 günde yenilenir (iki anahtar bir süre birlikte geçerlidir); sızıntı şüphesinde kurum iptal ister. |
 
 ## 4.5 RB-AP-ID — Kimlik belgesi sağlayıcısı
+
+> **Not (2026-11-25, [[ADR-0098]]):** gerçek ağda kimlik belgesi bugün verilmez; aşağıdaki kurallar gerçek bir kimlik yolu
+> açıldığında ve sandbox'ta (örnek kişilerle) geçerlidir.
 
 | # | Kural |
 |---|---|

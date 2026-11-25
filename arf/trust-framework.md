@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
+**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-25 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -250,6 +250,11 @@ certificate T1, diploma T2). The issuer ensures this level before issuing; the l
 [[t:credential]]. The paths and the integration of remote identity verification providers are in [[SPEC-ID-0003]].
 
 ### 3.5 Provisional identity credential provider
+
+> **Note (2026-11-25, [[ADR-0098]]):** the commercial remote identity verification provider was removed. On the real network
+> no Tamga identity credential is issued today, until a real identity path (the state PID, identity from a qualified
+> e-signature certificate, or the ID card chip) is opened by a separate decision. The rules below apply once that path opens; in
+> the sandbox the identity step uses a sample person.
 
 Until a PID Provider appointed by the state exists, **Tamga Network** takes this role _provisionally_: after remote identity
 verification (document, liveness, face match; NFC may be added) it issues the Tamga identity credential to the wallet. Rules:

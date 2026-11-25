@@ -4,7 +4,7 @@ title: "Qurum kimi şəbəkəyə qoşulmaq"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Qurumun sənədi verən qurum kimi Tamga Network-a qoşulması, ilk təmasdan canlı istifadəyə qədər addım-addım: sandbox-da sınaq, müraciət faylı və Aİ-nin ümumi qeydiyyat məlumatları (yoxlama siyahısı), açarlar və sertifikat sorğusu (CSR), qurumun sorğu nöqtəsi, etibar siyahısına daxil olma və sənəd növü səlahiyyəti, Qurum Konsolu hesabı, ilk sənəd, ləğv və qeydiyyat dəyişiklikləri.
 translation_of: GUIDE-0007
@@ -200,6 +200,9 @@ rolu ilə), API açarı yaradır ([[ADR-0016]]) və paylaşım qaydalarını ida
 - **API:** tələbə portalınız və ya sisteminiz `@tamga-network/issuer/client` ilə təklif açır və keçidi öz kanalınızla
   ötürür (Tamga şəxsin əlaqə ünvanını görmür). Addımlar: [[GUIDE-0003]].
 - **Tələbə başladır:** tələbə rəqəmsal cüzdanında qurumunuzu seçib şəxsiyyət sənədini təqdim edir; servis sorğu nöqtənizə `lookup` ilə sorğu göndərir.
+
+**Bu gün real şəbəkədə** yalnız PIN-li təklif işləyir: real şəbəkədə şəxsiyyət sənədi verilmir ([[ADR-0098]]). Şəxsiyyətə bağlı
+təklif və tələbənin başlatdığı yol real şəxsiyyət yolu açılana qədər yalnız sandbox-da sınanır.
 
 Hər rəqəmsal sənəd şəxsin cihazındakı açara bağlı 10 nüsxəlik paket kimi verilir. Öz sənəd vermə servisinizi idarə edirsinizsə,
 eyni addımları `@tamga-network/issuer` paketi ilə özünüz yerinə yetirirsiniz ([[SPEC-PROTO-0001]]).

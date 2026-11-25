@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Today the identity service has a person verified entirely by an external remote identity verification provider (document
   photo, liveness, face match). Decision: the chip of the identity card or passport is read over NFC on the person's phone, in the
@@ -26,6 +26,10 @@ related: ["[[ADR-0011]]", "[[ADR-0022]]", "[[ADR-0040]]", "[[ADR-0042]]", "[[ADR
 translation_of: ADR-0083
 source_version: 1.0.0
 ---
+
+> **Note (2026-11-25, [[ADR-0098]]):** the provider that performed the face and liveness check was removed. The chip path stays
+> closed; besides the legal opinion, opening it requires a face matching and liveness method chosen by a separate ADR (IDR4).
+> The K1(b) photo path does not exist.
 
 # In short
 

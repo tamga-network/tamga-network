@@ -4,7 +4,7 @@ title: "Verified driving licence information"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-04
+last_updated: 2026-11-25
 summary: >
   The Tamga identity service inspects a person's physical driving licence with its remote identity verification provider
   (document + liveness + face match) and issues the driving information printed on the card (categories, validity, issuing
@@ -17,6 +17,9 @@ domain: Credentials
 translation_of: ADR-0039
 source_version: 1.0.0
 ---
+
+> **Note (2026-11-25, [[ADR-0098]]):** the provider flow that sourced driving licence data was removed. This credential is not
+> issued on the real network; in the sandbox it is tried with the fake provider's sample data.
 
 # In brief
 

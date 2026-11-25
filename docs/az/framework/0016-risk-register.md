@@ -4,7 +4,7 @@ title: "Risk reyestri"
 status: Active
 version: 1.0.0
 created: 2026-11-16
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga Network-ün risk reyestri: Aİ-nin rəqəmsal cüzdanlar üçün ortaq risk reyestrinin (İcra Reqlamenti (Aİ) 2024/2981
   Əlavə I; Aİ ARF Əlavə 6) 14 yüksək səviyyəli riski, 3 sistem riski, 5 texniki təhdid ailəsi və 133 təhdid ssenarisi üçün
@@ -120,7 +120,7 @@ Texniki təhdidlər bir riskə bağlı deyil; bir çox hücumun vasitəsidir.
 | TR2 | Mövcud olmayan, uydurma elektron şəxsiyyətlər vermək. | R2 | Şəxsiyyət xidməti | Şəxsiyyət sənədi növün səviyyəsi təmin edilmədən verilmir ([[SPEC-ID-0003]]/IDP2, RB-AP-11); müstəqil audit yoxdur. | Qismən |
 | TR3 | İcazəsiz PID verməyə başlamaq. | R2 | Operator | Tamga PID vermir ([[SPEC-TRUST-0001]]/TL8); növ icazəsi icazə siyahısı ilədir, standart olaraq bağlıdır (RB-REG-04) və yoxlamada keçilə bilməz ([[SPEC-API-0001]]/AP8). | Qarşılanıb |
 | TR4 | İdarəçiyə səhv provayderi etibar siyahısına daxil etdirmək. | R2 | Operator | Siyahıya giriş qoşulma baxışı ilədir ([[FW-ONB-0001]]); hər dəyişiklik açıq dəyişiklik jurnalındadır (RB-OP-07). Siyahı imzası yeganə operatordadır, açar mərasimi və aparat təhlükəsizlik modulu gözlənilir (FW-ARF-0001 §7.4 L1). | Qismən |
-| TR5 | Uzaqdan şəxsiyyət yoxlaması xidmətini yan keçmək. | R1 / R2 | Şəxsiyyət xidməti | Lisenziyalı provayderlə sənəd, canlılıq və üz yoxlaması; provayderin qərarı imzalı bildiriş və qərar sorğusu ilə təsdiqlənir ([[SPEC-ID-0003]]/IDP5); keçid ötürülməsinə qarşı son təsdiq ([[ADR-0080]]/VL1–VL3). | Qismən |
+| TR5 | Uzaqdan şəxsiyyət yoxlaması xidmətini yan keçmək. | R1 / R2 | Şəxsiyyət xidməti | Kommersiya provayderi yolu çıxarıldı; real şəbəkədə şəxsiyyət sənədi verilmir, sandbox-da yalnız nümunə şəxs ([[ADR-0098]]/IDR1–IDR3); keçid ötürülməsinə qarşı son təsdiq ([[ADR-0080]]/VL1–VL3). | Qismən |
 | TR6 | Üzbəüz şəxsiyyət yoxlaması xidmətini yan keçmək. | R1 / R2 | Şəxsiyyət xidməti | Üzbəüz yol şəxsiyyət qaydalar kitabında T2 səviyyəsi kimi müəyyən edilib ([[FW-RB-0003]]); üzbəüz yoxlamanın qaydası ayrıca yazılmayıb. | Qismən |
 | TR7 | Uzaqdan (kvalifikasiyalı) sertifikata əsaslanan şəxsiyyət yoxlamasını yan keçmək. | R1 / R2 | Şəxsiyyət xidməti | Bu yol təqdim edilmir; kvalifikasiyalı imzaya əsaslanan T3 səviyyəsi bu gün verilmir ([[SPEC-ID-0003]]/IDP7). | Tətbiq edilmir |
 | TR8 | Şəxsə bağlı olmayan rəqəmsal cüzdana giriş əldə etmək. | R1 / R2 | Cüzdan provayderi | Hər təqdimat istifadəçi yoxlaması tələb edir ([[SPEC-WALLET-0001]]/WL11, RB-WP-03); sənədlər şəxsin şəxsiyyət yoxlamasından sonra verilir. Rəqəmsal cüzdanın şəxsə bağlanması cihazın istifadəçi yoxlamasına əsaslanır. | Qismən |

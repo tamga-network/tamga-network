@@ -4,7 +4,7 @@ title: "Join the network as an institution"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   How an institution joins Tamga Network as an issuer, from first contact to live, step by step: the sandbox trial, the
   application file and the EU common registration data (checklist), keys and the certificate signing request (CSR), the
@@ -211,6 +211,9 @@ Console (as administrator or staff), create API keys ([[ADR-0016]]) and manage s
   channel (Tamga never sees the person's contact address). Steps: [[GUIDE-0003]].
 - **The student starts:** the student picks your institution in the wallet and shows their identity attestation; the service asks
   your lookup endpoint with `lookup`.
+
+**On the real network today** only the PIN offer works: no identity credential is issued on the real network ([[ADR-0098]]). The
+identity-bound offer and the student-initiated path are tried only in the sandbox until a real identity path opens.
 
 Every credential is issued as a package of 10 copies bound to keys on the person's device. If you run your own issuing service you
 do the same steps yourself with the `@tamga-network/issuer` package ([[SPEC-PROTO-0001]]).

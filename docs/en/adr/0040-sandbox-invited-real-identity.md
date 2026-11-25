@@ -1,10 +1,10 @@
 ---
 document_id: ADR-0040
 title: "Real identity checks in sandbox"
-status: Active
+status: Superseded
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-11-04
+last_updated: 2026-11-25
 summary: >
   In the sandbox the identity flow offers two options: "Verify with your real identity" and "Quick trial (made-up
   person)". The real path is open to everyone (the invitation code remains as an optional mode) and shares the real network's
@@ -18,6 +18,9 @@ domain: Identity
 translation_of: ADR-0040
 source_version: 1.0.0
 ---
+
+> **Superseded (2026-11-25, [[ADR-0098]]):** the sandbox real identity verification path and the invite mode were removed; the
+> sandbox identity flow works only with sample persons (the original text of ADR-0038 SB3 applies again). This document is historical.
 
 > **Note (2026-10-28):** "the real path is open to everyone" in the summary is the original text. After the GDPR/KVKK
 > preliminary review the default mode is `invite`: until the legal review ends the real path opens only with a valid invitation

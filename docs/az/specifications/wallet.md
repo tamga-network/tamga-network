@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, cihaz dəyişməsi və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; cüzdan sənədlərin ehtiyat nüsxəsini almır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur; cihazdan kənara daşınan yeganə şey şəxsin başlatdığı köçürmə faylıdır ([[ADR-0078]]). Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -581,8 +581,8 @@ Parametrlər → **Cüzdanı sıfırla və məlumatlarımı sil** (mağaza qayda
 
 1. **Şəxsiyyət xidməti** — şəxsiyyət xidmətindən alınmış hər rəqəmsal sənəd üçün sahə açmadan təqdimat (SD-JWT VC + KB-JWT; aud = yoxlayan tərəf kimi xidmət,
    nonce = xidmətin `/nonce`-ı) → `POST {id}/erasure`. Xidmət rəqəmsal sənədi öz imzasından, sahibliyi isə `cnf` açarından
-   tanıyır; qeydi və hadisə sətirlərini silir, bütün nüsxələri ləğv edir, uzaqdan şəxsiyyət doğrulaması provayderindəki sessiyanı və
-   təsvirləri sildirir ([[SPEC-ID-0003]] §9.1).
+   tanıyır; qeydi və hadisə sətirlərini silir, bütün nüsxələri ləğv edir; uzaqdan şəxsiyyət doğrulaması provayderindən
+   istifadə edilibsə, oradakı sessiyanı və təsvirləri sildirir ([[SPEC-ID-0003]] §9.1; bu gün provayder yoxdur, [[ADR-0098]]).
 2. **Cüzdan provayderi** — cüzdan vahidinin açarı ilə imzalanmış `POST {wp}/units/delete`: cüzdan vahidi ləğv edilir (WIA bitləri), sonra qeyd
    (açıq açar, versiya, cihaz sübutu məlumatı) silinir ([[ADR-0025]]).
 3. **Cihaz** — bütün rəqəmsal sənədlər və açarlar, psevdonim toxumu, jurnal, PIN (WL1: bərpa yoxdur).

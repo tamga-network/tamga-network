@@ -4,11 +4,11 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
   sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
-  kurumunu test kurumu olarak denemek, gerçek kimliğinle kimlik doğrulama adımları, kurallar ve sıfırlama.
+  kurumunu test kurumu olarak denemek, kimlik adımının örnek kişiyle yapılması, kurallar ve sıfırlama.
 ---
 
 # Sandbox: test ağı
@@ -31,8 +31,8 @@ yalnız güven kökü, anahtarlar, güven listeleri ve veriler ayrıdır ve saht
 - Sandbox [[t:LOTL]]'u ve ulusal listesi kendini `"environment": "sandbox"` alanıyla test olarak işaretler
   ([[SPEC-TRUST-0001]] §3). Gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı bu listeyi kabul etmez
   (`ADR-0038/SB2`).
-- Kişiler, etkinlikler ve belgeler örnektir; gerçek kişisel veri yoktur. Kimlik doğrulama varsayılan olarak sahte bir
-  sağlayıcıyla yapılır (`ADR-0038/SB3`); isteyen herkes gerçek kimlik doğrulama adımlarını da deneyebilir (§8, [[ADR-0040]]).
+- Kişiler, etkinlikler ve belgeler örnektir; gerçek kişisel veri yoktur. Kimlik doğrulama yalnız sahte bir
+  sağlayıcıyla, örnek kişilerle yapılır (`ADR-0038/SB3`, [[ADR-0098]]; §8).
   Örnek kurumların adları uydurmadır; gerçek bir kurumu temsil etmez (aşağıdaki nota bakın).
 - Her sandbox sayfası ve sandbox'a bağlı her cüzdan ekranı "SANDBOX · test" işaretini gösterir (`ADR-0038/SB4`).
 - Veriler her gece ilk hâline döner (`ADR-0038/SB5`).
@@ -52,7 +52,7 @@ Sandbox, gerçek ağın adres düzenini `sandbox` alt adıyla tekrarlar. Bir cü
 | `https://status.sandbox.tamga.network` | iptal listeleri (Token Status List) | `status.tamga.network` |
 | `http(s)://crl.sandbox.tamga.network/<makam>.crl` | erişim sertifikalarının iptal listesi (RFC 5280 CRL; `http` ve `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test doğrulayıcısı ([[t:OpenID4VP]]) | `verify.tamga.network` |
-| `https://id.sandbox.tamga.network` | kimlik ve iletişim belgeleri; hızlı deneme (sahte kişi) ya da gerçek kimlikle doğrulama | `id.tamga.network` |
+| `https://id.sandbox.tamga.network` | kimlik ve iletişim belgeleri; kimlik adımı örnek kişiyle (hızlı deneme) | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Kurum Konsolu — yalnız sandbox'ta açılan test kurumları için | `console.tamga.network` |
 
 Sandbox'ın kendi cüzdan sağlayıcısı yoktur: ağ cüzdan sağlayıcısı işletmez, cüzdan geliştiricileri kendi sağlayıcılarını
@@ -227,30 +227,16 @@ Diploma ve biletin teklif sayfasında **iptal et**, **askıya al** ve **geri al*
 yayınladığında etkili olur (sabit aralıklı yayın; anında değil). Ardından aynı belgeyi bir örnek doğrulayıcıda yeniden
 gösterin: iptal edilmiş ya da askıdaki belge kabul edilmemelidir. Öğrenci belgesi kısa ömürlüdür ve durum listesi taşımaz.
 
-## 8. Gerçek kimliğinle dene
+## 8. Kimlik adımı: örnek kişiyle
 
-Sandbox'ta kimlik akışı iki seçenek sunar ([[ADR-0040]]): **Gerçek kimliğinle doğrula** — uzaktan kimlik doğrulama sağlayıcısının gerçek adımları
-(belgenin taranması, canlılık, yüz eşleştirme) — ya da **Hızlı deneme (sahte kişi)** — uydurma bir kişi seçip onaylarsınız.
-Hızlı deneme herkese açıktır. Gerçek yol, veri koruma hukuki incelemesi bitene kadar **varsayılan olarak davet koduyla** açılır
-(`ADR-0040/RI1`, 2026-10-28 notu); kodu sandbox ekibinden isteyin (`support@tamga.network`). Kodunuz yoksa hızlı denemeyi kullanın.
+Sandbox'ta kimlik akışında gerçek bir kimlik doğrulama yoktur ([[ADR-0098]]). Kimlik belgesi eklerken **Hızlı deneme
+(sahte kişi)** ile örnek kişilerden birini seçip onaylarsınız; kişiye PID verilmiş ve uzaktan kimlik doğrulama yapılmış sayılır.
+Gerçek kişinin belgesi ya da yüzü işlenmez (`ADR-0098/IDR3`). "Bu sen misin?" son onayı ([[ADR-0080]]) gerçek ağdaki gibi
+çalışır. AB biçiminde PID denemek için sandbox'taki temsili PID makamlarını kullanın ([[ADR-0094]]).
 
-1. Cüzdanı sandbox'a bağlayın ve kimlik belgesi eklemeyi başlatın.
-2. Kimlik servisinin sayfasında aydınlatmayı onaylayın, davet kodunu yazın ve "Gerçek kimliğinle doğrula" seçin.
-3. Açılan uyarıyı okuyup onaylayın: "Bu bir test ortamıdır; gerçek kimliğinle deniyorsun; verilerin her gece silinir;
-   sağlayıcıdaki oturumun silinmesi belge verilir verilmez istenir." Onay olmadan sağlayıcıya gidilmez (`ADR-0040/RI3`).
-4. Sağlayıcının sayfasında adımları tamamlayın; test belgesi cüzdana gelir. Sandbox, gerçek ağın sağlayıcı hesabını kullanır; belgeyi imzalayan
-   anahtarlar ve kayıtlar ise ayrıdır (`ADR-0040/RI2`).
-
-Ücretsiz doğrulama hakkı gerçek ağla ortak olduğu için gerçek yolun **günlük ve aylık bir tavanı** vardır. Tavan dolunca
-yalnız hızlı deneme görünür ("Bugünlük kota doldu, hızlı denemeyi kullan"); her akışta en çok bir gerçek oturum açılır
-(`ADR-0040/RI7`).
-
-Belgeye yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer; gerçek kimlik numarası ve belge numarası yerine
-rastgele bir `SANDBOX-…` değeri yazılır (`ADR-0040/RI4`). Sağlayıcıdaki doğrulama oturumunun silinmesi belge verilir verilmez ya da
-doğrulama başarısız olursa hemen, yarım bırakılırsa yaklaşık bir saat içinde, en geç gece sıfırlamasında istenir (`ADR-0040/RI5`);
-sağlayıcı kendi saklama ayarı içinde siler. Davet kodları kişiye özel (tek kullanım, en çok 7 gün) ya da süreli (en çok 72 saat, en
-çok 25 kullanım) olur, tavanı aşamaz ve gece sıfırlamasında silinir. Sandbox yöneticisi, hukuki inceleme bittikten sonra gerçek yolu
-herkese açık kipe alabilir.
+Gerçek ağda bugün kimlik belgesi verilmez: devletin PID'i, nitelikli e-imza sertifikasıyla kimlik ya da kimlik kartı çipi gibi
+gerçek bir kimlik yolu ayrı bir kararla açılana kadar (`ADR-0098/IDR2`). Kimlik belgesi isteyen akışlar (kimliğe bağlı teklif,
+kişinin başlattığı belge isteği, yaş doğrulama) bu süre içinde yalnız sandbox'ta denenir.
 
 ## 9. Kurumunu dene
 
@@ -280,8 +266,7 @@ katılımın kurum tarafındaki adımları (başvuru dosyası, anahtarlar ve CSR
 
 ## Kurallar ve sınırlar
 
-- **Gerçek kişisel veri girmeyin.** Sandbox'a yalnız örnek kişiler, örnek adresler ve uydurma kayıtlar girer; tek istisna
-  kendi seçtiğiniz gerçek kimlik denemesidir (§8) ve orada belgeye yalnız ad, soyad ve doğum tarihi geçer.
+- **Gerçek kişisel veri girmeyin.** Sandbox'a yalnız örnek kişiler, örnek adresler ve uydurma kayıtlar girer.
 - **Kalıcılık beklemeyin.** Sandbox verileri her gece 03:30'da (Türkiye saati) ilk hâline döner: verilen belgelerin kayıtları,
   iptal listeleri ve çapa günlüğü sıfırlanır. Cüzdanınızdaki sandbox belgeleri sıfırlamadan sonra doğrulanamayabilir; yeniden
   alın. Güven kökü ve listelerin imza anahtarları sıfırlanmaz; cüzdandaki sandbox pinleri değişmez.
@@ -291,4 +276,4 @@ katılımın kurum tarafındaki adımları (başvuru dosyası, anahtarlar ve CSR
 
 ## İlgili
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]
+[[ADR-0038]] · [[ADR-0098]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

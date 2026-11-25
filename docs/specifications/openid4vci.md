@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -667,7 +667,8 @@ kriptografik olarak çözmez ([[SPEC-CRED-0001]] §3, kapsam sınırı). Yüz y�
 bağlama en güçlüsüdür çünkü **prosedürel** doğrulamayı belge verme anına taşır.
 
 **Uzaktan [[t:identity-proofing]] (T2):** lisanslı sağlayıcıyla belge + canlılık + yüz eşleştirme; profil ve sağlayıcı
-entegrasyonu [[SPEC-ID-0003]]. Tip ↔ asgari seviye [[FW-RB-0002]] §4.4 (öğrenci belgesi T1, diploma T2).
+entegrasyonu [[SPEC-ID-0003]]. Tip ↔ asgari seviye [[FW-RB-0002]] §4.4 (öğrenci belgesi T1, diploma T2). Tamga kimlik servisinde
+bu yol bugün yoktur: sağlayıcı kaldırıldı, gerçek ağda kimlik belgesi verilmez, sandbox'ta örnek kişi ([[ADR-0098]]).
 
 ## 11.1 Wallet unit doğrulaması (D-CRED-6 — ETSI TS 119 471 REQ-EAASP-4.2.1.2-02/03)
 
@@ -741,7 +742,7 @@ böylece kurbanın belirteçlerini düşürebilir (hizmet reddi; veri açığa �
 kodu kullanmasını engellemekten önce gelir; cüzdan yeni bir PAR ile akışı yeniden başlatır.
 
 Tamga kimlik servisi (`id.tamga.network`) aynı akışı **tarayıcı** ile çalıştırır: `/authorize` KVKK aydınlatma + açık rıza →
-uzaktan doğrulama sağlayıcısı → `/idv/return` (karar sorgulama) → `redirect_uri?code`. ETSI 472-3 uyarınca T3 yalnızca bu yolla
+kimlik doğrulama adımı (bugün yalnız sandbox'ta, örnek kişiyle — [[ADR-0098]]) → `/idv/return` (karar sorgulama) → `redirect_uri?code`. ETSI 472-3 uyarınca T3 yalnızca bu yolla
 verilebilir (pre-authorized ile asla, IDP7). Metadata: `pushed_authorization_request_endpoint`, `authorization_endpoint`,
 `require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`; `grant_types_supported` kurum belge
 vereninde iki grant, **kimlik servisinde yalnız `authorization_code`** (ve ZK kopyası için `refresh_token`): kimlik servisi
@@ -805,7 +806,7 @@ error="invalid_token"|"invalid_dpop_proof", algs="ES256"` başlığı (RFC 6750 
 |---|---|---|---|
 | `invalid_proof` | 400 | Kanıt geçersiz (imza, `typ`, `aud`, `iat`, anahtar kanıtı); anahtar deposu alt sınırın altında; bir istekte **aynı anahtarla iki kanıt** (PR6, istek başına); sağlayıcının iptal bakım süresi bitmiş (ISSU_12c) | **Aynı kanıtla tekrar deneme** — hata bildir |
 | `invalid_nonce` | 400 | Kanıttaki `c_nonce` bilinmiyor, süresi dolmuş ya da **tüketilmiş** — nonce ilk `await`'ten önce atomik tüketilir (PR4); kanıt sonra reddedilse de geri konmaz | Yeni `c_nonce` al, kanıtları yeniden imzala |
-| `invalid_credential_request` | 400 | Yapı hatalı; istenen yapılandırma bu belirtecin kapsamında değil; ön koşul düşmüş (davet kodu iptal, bağlı kimlik belgesi etkin değil, tohum kimlik belgesinden önce istendi) | **Tekrar deneme** — hata bildir |
+| `invalid_credential_request` | 400 | Yapı hatalı; istenen yapılandırma bu belirtecin kapsamında değil; ön koşul düşmüş (bağlı kimlik belgesi etkin değil, tohum kimlik belgesinden önce istendi) | **Tekrar deneme** — hata bildir |
 | `unknown_credential_configuration` | 400 | Belge veren bu yapılandırmayı hiç sunmuyor | Metadata'yı yenile |
 | `unknown_credential_identifier` | 400 | `credential_identifier` gönderildi — Tamga belirteç yanıtında tanımlayıcı vermez | `credential_configuration_id` kullan |
 | `credential_request_denied` | 400 | Yetki yok / şema yetkisi güven listesinde düşmüş; **kayıt belge vermeye uygun değil** (ör. mezuniyet kaydı yok, bilet zaten verildi, kayıt bulunamadı, ZK kopyası için ana belge iptalde) | **Tekrar deneme**; kuruma başvur |

@@ -4,7 +4,7 @@ title: "Qurum kimi rəqəmsal sənəd vermək"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-04
+last_updated: 2026-11-25
 summary: >
   Universitet, dövlət qurumu və ya bilet satıcısı kimi şəxslərin rəqəmsal cüzdanına rəqəmsal sənəd vermək: Tamga-nın yerləşdirdiyi sənəd vermə xidmətini `@tamga-network/issuer/client` ilə çağırmaq (təklif, bilet satışı, ləğv/müvəqqəti dayandırma) və ya öz sənəd vermə xidmətinizi `@tamga-network/issuer` kitabxanası ilə qurmaq. Xarici giriş hər qurum üçün əhatə dairəsi məhdudlaşdırılmış API açarı ilə həyata keçirilir (ADR-0016).
 translation_of: GUIDE-0003
@@ -77,6 +77,10 @@ Xətalar `IssuerClientError` (`status` + mesaj) şəklində qaytarılır. Açar 
 - **PIN-li təklif:** şəxsiyyət sənədi olmayan şəxs üçün ehtiyat yol. PIN təklif keçidi ilə eyni kanaldan göndərilmir.
 - **Bilet:** fərdi məlumat daşımır; şəxsiyyət tələb olunmur.
 
+**Bu gün real şəbəkədə** yalnız PIN-li təklif və bilet işləyir: real şəbəkədə şəxsiyyət sənədi verilmir ([[ADR-0098]]), buna görə
+şəxsiyyətə bağlı təklif və şəxsin başlatdığı sorğu yolu (`lookup`) real şəxsiyyət yolu açılana qədər yalnız sandbox-da sınanır.
+Sorğu nöqtənizin `fetch` əməliyyatı hər yolda eynidir.
+
 ### API açarı
 
 Tamga operatoru qurumunuz üçün əhatə dairəsi məhdud açar yaradır (`tmg_<slug>_…`; məs. yalnız `tickets:write` + `revocations:write`)
@@ -109,7 +113,8 @@ Tamga API-sinin tam təsviri: [Sənəd vermə API-si](/api/issuer).
 - Rəqəmsal sənəd sahələrini yalnız rəqəmsal sənəd üçün istifadə edin; onları loglara, URL-ə, ləğv siyahısına yazmayın.
 - Şəxsi öz qeydinizlə uyğunlaşdırmalısınızsa (diplom, tələbə arayışı), [[t:identity-proofing|şəxsiyyətin yoxlanılması]]
   **Tamga şəxsiyyət sənədi** ilə aparılır: rəqəmsal cüzdan şəxsiyyət sənədini təqdim edir, Tamga isə yoxlayan tərəf kimi onu təklifdəki xülasə ilə və ya sorğu endpoint-iniz (`lookup`) ilə uyğunlaşdırır. Şəxsiyyət
-  provayderi ilə birbaşa əlaqə saxlamırsınız ([[ADR-0011]]).
+  provayderi ilə birbaşa əlaqə saxlamırsınız ([[ADR-0011]]). Real şəbəkədə bu gün şəxsiyyət sənədi verilmir; bu müddətdə PIN-li
+  təklifdən istifadə edin ([[ADR-0098]]).
 - Bilet kimi fərdi məlumat tələb etməyən rəqəmsal sənədlərdə şəxsiyyət sənədi istəməyin.
 
 ## Paylaşım qaydası: sənəd kimlərə göstərilsin {#sharing-rules}

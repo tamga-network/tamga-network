@@ -4,7 +4,7 @@ title: "Geçici kimlik belgesi sağlayıcısı"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-11-13
+last_updated: 2026-11-25
 summary: >
   Devlet tarafından atanmış bir PID Provider bulunmadığı sürece Tamga, uzaktan
   kimlik doğrulama (uzaktan kimlik doğrulama sağlayıcısı: belge + canlılık + yüz eşleştirme; ileride NFC çip
@@ -17,6 +17,10 @@ summary: >
   TL8 korunur (pid_providers[] boş), IDP3 yeniden ifade edilir.
 domain: Identity
 ---
+
+> **Not (2026-11-25, [[ADR-0098]]):** ticari uzaktan kimlik doğrulama sağlayıcısı kaldırıldı. Gerçek ağda kimlik servisi kimlik
+> belgesi vermez; gerçek bir kimlik yolu (devletin PID'i, nitelikli e-imza sertifikasıyla kimlik ya da kimlik kartı çipi) ayrı bir
+> ADR ile açılana kadar. Sandbox'ta yalnız sahte kişi. Aşağıdaki kimlik ispatı yöntemi tarihseldir.
 
 > **[[ADR-0022]] ile kısmen değiştirildi (2026-09-29):** kimlik servisinin sınıfı QUALIFIED / I3 değil, nitelikli olmayan EAA /
 > I2'dir; kimlik belgesi `category` claim'i taşımaz. Bağımsız uygunluk değerlendirmesinden sonra yeniden yükseltilebilir. Diğer

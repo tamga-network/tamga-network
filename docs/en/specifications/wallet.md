@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Defines the wallet's key, storage, device change and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -614,7 +614,8 @@ Settings → **Reset the wallet and delete my data** (store rules: in-app deleti
 1. **Identity service** — for every credential obtained from the identity service, a presentation with no claims disclosed
    (SD-JWT VC + KB-JWT; aud = the service, nonce = the service's `/nonce`) → `POST {id}/erasure`. The service recognises the
    credential by its own signature and possession by the `cnf` key; it deletes the record and its event rows, revokes all
-   copies, and has the session and images deleted at the remote identity verification provider ([[SPEC-ID-0003]] §9.1).
+   copies, and, if a remote identity verification provider was used, has the session and images deleted there ([[SPEC-ID-0003]]
+   §9.1; no provider today, [[ADR-0098]]).
 2. **Wallet provider** — `POST {wp}/units/delete` signed with the unit key: the unit is revoked (WIA bits), then the record
    (public key, version, device attestation data) is deleted ([[ADR-0025]]).
 3. **Device** — all credentials and keys, the pseudonym seed, the log, the PIN (WL1: no recovery).

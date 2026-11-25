@@ -4,9 +4,9 @@ title: "Sandbox: test şəbəkəsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 summary: >
-  Real şəbəkədən ayrı olan test şəbəkəsi sandbox.tamga.network ilə başdan-sona sınaq: ünvanlar, etibar lövbərinin sabitlənməsi, rəqəmsal cüzdanın sandbox-a qoşulması, cüzdan tərtibatçısı kimi öz cüzdan provayderinizin sandbox siyahısında qeydiyyata alınması, nümunə şəxslərlə rəqəmsal sənəd alınması, nümunə yoxlayan tərəflərdə təqdim edilməsi, ləğv və dayandırma vəziyyətlərinin sınanması, qurumunuzun test qurumu kimi sınanması, real şəxsiyyətinizlə şəxsiyyətin təsdiqi addımları, qaydalar və sıfırlama.
+  Real şəbəkədən ayrı olan test şəbəkəsi sandbox.tamga.network ilə başdan-sona sınaq: ünvanlar, etibar lövbərinin sabitlənməsi, rəqəmsal cüzdanın sandbox-a qoşulması, cüzdan tərtibatçısı kimi öz cüzdan provayderinizin sandbox siyahısında qeydiyyata alınması, nümunə şəxslərlə rəqəmsal sənəd alınması, nümunə yoxlayan tərəflərdə təqdim edilməsi, ləğv və dayandırma vəziyyətlərinin sınanması, qurumunuzun test qurumu kimi sınanması, şəxsiyyət addımının nümunə şəxslə aparılması, qaydalar və sıfırlama.
 translation_of: GUIDE-0013
 source_version: "1.0.0"
 ---
@@ -31,8 +31,8 @@ yalnız etibar kökü, açarlar, etibar siyahıları və məlumatlar ayrıdır v
 - Sandbox-un [[t:LOTL]]-u və milli siyahısı özlərini `"environment": "sandbox"` sahəsi ilə test kimi işarələyir
   ([[SPEC-TRUST-0001]] §3). Real şəbəkə üçün konfiqurasiya edilmiş rəqəmsal cüzdan və ya yoxlayan tərəf bu siyahını qəbul etmir
   (`ADR-0038/SB2`).
-- Şəxslər, tədbirlər və rəqəmsal sənədlər nümunədir; real fərdi məlumatlar yoxdur. Şəxsiyyətin təsdiqi standart olaraq saxta
-  provayderlə aparılır (`ADR-0038/SB3`); istəyən hər kəs real şəxsiyyət təsdiqi addımlarını da sınaya bilər (§8, [[ADR-0040]]).
+- Şəxslər, tədbirlər və rəqəmsal sənədlər nümunədir; real fərdi məlumatlar yoxdur. Şəxsiyyətin təsdiqi yalnız saxta
+  provayderlə, nümunə şəxslərlə aparılır (`ADR-0038/SB3`, [[ADR-0098]]; §8).
   Nümunə qurumların adları uydurmadır; heç bir real qurumu təmsil etmir (aşağıdakı qeydə baxın).
 - Hər sandbox səhifəsi və sandbox-a qoşulmuş hər cüzdan ekranı "SANDBOX · test" işarəsini göstərir (`ADR-0038/SB4`).
 - Məlumatlar hər gecə ilkin vəziyyətinə qaytarılır (`ADR-0038/SB5`).
@@ -52,7 +52,7 @@ lövbərini dəyişməklə keçid edir.
 | `https://status.sandbox.tamga.network` | ləğv siyahıları (Token Status List) | `status.tamga.network` |
 | `http(s)://crl.sandbox.tamga.network/<authority>.crl` | giriş sertifikatlarının ləğv siyahısı (RFC 5280 CRL; `http` və `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test yoxlayan tərəfi ([[t:OpenID4VP]]) | `verify.tamga.network` |
-| `https://id.sandbox.tamga.network` | şəxsiyyət və əlaqə sənədləri; sürətli sınaq (saxta şəxs) və ya real şəxsiyyətlə təsdiq | `id.tamga.network` |
+| `https://id.sandbox.tamga.network` | şəxsiyyət və əlaqə sənədləri; şəxsiyyət addımı nümunə şəxslə (sürətli sınaq) | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Qurum Konsolu — yalnız sandbox-da açılan test qurumları üçün | `console.tamga.network` |
 
 Sandbox-un öz cüzdan provayderi yoxdur: şəbəkə cüzdan provayderi idarə etmir, cüzdan tərtibatçıları öz provayderlərini
@@ -217,31 +217,16 @@ Diplom və biletin təklif səhifəsində **ləğv et**, **dayandır** və **ger
 dərc etdikdə qüvvəyə minir (sabit intervallı dərc; dərhal deyil). Sonra eyni rəqəmsal sənədi nümunə yoxlayan tərəfdə yenidən
 təqdim edin: ləğv edilmiş və ya dayandırılmış sənəd qəbul edilməməlidir. Tələbə sənədi qısamüddətlidir və status siyahısı daşımır.
 
-## 8. Real şəxsiyyətinlə sına
+## 8. Şəxsiyyət addımı: nümunə şəxslə
 
-Sandbox-da şəxsiyyət axını iki seçim təqdim edir ([[ADR-0040]]): **Real şəxsiyyətinlə doğrula** — uzaqdan şəxsiyyət yoxlaması provayderinin real addımları
-(sənədin skan edilməsi, canlılıq yoxlaması, üz uyğunlaşdırması) — və ya **Sürətli sınaq (saxta şəxs)** — uydurma bir şəxs seçib təsdiqləyirsiniz.
-Sürətli sınaq hamıya açıqdır. Fərdi məlumatların qorunması üzrə hüquqi baxış bitənə qədər real yol **standart olaraq dəvət kodu
-ilə** açılır (`ADR-0040/RI1`, 2026-10-28 qeydi); kodu sandbox komandasından istəyin (`support@tamga.network`). Kodunuz yoxdursa
-sürətli sınaqdan istifadə edin.
+Sandbox-da şəxsiyyət axınında real şəxsiyyət yoxlaması yoxdur ([[ADR-0098]]). Şəxsiyyət sənədi əlavə edərkən **Sürətli sınaq
+(saxta şəxs)** ilə nümunə şəxslərdən birini seçib təsdiq edirsiniz; şəxsə PID verilmiş və məsafədən şəxsiyyət yoxlaması aparılmış
+sayılır. Real şəxsin sənədi və ya üzü emal edilmir (`ADR-0098/IDR3`). "Bu sənsən?" son təsdiqi ([[ADR-0080]]) real şəbəkədəki
+kimi işləyir. AB formatında PID sınamaq üçün sandbox-dakı təmsili PID orqanlarından istifadə edin ([[ADR-0094]]).
 
-1. Rəqəmsal cüzdanı sandbox-a qoşun və şəxsiyyət rəqəmsal sənədinin əlavə edilməsini başladın.
-2. Şəxsiyyət xidmətinin səhifəsində məlumatlandırmanı təsdiqləyin, dəvət kodunu yazın və "Real şəxsiyyətinlə yoxla" seçimini edin.
-3. Açılan xəbərdarlığı oxuyub təsdiqləyin: "Bu test mühitidir; real şəxsiyyətinlə sınayırsan; məlumatların hər gecə silinir;
-   provayderdəki sessiyanın silinməsi rəqəmsal sənəd verilən kimi tələb olunur." Təsdiq olmadan provayderə keçid edilmir (`ADR-0040/RI3`).
-4. Provayderin səhifəsində addımları tamamlayın; test rəqəmsal sənədi rəqəmsal cüzdana gəlir. Sandbox real şəbəkənin provayder hesabından istifadə edir; rəqəmsal sənədi imzalayan
-   açarlar və qeydlər isə ayrıdır (`ADR-0040/RI2`).
-
-Şəxsiyyəti yoxlayan tərəfdəki pulsuz yoxlama limiti real şəbəkə ilə ortaq olduğu üçün real yolun **gündəlik və aylıq həddi** var. Hədd dolduqda
-yalnız sürətli sınaq görünür ("Bugünkü kvota doldu, sürətli sınaqdan istifadə et"); hər axında ən çox bir real sessiya açılır
-(`ADR-0040/RI7`).
-
-Rəqəmsal sənədə yalnız ad, soyad və doğum tarixi (və ondan törədilən yaş məlumatı) keçir; real şəxsiyyət nömrəsi və sənəd nömrəsi əvəzinə
-təsadüfi `SANDBOX-…` dəyəri yazılır (`ADR-0040/RI4`). Provayderdəki (şəxsiyyəti yoxlayan tərəfdəki) yoxlama sessiyasının silinməsi
-rəqəmsal sənəd verilən kimi və ya yoxlama uğursuz olduqda dərhal, yarımçıq qaldıqda təxminən bir saat ərzində, ən gec isə gecə
-sıfırlanmasında tələb olunur (`ADR-0040/RI5`); provayder öz saxlama parametri daxilində silir. Dəvət kodları fərdi (birdəfəlik, ən
-çox 7 gün) və ya müddətli (ən çox 72 saat, ən çox 25 istifadə) olur, həddi aşa bilməz və gecə sıfırlanmasında silinir. Hüquqi
-baxışdan sonra sandbox administratoru real yolu açıq rejimə keçirə bilər.
+Real şəbəkədə bu gün şəxsiyyət sənədi verilmir: dövlətin PID-i, ixtisaslaşdırılmış e-imza sertifikatı ilə şəxsiyyət və ya
+şəxsiyyət vəsiqəsinin çipi kimi real şəxsiyyət yolu ayrıca qərarla açılana qədər (`ADR-0098/IDR2`). Şəxsiyyət sənədi tələb edən
+axınlar (şəxsiyyətə bağlı təklif, şəxsin başlatdığı sənəd sorğusu, yaş yoxlaması) bu müddətdə yalnız sandbox-da sınanır.
 
 ## 9. Qurumunu sına
 
@@ -271,8 +256,7 @@ sandbox siyahısındakı görünüşünü `tamga-onboard check --listing-only --
 
 ## Qaydalar və məhdudiyyətlər
 
-- **Real fərdi məlumatlar daxil etməyin.** Sandbox-a yalnız nümunə şəxslər, nümunə ünvanlar və uydurma qeydlər daxil edilir; yeganə istisna
-  özünüzün seçdiyiniz real şəxsiyyət sınağıdır (§8) və orada rəqəmsal sənədə yalnız ad, soyad və doğum tarixi keçir.
+- **Real fərdi məlumatlar daxil etməyin.** Sandbox-a yalnız nümunə şəxslər, nümunə ünvanlar və uydurma qeydlər daxil edilir.
 - **Davamlılıq gözləməyin.** Sandbox məlumatları hər gecə saat 03:30-da (Türkiyə vaxtı ilə) ilkin vəziyyətinə qayıdır: verilmiş rəqəmsal sənədlərin qeydləri,
   ləğv siyahıları və lövbər jurnalı sıfırlanır. Rəqəmsal cüzdanınızdakı sandbox sənədləri sıfırlamadan sonra doğrulanmaya bilər; onları yenidən
   alın. Etibar kökü və siyahıların imza açarları sıfırlanmır; cüzdandakı sandbox pinləri dəyişmir.
@@ -282,4 +266,4 @@ sandbox siyahısındakı görünüşünü `tamga-onboard check --listing-only --
 
 ## Əlaqəli
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]
+[[ADR-0038]] · [[ADR-0098]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

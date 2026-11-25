@@ -4,7 +4,7 @@ title: "Əlavə A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga ekosisteminin idarəetmə çərçivəsi. World Bank-ın "Digital Wallets: Trust Frameworks" beşqatlı modeli əsasında qurulmuşdur: strategiya (vizyon, prinsiplər, hüquqi kontekst, risk, idarəetmə orqanları), texnologiya (əsas sənədə istinad), sxem qaydaları (rollar, qoşulma qapıları, həyat dövrü, təminat), uyğunluq (rejim, ISO/IEC 17000 rolları, uyğunluq testi, nəzarət, sanksiyalar, insidentlərə cavab) və müqavilələr (müqavilələr toplusu, xidmət səviyyələri, məsuliyyət, müqaviləyə xitam, varislik). eIDAS 2.0 və onun icra aktları qatının Türk dünyasındakı qarşılığıdır və dövlət öz üzərinə götürdükdə ona təhvil veriləcək aktivdir.
 translation_of: FW-TF-0001
@@ -230,6 +230,11 @@ sənədi T1, diplom T2). Bu səviyyəni yoxlayan tərəf deyil, sənədi verən 
 və məsafədən şəxsiyyət yoxlaması provayderinin inteqrasiyası [[SPEC-ID-0003]]-dədir.
 
 ## 3.5 Müvəqqəti şəxsiyyət sənədi provayderi
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** kommersiya məqsədli məsafədən şəxsiyyət yoxlaması provayderi çıxarıldı. Real şəbəkədə bu
+> gün Tamga şəxsiyyət sənədi verilmir; real şəxsiyyət yolu (dövlətin PID-i, ixtisaslaşdırılmış e-imza sertifikatı ilə şəxsiyyət və
+> ya şəxsiyyət vəsiqəsinin çipi) ayrıca qərarla açılana qədər. Aşağıdakı qaydalar həmin yol açıldıqda tətbiq edilir; sandbox-da
+> şəxsiyyət addımı nümunə şəxslə aparılır.
 
 Dövlətin təyin etdiyi PID provayderi olmayana qədər **Tamga Network** bu rolu *müvəqqəti* olaraq öz üzərinə götürür: məsafədən şəxsiyyət
 təsdiqindən (sənəd, canlılıq yoxlaması, üz uyğunlaşdırması; NFC əlavə edilə bilər) sonra cüzdana Tamga şəxsiyyət sənədi verir. Qaydalar:

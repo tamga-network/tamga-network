@@ -4,7 +4,7 @@ title: "Doğrulanmış sürücü belgesi bilgisi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-04
+last_updated: 2026-11-25
 summary: >
   Tamga kimlik servisi, kişinin fiziksel sürücü belgesini uzaktan kimlik doğrulama sağlayıcısıyla (belge + canlılık + yüz
   eşleştirme) inceler ve kartın üzerindeki sürücü bilgisini (sınıflar, geçerlilik, veren ülke) nitelikli olmayan bir EAA olarak
@@ -14,6 +14,9 @@ summary: >
   Yetkili makam dijital sürücü belgesi vermeye başlayınca yeni ihraç durur.
 domain: Credentials
 ---
+
+> **Not (2026-11-25, [[ADR-0098]]):** sürücü belgesi bilgisinin kaynağı olan sağlayıcı akışı kaldırıldı. Gerçek ağda bu belge
+> verilmez; sandbox'ta sahte sağlayıcının örnek verisiyle denenir.
 
 # Kısaca
 

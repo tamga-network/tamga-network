@@ -4,7 +4,7 @@ title: "Risk kaydı"
 status: Active
 version: 1.0.0
 created: 2026-11-16
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga Network'ün risk kaydı: AB'nin cüzdanlar için ortak risk kaydının (Uygulama Tüzüğü (AB) 2024/2981 Ek I; AB ARF Ek 6)
   14 üst düzey riski, 3 sistem riski, 5 teknik tehdit ailesi ve 133 tehdit senaryosu için Tamga'da kimin sorumlu olduğunu,
@@ -115,7 +115,7 @@ Teknik tehditler tek bir riske bağlı değildir; birçok saldırının aracıd�
 | TR2 | Var olmayan, uydurma elektronik kimlikler vermek. | R2 | Kimlik servisi | Kimlik belgesi türün seviyesi sağlanmadan verilmez ([[SPEC-ID-0003]]/IDP2, RB-AP-11); bağımsız denetim yok. | Kısmen |
 | TR3 | Yetkisiz PID vermeye başlamak. | R2 | İşletmeci | Tamga PID vermez ([[SPEC-TRUST-0001]]/TL8); tür yetkisi izin listesiyle, varsayılan kapalı (RB-REG-04) ve doğrulamada atlanamaz ([[SPEC-API-0001]]/AP8). | Karşılandı |
 | TR4 | Bir yöneticiye yanlış bir sağlayıcıyı güven listesine ekletmek. | R2 | İşletmeci | Listeye giriş katılım incelemesiyle ([[FW-ONB-0001]]); her değişiklik herkese açık değişiklik günlüğünde (RB-OP-07). Liste imzası tek işletmecide, anahtar töreni ve donanım güvenlik modülü bekliyor (FW-ARF-0001 §7.4 L1). | Kısmen |
-| TR5 | Uzaktan kimlik doğrulama hizmetini atlatmak. | R1 / R2 | Kimlik servisi | Lisanslı sağlayıcıyla belge, canlılık ve yüz denetimi; sağlayıcı kararı imzalı bildirim ve karar sorgusuyla teyit edilir ([[SPEC-ID-0003]]/IDP5); bağlantı iletimine karşı son onay ([[ADR-0080]]/VL1–VL3). | Kısmen |
+| TR5 | Uzaktan kimlik doğrulama hizmetini atlatmak. | R1 / R2 | Kimlik servisi | Ticari sağlayıcı yolu kaldırıldı; gerçek ağda kimlik belgesi verilmez, sandbox'ta yalnız örnek kişi ([[ADR-0098]]/IDR1–IDR3); bağlantı iletimine karşı son onay ([[ADR-0080]]/VL1–VL3). | Kısmen |
 | TR6 | Yüz yüze kimlik doğrulama hizmetini atlatmak. | R1 / R2 | Kimlik servisi | Yüz yüze yol kimlik kural kitabında T2 seviyesi olarak tanımlıdır ([[FW-RB-0003]]); yüz yüze doğrulamanın usulü ayrıca yazılmadı. | Kısmen |
 | TR7 | Uzaktan (nitelikli) sertifika kullanımına dayanan kimlik doğrulamayı atlatmak. | R1 / R2 | Kimlik servisi | Bu yol sunulmuyor; nitelikli imzaya dayanan T3 seviyesi bugün verilmiyor ([[SPEC-ID-0003]]/IDP7). | Uygulanmaz |
 | TR8 | Bir kişiye bağlı olmayan cüzdana erişmek. | R1 / R2 | Cüzdan sağlayıcısı | Her gösterim kullanıcı doğrulaması ister ([[SPEC-WALLET-0001]]/WL11, RB-WP-03); belgeler kişinin kimlik doğrulamasından sonra verilir. Cüzdanın kişiye bağlanması cihazın kullanıcı doğrulamasına dayanır. | Kısmen |

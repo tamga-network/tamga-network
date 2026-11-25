@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -654,7 +654,9 @@ The protocol counterpart of [[SPEC-CRED-0001]] §3. The [[t:holder-binding]] met
 moment of issuance.
 
 **Remote [[t:identity-proofing]] (T2):** document + liveness + face matching with a licensed provider; profile and provider
-integration in [[SPEC-ID-0003]]. Type ↔ minimum level: [[FW-RB-0002]] §4.4 (student certificate T1, diploma T2).
+integration in [[SPEC-ID-0003]]. Type ↔ minimum level: [[FW-RB-0002]] §4.4 (student certificate T1, diploma T2). The Tamga
+identity service has no such path today: the provider was removed, no identity credential is issued on the real network, the
+sandbox uses a sample person ([[ADR-0098]]).
 
 ## 11.1 Wallet unit verification (D-CRED-6 — ETSI TS 119 471 REQ-EAASP-4.2.1.2-02/03)
 
@@ -730,7 +732,7 @@ deliberate application of RFC 9700's "revoke on reuse" rule: when a code may hav
 preventing the attacker's use of the code; the wallet restarts the flow with a new PAR.
 
 The Tamga identity service (`id.tamga.network`) runs the same flow **in the browser**: `/authorize` privacy notice +
-explicit consent → remote verification provider → `/idv/return` (decision query) → `redirect_uri?code`. Under ETSI 472-3,
+explicit consent → identity verification step (today only in the sandbox, with a sample person — [[ADR-0098]]) → `/idv/return` (decision query) → `redirect_uri?code`. Under ETSI 472-3,
 T3 can be issued only on this path (never with pre-authorized, IDP7). Metadata: `pushed_authorization_request_endpoint`,
 `authorization_endpoint`, `require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`;
 `grant_types_supported` lists both grants at the institution issuer but **only `authorization_code`** (plus `refresh_token` for ZK
@@ -797,7 +799,7 @@ failures are **401** with a `WWW-Authenticate: DPoP error="invalid_token"|"inval
 |---|---|---|---|
 | `invalid_proof` | 400 | The proof is invalid (signature, `typ`, `aud`, `iat`, key attestation); key storage below the minimum; **two proofs with the same key in one request** (PR6, per request); the provider's revocation-maintenance period has ended (ISSU_12c) | **Do not retry with the same proof** — report the error |
 | `invalid_nonce` | 400 | The `c_nonce` in the proof is unknown, expired or **already consumed** — the nonce is consumed atomically before the first `await` (PR4) and is not restored when the proof is then rejected | Get a new `c_nonce` and sign the proofs again |
-| `invalid_credential_request` | 400 | Malformed request; the requested configuration is not covered by this token; a precondition dropped (invitation code revoked, bound identity credential no longer active, seed requested before the identity credential) | **Do not retry** — report the error |
+| `invalid_credential_request` | 400 | Malformed request; the requested configuration is not covered by this token; a precondition dropped (bound identity credential no longer active, seed requested before the identity credential) | **Do not retry** — report the error |
 | `unknown_credential_configuration` | 400 | The issuer does not offer this configuration at all | Refresh the metadata |
 | `unknown_credential_identifier` | 400 | A `credential_identifier` was sent — Tamga issues no identifiers in the token response | Use `credential_configuration_id` |
 | `credential_request_denied` | 400 | No authorisation / schema authorisation dropped in the trust list; **the record is not ready for issuance** (no graduation record, ticket already issued, no record found, main credential revoked for a ZK copy) | **Do not retry**; contact the institution |

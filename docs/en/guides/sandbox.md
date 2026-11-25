@@ -4,13 +4,13 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
   developer, getting credentials with example people, presenting them to example
-  verifiers, trying revocation and suspension, trying your institution as a test institution, real identity verification
-  steps with your own identity, rules and resets.
+  verifiers, trying revocation and suspension, trying your institution as a test institution, the identity step with a sample
+  person, rules and resets.
 translation_of: GUIDE-0013
 source_version: 1.0.0
 ---
@@ -35,9 +35,8 @@ same code as the real network; only the trust root, the keys, the trusted lists 
 - The sandbox [[t:LOTL]] and its national list mark themselves as test with the field `"environment": "sandbox"`
   ([[SPEC-TRUST-0001]] §3). A wallet or verifier configured for the real network does not accept this list
   (`ADR-0038/SB2`).
-- People, events and credentials are examples; there is no real personal data. Identity verification uses a fake provider
-  by default (`ADR-0038/SB3`); anyone who wants can also try the real identity verification steps (§8,
-  [[ADR-0040]]). The example institutions have made-up names and represent no real institution (see the note below).
+- People, events and credentials are examples; there is no real personal data. Identity verification uses only a fake provider
+  with sample persons (`ADR-0038/SB3`, [[ADR-0098]]; §8). The example institutions have made-up names and represent no real institution (see the note below).
 - Every sandbox page and every wallet screen connected to the sandbox shows a "SANDBOX · test" mark (`ADR-0038/SB4`).
 - The data returns to its initial state every night (`ADR-0038/SB5`).
 
@@ -56,7 +55,7 @@ only the addresses and the trust anchor.
 | `https://status.sandbox.tamga.network` | status lists (Token Status List) | `status.tamga.network` |
 | `http(s)://crl.sandbox.tamga.network/<authority>.crl` | revocation list of access certificates (RFC 5280 CRL; `http` and `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test verifier ([[t:OpenID4VP]]) | `verify.tamga.network` |
-| `https://id.sandbox.tamga.network` | identity and contact credentials; quick trial (made-up person) or verification with your real identity | `id.tamga.network` |
+| `https://id.sandbox.tamga.network` | identity and contact credentials; identity step with a sample person (quick trial) | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Institution Console — only for test institutions opened in the sandbox | `console.tamga.network` |
 
 The sandbox has no wallet provider of its own: the network runs no wallet provider, and wallet developers register their own
@@ -235,32 +234,18 @@ publishes its next status list (publication at a fixed interval; not instantly).
 example verifier again: a revoked or suspended credential must not be accepted. The student credential is short-lived and
 carries no status list entry.
 
-## 8. Try with your real identity
+## 8. Identity step: with a sample person
 
-In the sandbox the identity flow offers two options ([[ADR-0040]]): **Verify with your real identity** — the remote identity verification provider's
-real steps (document scan, liveness, face match) — or **Quick trial (made-up person)** — you pick a made-up person and approve.
-The quick trial is open to everyone. Until the data-protection legal review is complete, the real path opens **by default with an
-invitation code** (`ADR-0040/RI1`, note of 2026-10-28); ask the sandbox team for one (`support@tamga.network`). Without a code use
-the quick trial.
+There is no real identity verification in the sandbox identity flow ([[ADR-0098]]). When adding an identity credential you
+choose **Quick trial (made-up person)**, pick one of the sample persons and confirm; the person is treated as if the PID was
+issued and remote identity verification was done. No real person's document or face is processed (`ADR-0098/IDR3`). The
+"Is this you?" final confirmation ([[ADR-0080]]) works as on the real network. To try a PID in the EU format, use the sandbox's
+representative PID authorities ([[ADR-0094]]).
 
-1. Connect the wallet to the sandbox and start adding an identity credential.
-2. On the identity service's page, accept the privacy notice, enter the invitation code and choose "Verify with your real identity".
-3. Read and confirm the warning: "This is a test environment; you are trying it with your real identity; your data is deleted
-   every night; deletion of the verification session at the provider is requested as soon as the credential is issued." Without
-   confirmation the provider is not opened (`ADR-0040/RI3`).
-4. Complete the steps on the provider's page; the test credential arrives in the wallet. The sandbox uses the real network's provider
-   account; the keys that sign the credential and the records are separate (`ADR-0040/RI2`).
-
-Because the free verification allowance is shared with the real network, the real path has a **daily and a monthly cap**.
-When a cap is reached only the quick trial is shown ("Today's quota is full — use the quick trial"); each flow opens at most
-one real session (`ADR-0040/RI7`).
-
-Only given name, family name and date of birth (and the derived age flag) go into the credential; instead of the real identity
-number and document number a random `SANDBOX-…` value is written (`ADR-0040/RI4`). Deletion of the verification session at the
-provider is requested as soon as the credential is issued or at once if verification fails, and for an abandoned session within
-about an hour, at the latest at the nightly reset (`ADR-0040/RI5`); the provider deletes within its own retention setting.
-Invitation codes are personal (single use, at most 7 days) or timed (at most 72 hours, at most 25 uses), cannot exceed the caps
-and are deleted at the nightly reset. After the legal review the sandbox administrator can switch the real path to the open mode.
+On the real network no identity credential is issued today, until a real identity path such as the state PID, identity from a
+qualified e-signature certificate or the ID card chip is opened by a separate decision (`ADR-0098/IDR2`). Flows that need an
+identity credential (identity-bound offer, person-initiated credential request, age verification) are tried only in the sandbox
+during this period.
 
 ## 9. Try your institution
 
@@ -291,9 +276,7 @@ institution's side of joining the real network (application file, keys and CSRs,
 
 ## Rules and limits
 
-- **Do not enter real personal data.** Only the example people, example addresses and made-up records go into the sandbox; the
-  only exception is the real identity trial you choose yourself (§8), where only given name, family name and date of birth go into the
-  credential.
+- **Do not enter real personal data.** Only the example people, example addresses and made-up records go into the sandbox.
 - **Do not expect persistence.** Sandbox data returns to its initial state every night at 03:30 (Türkiye time): records of
   issued credentials, status lists and the anchor log are reset. Sandbox credentials in your wallet may no longer verify
   after a reset; get them again. The trust root and the list signing keys are not reset; the sandbox pins in the wallet do not
@@ -304,4 +287,4 @@ institution's side of joining the real network (application file, keys and CSRs,
 
 ## Related
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]
+[[ADR-0038]] · [[ADR-0098]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

@@ -4,7 +4,7 @@ title: "Provisional identity attestation provider"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-11-13
+last_updated: 2026-11-25
 summary: >
   As long as there is no PID Provider appointed by the state, Tamga issues an identity attestation it signs itself
   (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (a remote identity verification provider: document +
@@ -17,6 +17,11 @@ domain: Identity
 translation_of: ADR-0011
 source_version: 1.0.0
 ---
+
+> **Note (2026-11-25, [[ADR-0098]]):** the commercial remote identity verification provider was removed. On the real network the
+> identity service does not issue identity credentials until a real identity path (the state PID, identity from a qualified
+> e-signature certificate, or the ID card chip) is opened by a separate ADR. The sandbox uses sample persons only. The proofing
+> method below is historical.
 
 > **Partly changed by [[ADR-0022]] (2026-09-29):** the identity service's class is not QUALIFIED / I3 but non-qualified EAA /
 > I2; the identity credential carries no `category` claim. It can be raised again after an independent conformity assessment.

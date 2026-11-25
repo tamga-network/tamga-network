@@ -6,6 +6,13 @@ published on npm as test releases; `0.10.0` is the next one (prepared 2026-11-24
 
 ## [Unreleased]
 
+- Changed (identity, ADR-0098): the commercial remote identity verification provider is removed from the identity service, on
+  the real network and in the sandbox. On the real network no identity credential, pseudonym seed or driving licence data is
+  issued until a real identity path (the state PID, identity from a qualified e-signature certificate, or the ID card chip) is
+  opened by a separate decision; credentials issued earlier stay valid until they expire. In the sandbox the identity step uses
+  sample persons only (the real identity trial and invite codes are gone; ADR-0040 superseded). Institution credentials on the
+  real network use the PIN offer and tickets meanwhile. Guides, specifications and the ARF carry dated notes.
+
 ## 0.10.0 — 2026-11-24
 
 Prepared on 2026-11-24; not yet published on npm.

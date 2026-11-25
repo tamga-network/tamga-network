@@ -1,10 +1,10 @@
 ---
 document_id: ADR-0040
 title: "Sandbox'ta gerçek kimlik doğrulama"
-status: Active
+status: Superseded
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-11-04
+last_updated: 2026-11-25
 summary: >
   Sandbox'ta kimlik akışı iki seçenek sunar: "Gerçek kimliğinle doğrula" ve "Hızlı deneme (sahte kişi)". Gerçek yol
   herkese açıktır (davet kodu isteğe bağlı bir kip olarak kalır) ve gerçek ağın sağlayıcı hesabını ve kimlik akışını paylaşır; ayrı
@@ -15,6 +15,9 @@ summary: >
   maddesini ve SB3 kuralını değiştirir.
 domain: Identity
 ---
+
+> **Kaldırıldı (2026-11-25, [[ADR-0098]]):** sandbox'ta gerçek kimlik doğrulama yolu ve davet kipi kaldırıldı; sandbox'ta kimlik
+> akışı yalnız sahte kişiyle çalışır (ADR-0038 SB3'ün ilk metni geri geldi). Bu belge tarihseldir.
 
 > **Not (2026-10-28):** özetteki "gerçek yol herkese açıktır" ilk metindir. KVKK/GDPR ön incelemesi sonucu varsayılan
 > kip `invite`'tır: hukuki inceleme bitene kadar gerçek yol yalnız geçerli bir davet koduyla açılır, hızlı deneme herkese

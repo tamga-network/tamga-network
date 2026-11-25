@@ -4,7 +4,7 @@ title: "Əlavə B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga şəbəkəsinə qoşulan hər bir rolun (operator və siyahı operatoru, qeydiyyat qurumu, sənədi verən qurum, səlahiyyətli mənbə, cüzdan provayderi, yoxlayan tərəf, sənəd sahibi) əməl etməli olduğu məcburi, nömrələnmiş qaydalar. Hər qayda bir dəyişməzdən və ya qərardan törədilib; bu sənəd yeni qayda yaratmır, qaydaları rollar üzrə toplayır və "MUST" dili ilə ifadə edir. EUDI ARF Annex 2 (High-Level Requirements) sənədinin qarşılığıdır.
 translation_of: FW-RB-0001
@@ -153,6 +153,9 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 
 ## 4.4 Uzaqdan şəxsiyyət yoxlanışı provayderləri
 
+> **Qeyd (2026-11-25, [[ADR-0098]]):** Tamga şəxsiyyət xidməti bu gün məsafədən şəxsiyyət yoxlaması provayderindən istifadə
+> etmir. Aşağıdakı qaydalar belə provayderdən istifadə edən sənəd verənlərə və gələcəkdə ayrıca qərarla seçiləcək üsula aiddir.
+
 | # | Qayda |
 |---|---|
 | RB-AP-23 | Məsafədən autentifikasiya provayderindən istifadə olunursa, sənədi verən qurum yalnız nəticənin xülasəsini (səviyyə, sessiya identifikatoru, vaxt, provayder) saxlamalıdır (**MUST**); sənəd təsvirləri, üz məlumatları və OCR xam məlumatları sənədi verən qurumun sistemində saxlanılmamalıdır (**MUST NOT**). |
@@ -160,6 +163,9 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-AP-25 | Host edilən xidmətdən istifadə edən qurum API açarını öz serverində saxlamalıdır (**MUST**) (brauzerə, rəqəmsal cüzdana, koda yerləşdirməməlidir); açar 90 gündən bir yenilənir (iki açar müəyyən müddət birlikdə etibarlı olur); sızma şübhəsi olduqda qurum ləğv tələb edir. |
 
 ## 4.5 RB-AP-ID — Şəxsiyyət sənədi provayderi
+
+> **Qeyd (2026-11-25, [[ADR-0098]]):** real şəbəkədə bu gün şəxsiyyət sənədi verilmir; aşağıdakı qaydalar real şəxsiyyət yolu
+> açıldıqda və sandbox-da (nümunə şəxslərlə) tətbiq edilir.
 
 | # | Qayda |
 |---|---|

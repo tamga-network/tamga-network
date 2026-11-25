@@ -94,7 +94,7 @@
         }
       ],
       "authentic_source": {
-        "name": "Remote identity verification provider (Didit v3) — Tamga is the data controller (ADR-0011 K4)",
+        "name": "No identity proofing on the real network: identity credentials are not issued until a real identity path opens (ADR-0098); Tamga is the data controller (ADR-0011 K4)",
         "mode": "IDV_PROVIDER"
       },
       "trade_name": "Tamga Identity Service",

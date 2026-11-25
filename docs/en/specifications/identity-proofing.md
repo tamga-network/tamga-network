@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   status against ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -17,6 +17,12 @@ source_version: 1.0.0
 
 # In brief
 
+
+> **Note (2026-11-25, [[ADR-0098]]):** the Tamga identity service's path that worked with a commercial remote identity
+> verification provider was removed. On the real network no identity credential, pseudonym seed or driving licence data is issued
+> today, until a real identity path (the state PID, identity from a qualified e-signature certificate, or the ID card chip) is
+> opened by a separate decision. In the sandbox the identity step uses a sample person. The general rules of §3 still apply to any
+> issuer that uses a provider; §4–§5 are historical.
 This document describes how an institution verifies, before issuing a credential, that a person really is who they claim to
 be ([[t:identity-proofing]]). It is written for issuing institutions ([[t:issuer|issuers]]) and for developers who connect
 to an identity verification provider.
@@ -115,6 +121,8 @@ DB-5). The result may be reused for the same person for 12 months (PROPOSAL); th
 
 # 4. Reference provider — protocol mapping
 
+> **Historical (2026-11-25, [[ADR-0098]]):** the reference provider adapter was removed; this section remains for information.
+
 The reference adapter uses the hosted verification flow of a remote identity verification provider. The provider's name, API
 addresses and setting names are in the operator's configuration document; this specification keeps only the provider-independent
 rules. If the provider changes, the adapter changes; the rules below do not.
@@ -209,6 +217,11 @@ Stored record (issuing service `data/<slug>/state.json › proofing[subjectRef]`
 ---
 
 # 9. Tamga identity credential service
+
+> **Note (2026-11-25, [[ADR-0098]]):** on the real network this service issues no identity credential, pseudonym seed or driving
+> licence data today; requests for these types are rejected with a clear error (`ADR-0098/IDR2`). Contact credentials and the
+> app-store review code path (§9.2) are not affected. Identity credentials issued earlier stay valid until they expire; they are
+> not renewed. In the sandbox the service works with sample persons.
 
 Until a state PID provider is appointed, remote identity verification is performed **in Tamga's identity service** and the
 result is given to the wallet as a credential. This credential is not a PID but a non-qualified [[t:EAA]] issued by Tamga as

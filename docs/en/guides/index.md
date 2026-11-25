@@ -111,7 +111,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 | Trust anchor | signed trust lists ([[ADR-0009]]); the Tamga operator registers issuers and verifiers |
 | Wallets | the network runs no wallet; it lists the wallet providers that follow its rules ([[ADR-0042]]); the first wallet's provider, Tamga Wallet's `TAMGA-WP-1`, is `ACTIVE` in the production and sandbox lists |
 | Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is live; the wallet side is wired through `@tamga-network/zk`, the Android native library is ready, iOS is pending ([[ADR-0032]]) |
-| Sandbox | live: a single test network with the same rules as the real network, open to everyone; real identity verification with daily/monthly caps ([[GUIDE-0013]]) |
+| Sandbox | live: a single test network with the same rules as the real network, open to everyone; identity step with sample persons only ([[GUIDE-0013]], [[ADR-0098]]) |
 | Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]], preparation: [[GUIDE-0015]], test network: [[GUIDE-0018]]) |
 
 ## Rules for every integration

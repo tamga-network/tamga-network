@@ -108,7 +108,7 @@ hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu d
 | Güven çapası | imzalı güven listeleri ([[ADR-0009]]); belge veren ve doğrulayıcı kaydını Tamga operatörü yapar |
 | Cüzdanlar | ağ cüzdan işletmez, kurallara uyan cüzdan sağlayıcılarını listeler ([[ADR-0042]]); ilk cüzdan Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox listelerinde `ACTIVE` |
 | Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı yayında; cüzdan tarafı `@tamga-network/zk` ile bağlandı, Android yerel kütüphanesi hazır, iOS bekliyor ([[ADR-0032]]) |
-| Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; gerçek kimlik doğrulaması günlük/aylık tavanlı ([[GUIDE-0013]]) |
+| Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; kimlik adımı yalnız örnek kişiyle ([[GUIDE-0013]], [[ADR-0098]]) |
 | Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]], hazırlık: [[GUIDE-0015]], test ağı: [[GUIDE-0018]]) |
 
 ## Her entegrasyonda ortak kurallar

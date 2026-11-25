@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-13
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Bugün kimlik servisi kişiyi tamamen bir dış uzaktan kimlik doğrulama sağlayıcısına doğrulatıyor (belge fotoğrafı, canlılık,
   yüz eşleştirme). Karar: kimlik kartı ya da pasaport çipi kişinin telefonunda, akışı başlatan cüzdanda NFC ile okunur; cüzdan
@@ -22,6 +22,9 @@ summary: >
 domain: Identity
 related: ["[[ADR-0011]]", "[[ADR-0022]]", "[[ADR-0040]]", "[[ADR-0042]]", "[[ADR-0080]]", "[[SPEC-ID-0003]]", "[[SPEC-PROTO-0001]]", "[[SPEC-WALLET-0001]]"]
 ---
+
+> **Not (2026-11-25, [[ADR-0098]]):** yüz ve canlılık denetimini yapan sağlayıcı kaldırıldı. Çip yolu kapalı kalır; açılış için
+> hukuki görüşe ek olarak yüz eşleştirme ve canlılık yöntemi ayrı bir ADR ile seçilir (IDR4). K1(b) fotoğraf yolu yoktur.
 
 # Kısaca
 

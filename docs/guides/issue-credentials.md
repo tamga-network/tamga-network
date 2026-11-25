@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-04
+last_updated: 2026-11-25
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi
@@ -77,6 +77,10 @@ Hatalar `IssuerClientError` (`status` + mesaj) olarak gelir. Anahtar **yalnızca
 - **PIN'li teklif:** kimlik belgesi olmayan kişi için yedek yol. PIN teklif bağlantısıyla aynı kanaldan gönderilmez.
 - **Bilet:** kişisel veri taşımaz; kimlik istenmez.
 
+**Bugün gerçek ağda** yalnız PIN'li teklif ve bilet çalışır: gerçek ağda kimlik belgesi verilmez ([[ADR-0098]]), bu yüzden
+kimliğe bağlı teklif ve kişinin başlattığı sorgu yolu (`lookup`) gerçek bir kimlik yolu açılana kadar yalnız sandbox'ta denenir.
+Sorgu ucunuzun `fetch` işlemi her yolda aynıdır.
+
 ### API anahtarı
 
 Tamga operatörü kurumunuz için kapsamlı bir anahtar üretir (`tmg_<slug>_…`; ör. yalnızca `tickets:write` + `revocations:write`)
@@ -109,7 +113,8 @@ Tamga API'sinin tamamı: [Belge verme API'si](/api/issuer).
 - Belge alanlarını yalnızca belge için kullanın; loglara, URL'ye, iptal listesine yazmayın.
 - Kişiyi kendi kaydınızla eşlemeniz gerekiyorsa (diploma, öğrenci belgesi) [[t:identity-proofing|kimlik doğrulama]]
   **Tamga kimlik belgesi** ile yapılır: cüzdan kimlik belgesini sunar, Tamga bunu teklifteki özetle ya da sorgu ucunuzla (`lookup`) eşler. Kimlik
-  sağlayıcısıyla doğrudan konuşmazsınız ([[ADR-0011]]).
+  sağlayıcısıyla doğrudan konuşmazsınız ([[ADR-0011]]). Gerçek ağda kimlik belgesi bugün verilmez; o süre içinde PIN'li teklifi
+  kullanın ([[ADR-0098]]).
 - Bilet gibi kişisel veri gerektirmeyen belgelerde kimlik istemeyin.
 
 ## Paylaşım kuralı: belgeyi kimlere gösterilsin {#sharing-rules}

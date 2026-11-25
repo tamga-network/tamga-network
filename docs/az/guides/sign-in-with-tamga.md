@@ -4,7 +4,7 @@ title: "“Tamga ilə daxil ol” əlavə etmək"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 summary: >
   Veb sayta Tamga ilə qeydiyyat və girişin əlavə edilməsi: səhifədə `@tamga-network/verifier/web` dəsti (QR / telefonda rəqəmsal cüzdanı açmaq), serverdə nəticənin yoxlayan tərəfdən alınıb sessiyanın açılması, qeydiyyatdan sonra passkey ilə telefonsuz giriş. İşlək nümunə sandbox-dadır: verify.sandbox.tamga.network/sample-site (apps/verify/src/routes/site.ts).
 translation_of: GUIDE-0001
@@ -21,6 +21,8 @@ Yoxlamanı tamamilə öz serverinizdə aparmaq istəsəniz, [[GUIDE-0002]] bölm
 
 **Sınamaq üçün:** işlək nümunə sayt test şəbəkəsindədir: `https://verify.sandbox.tamga.network/sample-site` (sandbox istifadəyə
 verildikdə; ünvanlar və test rəqəmsal cüzdanının ayarı [[GUIDE-0013]] bölməsindədir). Real şəbəkədəki Tamga Verify-da nümunə sayt yoxdur.
+Real şəbəkədə təxəllüs toxumu bu gün verilmir (şəxsin şəxsiyyətindən törədilir, [[ADR-0098]]); giriş real şəxsiyyət yolu açılana
+qədər sandbox-da sınanır.
 
 ## Necə işləyir?
 

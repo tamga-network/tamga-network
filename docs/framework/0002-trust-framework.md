@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -233,6 +233,10 @@ belgesi T1, diploma T2). Belge veren bu seviyeyi belgeyi vermeden önce sağlar;
 ve uzaktan kimlik doğrulama sağlayıcısı entegrasyonu [[SPEC-ID-0003]]'tedir.
 
 ## 3.5 Geçici kimlik belgesi sağlayıcısı
+
+> **Not (2026-11-25, [[ADR-0098]]):** ticari uzaktan kimlik doğrulama sağlayıcısı kaldırıldı. Gerçek ağda bugün Tamga kimlik
+> belgesi verilmez; gerçek bir kimlik yolu (devletin PID'i, nitelikli e-imza sertifikasıyla kimlik ya da kimlik kartı çipi) ayrı
+> bir kararla açılana kadar. Aşağıdaki kurallar o yol açıldığında uygulanır; sandbox'ta kimlik adımı örnek kişiyle yapılır.
 
 Devletin atadığı bir PID sağlayıcısı bulunana kadar **Tamga Network** bu rolü *geçici* olarak üstlenir: uzaktan kimlik
 doğrulamasının (belge, canlılık, yüz eşleştirmesi; NFC eklenebilir) ardından cüzdana Tamga kimlik belgesi verir. Kurallar:

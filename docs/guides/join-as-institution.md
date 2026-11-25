@@ -4,7 +4,7 @@ title: "Kurum olarak ağa katılmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 summary: >
   Bir kurumun belge veren olarak Tamga Network'e katılması, ilk temastan canlıya adım adım: sandbox denemesi, başvuru
   dosyası ve AB ortak kayıt verileri (kontrol listesi), anahtarlar ve sertifika isteği (CSR), kurumun sorgu ucu, güven
@@ -200,6 +200,9 @@ rolüyle), API anahtarı üretir ([[ADR-0016]]) ve paylaşım kurallarını yön
 - **API:** öğrenci portalınız ya da sisteminiz `@tamga-network/issuer/client` ile teklif açar ve bağlantıyı kendi kanalınızla
   iletir (Tamga kişinin iletişim adresini görmez). Adımlar: [[GUIDE-0003]].
 - **Öğrenci başlatır:** öğrenci cüzdanında kurumunuzu seçip kimlik belgesini gösterir; servis sorgu ucunuza `lookup` ile sorar.
+
+**Bugün gerçek ağda** yalnız PIN'li teklif çalışır: gerçek ağda kimlik belgesi verilmez ([[ADR-0098]]). Kimliğe bağlı teklif ve
+öğrencinin başlattığı yol gerçek bir kimlik yolu açılana kadar yalnız sandbox'ta denenir.
 
 Her belge, kişinin cihazındaki anahtara bağlı 10 kopyalık bir paket olarak verilir. Kendi belge verme servisinizi işletiyorsanız
 aynı adımları `@tamga-network/issuer` paketiyle kendiniz yaparsınız ([[SPEC-PROTO-0001]]).

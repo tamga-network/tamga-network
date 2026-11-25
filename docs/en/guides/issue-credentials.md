@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-04
+last_updated: 2026-11-25
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer
@@ -83,6 +83,10 @@ Which of the three offer types?
   the offer link.
 - **Ticket:** carries no personal data; no identity is asked for.
 
+**On the real network today** only the PIN offer and tickets work: no identity credential is issued on the real network
+([[ADR-0098]]), so the identity-bound offer and the person-initiated lookup path (`lookup`) are tried only in the sandbox until a
+real identity path opens. The `fetch` operation of your source endpoint is the same on every path.
+
 ### API key
 
 The Tamga operator creates a scoped key for your institution (`tmg_<slug>_…`; e.g. only `tickets:write` +
@@ -120,7 +124,8 @@ The whole Tamga API: [Hosted issuer API](/api/issuer).
 - Use credential fields only for the credential; never write them to logs, URLs or the status list.
 - If you need to match the person with your own record (diploma, student certificate), [[t:identity-proofing]] uses the
   **Tamga identity credential**: the wallet presents the identity credential, and Tamga matches it with the digest in the offer
-  or with your source endpoint (`lookup`). You never talk to the identity verification provider directly ([[ADR-0011]]).
+  or with your source endpoint (`lookup`). You never talk to the identity verification provider directly ([[ADR-0011]]). No identity credential is
+  issued on the real network today; use the PIN offer meanwhile ([[ADR-0098]]).
 - For credentials that need no personal data, such as tickets, do not ask for identity.
 
 ## Sharing rules: who may see the credential {#sharing-rules}

@@ -4,7 +4,7 @@ title: "“Tamga ile giriş yap” eklemek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-11
+last_updated: 2026-11-25
 summary: >
   Bir web sitesine Tamga ile kayıt ve giriş eklemek: sayfada `@tamga-network/verifier/web` kiti (QR / telefonda cüzdanı aç),
   sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek
@@ -20,7 +20,8 @@ barındırılan [[t:verifier|doğrulayıcısı]] Tamga Verify yapar; size bir sa
 Doğrulamayı tamamen kendi sunucunuzda yapmak isterseniz [[GUIDE-0002]]'ye geçin.
 
 **Denemek için:** çalışan örnek site test ağındadır: `https://verify.sandbox.tamga.network/sample-site` (sandbox yayına
-girince; adresler ve test cüzdanı ayarı [[GUIDE-0013]]'te). Gerçek ağdaki Tamga Verify'da örnek site yoktur.
+girince; adresler ve test cüzdanı ayarı [[GUIDE-0013]]'te). Gerçek ağdaki Tamga Verify'da örnek site yoktur. Gerçek ağda takma ad
+tohumu bugün verilmez (kişinin kimliğinden türetilir, [[ADR-0098]]); giriş gerçek bir kimlik yolu açılana kadar sandbox'ta denenir.
 
 ## Nasıl çalışır?
 

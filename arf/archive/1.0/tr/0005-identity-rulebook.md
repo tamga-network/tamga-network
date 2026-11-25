@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -25,6 +25,11 @@ summary: >
 # 1. Giriş
 
 ## 1.1 Kapsam ve amaç
+
+> **Not (2026-11-25, [[ADR-0098]]):** gerçek ağda bugün kimlik belgesi, takma ad tohumu ve sürücü belgesi bilgisi verilmez;
+> ticari uzaktan kimlik doğrulama sağlayıcısı kaldırıldı. Bu kural kitabı, gerçek bir kimlik yolu (devletin PID'i, nitelikli
+> e-imza sertifikasıyla kimlik ya da kimlik kartı çipi) ayrı bir kararla açıldığında uygulanır; sandbox'ta kimlik adımı örnek
+> kişiyle yapılır (PID verilmiş ve kimlik doğrulanmış sayılır).
 
 Bu [[t:rulebook]], Tamga Network kimlik servisinin (`id.tamga.network`) verdiği dört kişi belgesi türünü tanımlar:
 
@@ -368,6 +373,10 @@ kişiyi eşleştirmek için PID'i de kabul etmesi ayrı bir kararla açılır.
 
 ## 4.3 Belge vermeden önce kimlik doğrulama
 
+> **Not (2026-11-25, [[ADR-0098]]):** belge fotoğrafı + canlılık + yüz yolunu yürüten sağlayıcı kaldırıldı; aşağıdaki ilk satır
+> bugün kullanılmaz (`remote-document-liveness-face` değeri yalnız daha önce verilmiş belgelerde ve sandbox'ın örnek kişilerinde
+> görülür). Çip yolu kapalıdır; açılması hukuki görüşe ve seçilmiş bir yüz eşleştirme yöntemine bağlıdır (`ADR-0098/IDR4`).
+
 | Yol | Seviye | Not |
 |---|---|---|
 | Uzaktan: belge, canlılık ve yüz eşleştirmesi | **T2** | `verification_method: remote-document-liveness-face`; ETSI TS 119 461'e göre standart dışı yedek yol (çipsiz belgeler, NFC'si olmayan telefonlar); TS 119 461 düzeyi iddia edilmez |
@@ -464,6 +473,9 @@ süresi dolana kadar geçerli kalır (RB-AP-ID-06). Doğrulayıcı politikaları
 `DEPRECATED` olur ama doğrulanabilir kalır.
 
 ## 4.8 Sürücü belgesi bilgisi — ek kurallar
+
+> **Not (2026-11-25, [[ADR-0098]]):** kartı inceleyen sağlayıcı akışı kaldırıldı; gerçek ağda bu belge verilmez, sandbox'ta
+> sahte sağlayıcının örnek verisiyle denenir.
 
 Kişinin fiziksel sürücü belgesi kartı uzaktan incelenir (belge + canlılık + yüz eşleştirme) ve karttaki sınıflar ile tarihler bir
 belge olarak verilir ([[ADR-0039]]). **Resmî sürücü belgesi değildir, mDL değildir;** trafik denetiminde ve resmî işlemlerde
