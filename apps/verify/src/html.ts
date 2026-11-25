@@ -33,6 +33,43 @@ const T = {
   en: {
     service: "Tamga Verify",
     trace: "What happened in the background",
+    lookTitle: "What we checked",
+    lookLead: "Five checks, without asking the issuer. Technical step codes in grey.",
+    techDetails: "Technical details",
+    look: {
+      ok: "Checked",
+      fail: "Failed",
+      indet: "Could not check",
+      skip: "Not checked",
+      stopped: "Not reached: an earlier check failed",
+      partial: "Partly checked",
+      partialText: "The checks that ran passed; the rest were not reached.",
+      sig: [
+        "Signature",
+        "Signed with the issuer's key; nothing was changed and it is within its validity dates.",
+        "The signature, the content or the validity dates do not check out.",
+      ],
+      list: [
+        "Trust list",
+        "The issuer is in the signed trust list and was active when it issued this credential.",
+        "The issuer is not in the trust list, or was not active at that time.",
+      ],
+      auth: [
+        "Authorisation",
+        "The issuer may issue this credential type; the request stays within what this verifier is registered for.",
+        "The issuer is not authorised for this type, or the request breaks the rules.",
+      ],
+      status: [
+        "Status",
+        "Not revoked or suspended: checked against the issuer's status list, without contacting the issuer.",
+        "The issuer has revoked or suspended this credential.",
+      ],
+      device: [
+        "Device binding",
+        "Shown from the phone it was issued to, for this request only.",
+        "Could not prove that it came from the phone it was issued to.",
+      ],
+    } as Record<string, string | string[]>,
     notFound: "Presentation not found.",
     expiredTitle: "Link invalid or expired",
     expiredText: "A check link is valid for 5 minutes; ask the person to show it again.",
@@ -123,6 +160,43 @@ const T = {
   tr: {
     service: "Tamga Doğrulama",
     trace: "Arka planda ne oldu",
+    lookTitle: "Nereye baktık",
+    lookLead: "Beş denetim, kuruma sormadan. Gri kodlar teknik adımlar.",
+    techDetails: "Teknik ayrıntılar",
+    look: {
+      ok: "Denetlendi",
+      fail: "Geçmedi",
+      indet: "Denetlenemedi",
+      skip: "Bakılmadı",
+      stopped: "Sıra gelmedi: önceki bir denetim geçmedi",
+      partial: "Kısmen denetlendi",
+      partialText: "Yapılan denetimler geçti; kalanlara sıra gelmedi.",
+      sig: [
+        "İmza",
+        "Kurumun anahtarıyla imzalı; içeriği değiştirilmemiş, geçerlilik tarihleri içinde.",
+        "İmza, içerik ya da geçerlilik tarihleri tutmuyor.",
+      ],
+      list: [
+        "Güven listesi",
+        "Kurum imzalı güven listesinde; belgeyi verdiğinde etkindi.",
+        "Kurum listede yok ya da o tarihte etkin değildi.",
+      ],
+      auth: [
+        "Yetki",
+        "Kurum bu belge türünü vermeye yetkili; istek doğrulayıcının kayıtlı kapsamı içinde.",
+        "Kurum bu tür için yetkili değil ya da istek kurallara uymuyor.",
+      ],
+      status: [
+        "Durum",
+        "İptal ya da askıda değil: kurumun iptal listesinden, kuruma sormadan bakıldı.",
+        "Kurum belgeyi iptal etmiş ya da askıya almış.",
+      ],
+      device: [
+        "Cihaz bağı",
+        "Belgenin verildiği telefondan, yalnız bu istek için gösterildi.",
+        "Belgenin verildiği telefondan geldiği kanıtlanamadı.",
+      ],
+    } as Record<string, string | string[]>,
     notFound: "Sunum bulunamadı.",
     expiredTitle: "Bağlantı geçersiz ya da süresi dolmuş",
     expiredText: "Kontrol bağlantısı 5 dakika geçerlidir; kişiden yeniden göstermesini isteyin.",
@@ -280,13 +354,70 @@ const STEPS: Step[] = [
   "E4",
 ];
 
-export function tracePanel(p: Presentation, lang: Lang = "en") {
-  const rows = p.trace
+/**
+ * "Nereye baktık" (CL72): teknik adımları beş sade karta toplar — yalnız görünüm, doğrulama mantığı değişmez. Kart durumu sonuçtaki
+ * `failed_step` / `checks_performed` / `indeterminate_reason`'dan türetilir (üç değerli sonuç, CMP9): başarısız adım karttaysa
+ * Geçmedi (INDETERMINATE'te Denetlenemedi); hiçbir adımı yapılmadıysa Bakılmadı; yapılanlar geçti ama başarısızlıktan sonra gelen
+ * bir adımına sıra gelmediyse Kısmen denetlendi; hepsi yapılıp geçtiyse Denetlendi. Adım sırası A → B → C → D → E (`STEPS`).
+ */
+const LOOK: { key: "sig" | "list" | "auth" | "status" | "device"; steps: Step[]; codes: string }[] = [
+  { key: "sig", steps: ["A1", "A2", "A3", "A3c", "A4", "A5", "A7", "A8", "Z1"], codes: "A1–A5 · A7–A8" },
+  { key: "list", steps: ["T0", "A3b", "C1", "C3"], codes: "A3b · C1 · C3" },
+  {
+    key: "auth",
+    steps: ["B1", "B2", "B3", "B4", "B5", "B6", "C2", "C4", "E1", "E2", "E3"],
+    codes: "B1–B6 · C2 · C4 · E1–E3",
+  },
+  { key: "status", steps: ["D1", "D2", "D3", "D4", "D5", "D6"], codes: "D1–D6" },
+  { key: "device", steps: ["A3d", "A6", "P1"], codes: "A3d · A6" },
+];
+const INDET_CARD: Record<string, string> = {
+  STATUS_UNREACHABLE: "status",
+  STATUS_STALE: "status",
+  STATUS_VALUE_UNKNOWN: "status",
+  SCHEMA_UNREACHABLE: "auth",
+  CHAIN_UNREACHABLE: "list",
+  INDEXER_STALE: "list",
+};
+type LookState = "ok" | "partial" | "fail" | "indet" | "skip";
+const ORDER: Step[] = [...STEPS.slice(0, 12), "Z1", "P1", ...STEPS.slice(12)];
+export function lookState(r: VerificationResult, card: (typeof LOOK)[number]): LookState {
+  const indet = r.outcome === "INDETERMINATE";
+  if (r.failed_step && card.steps.includes(r.failed_step)) return indet ? "indet" : "fail";
+  if (indet && !r.failed_step && r.indeterminate_reason && INDET_CARD[r.indeterminate_reason] === card.key)
+    return "indet";
+  const done = (s: Step) => r.checks_performed.includes(s);
+  if (!card.steps.some(done)) return "skip";
+  if (r.failed_step) {
+    const at = ORDER.indexOf(r.failed_step);
+    if (card.steps.some((s) => ORDER.indexOf(s) > at && !done(s))) return "partial";
+  }
+  return "ok";
+}
+export function lookPanel(r: VerificationResult, lang: Lang = "en") {
+  const t = T[lang];
+  const mark: Record<LookState, string> = { ok: "✓", partial: "◐", fail: "✗", indet: "?", skip: "–" };
+  const cards = LOOK.map((c) => {
+    const st = lookState(r, c);
+    const [title, okText, failText] = t.look[c.key] as string[];
+    const label = st === "skip" && r.failed_step ? (t.look.stopped as string) : (t.look[st] as string);
+    const text =
+      st === "fail" ? failText : st === "ok" ? okText : st === "partial" ? (t.look.partialText as string) : label;
+    return `<li class="lookcard ${st}"><span class="mark"><span aria-hidden="true">${mark[st]}</span> ${esc(st === "skip" ? (t.look.skip as string) : label)}</span><h3>${esc(title)}</h3><p>${esc(text)}</p><span class="code small muted">${esc(c.codes)}</span></li>`;
+  }).join("");
+  return `<section><h2>${t.lookTitle}</h2><p class="muted small">${t.lookLead}</p><ul class="lookcards">${cards}</ul></section>`;
+}
+
+const traceRows = (p: Presentation) =>
+  p.trace
     .map(
       (e) =>
         `<tr><td class="fmt">+${((e.t - p.createdAt) / 1000).toFixed(1)}s</td><td>${esc(e.step)}${e.detail ? `<br><span class="muted small"><code>${esc(e.detail)}</code></span>` : ""}</td></tr>`,
     )
     .join("");
+
+export function tracePanel(p: Presentation, lang: Lang = "en") {
+  const rows = traceRows(p);
   return `<section><details open><summary>${T[lang].trace}</summary><div class="table-wrap mt-12"><table>${rows}</table></div></details></section>`;
 }
 
@@ -503,14 +634,15 @@ export function resultPage(lang: Lang, p: Presentation, r: VerificationResult, i
     lang,
     r.outcome,
     `<div class="result ${r.outcome}">${r.outcome}</div><p class="lede mt-16">${explain}</p>${drivingNote(p.policy, lang)}
-<section><div class="checks">${steps}</div></section>
+${lookPanel(r, lang)}
 <section><div class="table-wrap"><table class="kv"><tbody>
 <tr><td>${t.issuer}</td><td>${esc(r.issuer?.legal_name ?? "—")} · ${esc(r.issuer?.assurance ?? "")} ${esc(r.issuer?.class ?? "")}<br><span class="code small">${esc(r.issuer?.issuer_id ?? "")}</span></td></tr>
 <tr><td>${t.type}</td><td class="code">${esc(r.schema?.vct ?? "")}</td></tr><tr><td>${t.status}</td><td>${status}</td></tr>
 <tr><td>${t.trustSource}</td><td>${esc(r.freshness.trust_source)} v${r.freshness.trust_version} · ${r.freshness.trust_age_sec}s</td></tr>
 <tr><td>${t.disclosedFields}</td><td>${r.disclosed_claims.map(esc).join(", ")}</td></tr></tbody></table></div>
 <p class="muted small">${esc(r.spec_version)} · ${esc(r.sdk_version)} · ${esc(r.verification_id)}</p><a class="btn" href="/">${t.newCheck}</a></section>
-${claims}${tracePanel(p, lang)}<section><details><summary>${t.resultJson}</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details></section>`,
+${claims}<section><details><summary>${t.techDetails}</summary><div class="checks mt-12">${steps}</div>
+<h3 class="mt-16">${t.trace}</h3><div class="table-wrap mt-12"><table>${traceRows(p)}</table></div></details></section><section><details><summary>${t.resultJson}</summary><pre>${esc(JSON.stringify(r, null, 2))}</pre></details></section>`,
   );
 }
 

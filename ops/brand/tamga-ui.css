@@ -158,7 +158,9 @@ pre::before {
   height: 9px;
   border-radius: 50%;
   background: #ff5f57;
-  box-shadow: 15px 0 0 #febc2e, 30px 0 0 #28c840;
+  box-shadow:
+    15px 0 0 #febc2e,
+    30px 0 0 #28c840;
 }
 h1,
 h2,
@@ -723,6 +725,62 @@ ul.clean li {
   background: var(--bad-bg);
   color: var(--bad);
 }
+/* "What we checked" cards (verify result page): state in text and mark, not color only */
+.lookcards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+.lookcard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-el);
+}
+.lookcard h3 {
+  margin: 0;
+  font: 600 1rem var(--display);
+}
+.lookcard p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.lookcard .mark {
+  font: 600 0.78rem var(--sans);
+  color: var(--fg-muted);
+}
+.lookcard.ok .mark {
+  color: var(--ok);
+}
+.lookcard.partial .mark {
+  color: var(--ok);
+}
+.lookcard.partial {
+  border-style: dashed;
+}
+.lookcard.fail {
+  border-color: var(--bad);
+  background: var(--bad-bg);
+}
+.lookcard.fail .mark {
+  color: var(--bad);
+}
+.lookcard.indet {
+  border-color: var(--warn);
+}
+.lookcard.indet .mark {
+  color: var(--warn);
+}
+.lookcard.skip p {
+  color: var(--fg-muted);
+}
 .qr {
   background: #fff;
   padding: 10px;
@@ -997,7 +1055,9 @@ form.inline {
 .sandbox-bar {
   background: #b45309;
   color: #fff;
-  font: 600 13px/1.4 system-ui, sans-serif;
+  font:
+    600 13px/1.4 system-ui,
+    sans-serif;
   text-align: center;
   padding: 6px 12px;
 }
@@ -1100,4 +1160,6 @@ form.inline {
 }
 
 /* service pages: spacing without inline style attributes (CSP style-src 'self') */
-.sub.gap { margin-top: 20px; }
+.sub.gap {
+  margin-top: 20px;
+}

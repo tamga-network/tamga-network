@@ -38,13 +38,18 @@ if (archiveDir && existsSync(join(archiveDir, "lotl.jws"))) {
   writeFixtureDist(f, dist);
 }
 const t0 = Date.now();
-const code = await chainReplayCommand(["--archive", dist, ...passThrough], {
-  dist,
-  environment: "production",
-  env: { ...process.env, TAMGA_CHAIN_ENABLED: "1", TAMGA_CHAIN_RPC_URL: rpc },
-  // fikstürün iptal listesi adresleri uydurmadır: bit sayısı satırda olmayan liste varsayılanla yazılır (yerel / test zinciri)
-  fetchText: () => Promise.reject(new Error("fikstür: ağ yok")),
-});
-console.error(`besu-smoke: çıkış ${code}, ${Math.round((Date.now() - t0) / 1000)} sn`);
-if (!archiveDir) rmSync(dist, { recursive: true, force: true });
+let code = 1;
+try {
+  code = await chainReplayCommand(["--archive", dist, ...passThrough], {
+    dist,
+    environment: "production",
+    env: { ...process.env, TAMGA_CHAIN_ENABLED: "1", TAMGA_CHAIN_RPC_URL: rpc },
+    // fikstürün iptal listesi adresleri uydurmadır: bit sayısı satırda olmayan liste varsayılanla yazılır (yerel / test zinciri)
+    fetchText: () => Promise.reject(new Error("fikstür: ağ yok")),
+  });
+  console.error(`besu-smoke: çıkış ${code}, ${Math.round((Date.now() - t0) / 1000)} sn`);
+} finally {
+  // CL75: geçici fikstür klasörü hata olsa da silinir (yalnız bu betiğin açtığı; --archive verilen klasör kalır)
+  if (!archiveDir) rmSync(dist, { recursive: true, force: true });
+}
 process.exit(code);

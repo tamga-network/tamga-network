@@ -6,6 +6,9 @@ published on npm as test releases; `0.10.0` is the next one (prepared 2026-11-24
 
 ## [Unreleased]
 
+- Added (verify): the reference verifier's result page opens with "What we checked" — five plain-language cards (Signature,
+  Trust list, Authorisation, Status, Device binding) derived from the existing step results, each with its state in text and the
+  step codes it covers; the step chips and the background trace moved under "Technical details". Verification logic unchanged.
 - Changed (identity, ADR-0098): the commercial remote identity verification provider is removed from the identity service, on
   the real network and in the sandbox. On the real network no identity credential, pseudonym seed or driving licence data is
   issued until a real identity path (the state PID, identity from a qualified e-signature certificate, or the ID card chip) is
